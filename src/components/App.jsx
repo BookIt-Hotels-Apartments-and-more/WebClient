@@ -1,25 +1,12 @@
-import { useState } from 'react';
-import './App.css';
+import React from 'react';
+import AppRouter from '../router/AppRouter';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+const App = () => {
   return (
-    <>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="min-h-screen bg-gray-100 text-gray-900">
+      <AppRouter />
+    </div>
+  );
+};
 
 export default App;
