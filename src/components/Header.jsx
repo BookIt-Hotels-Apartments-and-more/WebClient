@@ -1,41 +1,26 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../store/slices/userSlice';
+import { Link } from 'react-router-dom';
+import { useLanguage } from "../context/LanguageContext";
+import { translations } from "../locales/translations";
 
 const Header = () => {
-  const user = useSelector((state) => state.user.user);
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/');
-  };
+  const { language, toggleLanguage } = useLanguage();
+  const t = translations[language];
 
   return (
-    <header className="bg-white shadow-md p-4 flex justify-between items-center">
-      <Link to="/" className="text-xl font-bold text-blue-600">🏠 Home</Link>
+    <nav className="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+      <div className="container">
+        <Link to="/" className="navbar-brand fw-bold fs-3">🏠 BookIt 🚙</Link>
 
-      <div className="flex items-center space-x-4">
-        {user ? (
-          <>
-            <span className="text-gray-700">👤 {user.name}</span>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-            >
-              Вийти
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" className="text-gray-700 hover:text-blue-600">Увійти</Link>
-            <Link to="/register" className="text-gray-700 hover:text-blue-600">Реєстрація</Link>
-          </>
-        )}
+        <div className="d-flex ms-auto align-items-center gap-2">
+          <button className="btn btn-sm btn-outline-secondary" onClick={toggleLanguage}>
+            {language === "uk" ? "EN" : "UK"}
+          </button>
+          <Link to="/login" className="btn btn-outline-dark">{t.login}</Link>
+          <Link to="/register" className="btn btn-dark">{t.register}</Link>
+        </div>
       </div>
-    </header>
+    </nav>
   );
 };
 
