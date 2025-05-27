@@ -1,71 +1,55 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
 import { useLanguage } from "../context/LanguageContext";
 import { translations } from "../locales/translations";
+import { registerUser } from "../api/authApi";
+import { useLocation } from "react-router-dom";
+
 
 
 const Register = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: "",
-    phone: "",
+    //phone: "",
     email: "",
     password: "",
   });
   const { language } = useLanguage();
   const t = translations[language];
+  const location = useLocation();
+  const selectedRole = location.state?.role || "Tenant";
+
 
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!formData.email.includes("@")) {
-      alert("Введіть коректну пошту");
-      return;
-    }
+  if (!formData.email.includes("@")) {
+    alert("Введіть коректну пошту");
+    return;
+  }
 
-    fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
+    registerUser({
+    username: formData.fullName,
+    email: formData.email,
+    password: formData.password,
+    role: selectedRole,
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("Помилка реєстрації");
-        return res.json();
-      })
-      .then((data) => {
-        console.log("Зареєстровано:", data);
-        navigate("/login");
-      })
-      .catch((err) => {
-        alert(err.message);
-      });
-  };
-
-  const handleGoogleSuccess = (credentialResponse) => {
-    const token = credentialResponse.credential;
-    fetch("/api/auth/google", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
+    .then((data) => {
+      console.log("Зареєстровано:", data);
+      alert("Ви успішно зареєстровані в нашому сервісі!");
+      navigate("/login");
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("Помилка Google реєстрації");
-        return res.json();
-      })
-      .then((data) => {
-        console.log("Google зареєстровано:", data);
-        navigate("/");
-      })
-      .catch((err) => {
-        alert(err.message);
-      });
-  };
+    .catch((err) => {
+      alert(err.message || "Помилка реєстрації");
+    });
+};
 
+  
   const handleClose = () => {
     navigate("/");
   };
@@ -90,7 +74,7 @@ const Register = () => {
                   required
                 />
 
-                <input
+                {/* <input
                   type="tel"
                   name="phone"
                   className="form-control mb-3"
@@ -98,7 +82,7 @@ const Register = () => {
                   value={formData.phone}
                   onChange={handleChange}
                   required
-                />
+                /> */}
 
                 <input
                   type="email"
@@ -122,11 +106,13 @@ const Register = () => {
 
 
               <div className="text-center mt-4">
-                <p>{t.registerWithGoogle}</p>
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={() => alert("Google авторизація не вдалася")}
-                />
+               <button
+                  onClick={() => {
+                    window.location.href = "https://localhost:7065/google-auth/login";
+                  }}
+                >
+                  Увійти через Google
+                </button>
               </div>
             </div>
             <div className="modal-footer">

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
 import { useLanguage } from "../context/LanguageContext";
 import { translations } from "../locales/translations";
 import { loginUser } from "../api/authApi";
 import { getCurrentUser } from "../api/authApi";
 import { useDispatch } from "react-redux";
 import { setUser } from "../store/slices/userSlice";
+import { forgotPassword } from "../api/authApi";
+
 
 
 
@@ -17,6 +18,10 @@ const Login = () => {
   const { language } = useLanguage();
   const t = translations[language];
   const dispatch = useDispatch();
+  const [showForgot, setShowForgot] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [message, setMessage] = useState("");
+
 
 
   const handleClose = () => {
@@ -28,42 +33,47 @@ const Login = () => {
     alert("Введіть коректну пошту");
     return;
   }
+
   loginUser({ email, password })
     .then((data) => {
-      localStorage.setItem("token", data.token); 
-      return getCurrentUser(); 
+      localStorage.setItem("token", data.token);
+      return getCurrentUser();
     })
     .then((user) => {
+      console.log("👤 userData з логіна:", user);
       dispatch(setUser(user));
-      navigate("/");
+
+      if (user.role === "Landlord") {
+        navigate("/landlordpanel");
+      } else if (user.role === "Admin") {
+        navigate("/adminpanel");
+      } else {
+        navigate("/");
+      }
     })
     .catch((err) => {
       alert(err.message || "Невірний email або пароль");
     });
-  };
+};
 
+  const handleForgotPassword = async () => {
+  if (!recoveryEmail.includes("@")) {
+    alert("Введіть коректний email");
+    return;
+  }
+
+  try {
+    const res = await forgotPassword(recoveryEmail);
+    setMessage(res.message || `Лист для відновлення пароля надіслано на ${recoveryEmail}`);
+  } catch (err) {
+    setMessage("Помилка при відновленні пароля.");
+    console.error("❌ Forgot password error:", err);
+  } finally {
+    setRecoveryEmail("");
+    setShowForgot(false);
+  }
+};
   
-
-  const handleGoogleSuccess = (credentialResponse) => {
-    const token = credentialResponse.credential;
-    fetch("https://your-backend.com/api/auth/google", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Помилка входу через Google");
-        return res.json();
-      })
-      .then((data) => {
-        console.log("Користувач авторизований:", data);
-        navigate("/");
-      })
-      .catch((err) => {
-        alert(err.message);
-      });
-  };
-
   return (
     <div className="modal d-block" tabIndex="-1" style={{ background: "rgba(0,0,0,0.6)" }}>
       <div className="modal-dialog">
@@ -89,10 +99,23 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
             />
 
+            <div className="text-end mb-3">
+              <button
+                className="btn btn-link p-0"
+                onClick={() => setShowForgot(true)}
+              >
+                Забули пароль?
+              </button>
+            </div>
 
-            <div className="text-center mt-4">
-              <p>{t.loginWithGoogle}</p> 
-              <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => alert("Google авторизація не вдалася")} />
+            <div className="text-center mt-4">             
+              <button
+                  onClick={() => {
+                    window.location.href = "https://localhost:7065/google-auth/login";
+                  }}
+                >
+                  Увійти через Google
+                </button>
             </div>
           </div>
           <div className="modal-footer">
@@ -102,7 +125,36 @@ const Login = () => {
           </div>
         </div>
       </div>
-    </div>
+
+      {showForgot && (
+        <div className="modal d-block" tabIndex="-1" style={{ background: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Відновлення пароля</h5>
+                <button type="button" className="btn-close" onClick={() => setShowForgot(false)}></button>
+              </div>
+              <div className="modal-body">
+                <input
+                  type="email"
+                  className="form-control"
+                  placeholder="Введіть email"
+                  value={recoveryEmail}
+                  onChange={(e) => setRecoveryEmail(e.target.value)}
+                />
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-primary w-100" onClick={handleForgotPassword}>
+                  Надіслати
+                </button>
+              </div>
+            </div>
+          </div>
+          {message && <div className="alert alert-info text-center">{message}</div>}
+        </div>
+      )}
+
+    </div>    
   );
 };
 

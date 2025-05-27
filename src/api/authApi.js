@@ -16,6 +16,16 @@ export const loginWithGoogle = async (token) => {
 };
 
 export const getCurrentUser = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null; 
+
   const res = await axiosInstance.get("/auth/me");
   return res.data;
 };
+
+export const forgotPassword = async (email) => {
+  const res = await axiosInstance.post("/auth/forgot-password", { email });
+  return res.data;
+};
+
+
