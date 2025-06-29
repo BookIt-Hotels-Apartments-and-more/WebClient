@@ -29,7 +29,7 @@ const AuthSuccess = () => {
       });
   }, [dispatch, navigate]);
 
-  return <div style={{ padding: "2rem", textAlign: "center" }}>Вхід успішний, переадресація...</div>;
+  return <div style={{ padding: "2rem", textAlign: "center" }}>Login successful, redirecting...</div>;
 };
 
 export default AuthSuccess;

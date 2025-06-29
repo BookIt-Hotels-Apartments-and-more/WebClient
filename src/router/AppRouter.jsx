@@ -15,6 +15,7 @@ import AdminAuth from '../pages/admin/AdminAuth';
 import AddHotel from "../pages/landlord/AddHotel";
 import EditHotel from "../pages/landlord/EditHotel";
 import EditApartment from "../pages/landlord/EditApartment";
+import ProtectedRoute from '../components/ProtectedRoute';
 
 
 
@@ -30,9 +31,11 @@ const AppRouter = () => {
           <Route path="register" element={<Register />} />
           <Route path="hotels/:id" element={<HotelDetails />} />
           <Route path="/admin-auth" element={<AdminAuth />} />
+          {/* <Route path="/adminpanel" element={<ProtectedRoute role={0}><AdminPanel /></ProtectedRoute>} />   */}
           <Route path="/adminpanel" element={<AdminPanel />} />  
           <Route path="/partner-auth" element={<PartnerAuth />} />
-          <Route path="/landlordpanel" element={<LandPanel />} />  
+          {/* <Route path="/landlordpanel" element={<ProtectedRoute role={1}><LandPanel /></ProtectedRoute>} />   */}
+          <Route path="/landlordpanel" element={<LandPanel />} />
           <Route path="/add-hotel" element={<AddHotel />} />
           <Route path="/edit-hotel/:id" element={<EditHotel />} />
           <Route path="/edit-apartment/:id" element={<EditApartment />} />

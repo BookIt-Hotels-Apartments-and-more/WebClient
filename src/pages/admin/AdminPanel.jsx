@@ -23,14 +23,14 @@ const AdminPanel = () => {
   }, []);
 
   const handleDeleteUser = async (id) => {
-    if (confirm("Видалити користувача?")) {
+    if (confirm("Delete user?")) {
       await deleteUser(id);
       loadData();
     }
   };
 
   const handleDeleteEstablishment = async (id) => {
-    if (confirm("Видалити готель?")) {
+    if (confirm("Delete hotel?")) {
       await deleteEstablishment(id);
       loadData();
     }
@@ -38,12 +38,12 @@ const AdminPanel = () => {
 
   return (
     <div className="container mt-4">
-      <h2>🛠️ Адмін-панель</h2>
+      <h2>🛠️ Admin panel</h2>
 
       <hr />
-      <h4>👥 Користувачі</h4>
+      <h4>👥 Users</h4>
       {users.length === 0 ? (
-        <p className="text-muted">Немає користувачів</p>
+        <p className="text-muted">There are no users</p>
       ) : (
         <ul className="list-group mb-4">
           {users.map((u) => (
@@ -52,7 +52,7 @@ const AdminPanel = () => {
                 🧑 {u.username} ({u.email}) — <strong>{u.role}</strong>
               </div>
               <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteUser(u.id)}>
-                Видалити
+                Remove
               </button>
             </li>
           ))}
@@ -60,9 +60,9 @@ const AdminPanel = () => {
       )}
 
       <hr />
-      <h4>🏨 Готелі</h4>
+      <h4>🏨 Hotels</h4>
       {establishments.length === 0 ? (
-        <p className="text-muted">Немає готелів</p>
+        <p className="text-muted">There are no hotels</p>
       ) : (
         <ul className="list-group">
           {establishments.map((e) => (
@@ -71,7 +71,7 @@ const AdminPanel = () => {
                 🏨 {e.name} — {e.location}
               </div>
               <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteEstablishment(e.id)}>
-                Видалити
+                Remove
               </button>
             </li>
           ))}

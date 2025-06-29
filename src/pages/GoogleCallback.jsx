@@ -9,11 +9,11 @@ const GoogleCallback = () => {
       // Правильне перенаправлення на бекенд
       window.location.href = `https://localhost:7065/google-auth/callback?code=${code}`;
     } else {
-      alert("Код авторизації не знайдено");
+      alert("Authorization code not found");
     }
   }, []);
 
-  return <p>Очікуємо завершення авторизації через Google...</p>;
+  return <p>Waiting for Google authorization to complete...</p>;
 };
 
 export default GoogleCallback;

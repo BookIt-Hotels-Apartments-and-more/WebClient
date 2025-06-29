@@ -7,9 +7,13 @@ const EditApartment = () => {
   const navigate = useNavigate();
 
   const [apartment, setApartment] = useState({
-    name: "",
-    price: 0,
-  });
+      name: "",
+      price: 0,
+      capacity: 1,
+      description: "",
+      establishmentId: 0,
+    });
+
 
   const [loading, setLoading] = useState(true);
 
@@ -20,9 +24,13 @@ const EditApartment = () => {
         setApartment({
           name: data.name || "",
           price: data.price || 0,
+          capacity: data.capacity || 1,
+          description: data.description || "",
+          establishmentId: data.establishment?.id || 0,
         });
+
       } catch (error) {
-        console.error("❌ Помилка при завантаженні апартаменту:", error);
+        console.error("❌ Error loading apartment:", error);
       } finally {
         setLoading(false);
       }
@@ -43,20 +51,20 @@ const EditApartment = () => {
     e.preventDefault();
     try {
       await updateApartment(id, apartment);
-      navigate("/landlordpanel"); // повернення на панель
+      navigate("/landlordpanel"); 
     } catch (error) {
-      console.error("❌ Помилка при оновленні апартаменту:", error);
+      console.error("❌ Error updating apartment:", error);
     }
   };
 
-  if (loading) return <div className="container mt-4">Завантаження...</div>;
+  if (loading) return <div className="container mt-4">Loading...</div>;
 
   return (
     <div className="container mt-4">
-      <h3>✏️ Редагувати номер</h3>
+      <h3>✏️ Edit apartment</h3>
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
-          <label className="form-label">Назва номеру</label>
+          <label className="form-label">Name apartment</label>
           <input
             type="text"
             name="name"
@@ -67,7 +75,7 @@ const EditApartment = () => {
           />
         </div>
         <div className="mb-3">
-          <label className="form-label">Ціна</label>
+          <label className="form-label">Price</label>
           <input
             type="number"
             name="price"
@@ -77,7 +85,14 @@ const EditApartment = () => {
             required
           />
         </div>
-        <button className="btn btn-success">Зберегти</button>
+        <button className="btn btn-success">Save</button>
+        <button
+          type="button"
+          className="btn btn-secondary ms-2"
+          onClick={() => navigate(-1)}
+        >
+          Back
+        </button>
       </form>
     </div>
   );

@@ -9,14 +9,14 @@ import { useDispatch, useSelector } from "react-redux";
 
 const App = () => {
   const dispatch = useDispatch();
-  const user = useSelector((state) => state.user.user); // ⬅️ читаємо user
+  const user = useSelector((state) => state.user.user); 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         if (user?.id) {
-          setIsLoading(false); // ⬅️ вже є user — нічого не робимо
+          setIsLoading(false);
           return;
         }
 
@@ -28,7 +28,7 @@ const App = () => {
         }
       } catch (err) {
         if (err?.response?.status !== 401) {
-          console.error("Помилка завантаження користувача:", err);
+          console.error("User upload error:", err);
         }
         localStorage.removeItem("token");
       } finally {
@@ -45,7 +45,7 @@ const App = () => {
     fetchUser();
   }, [dispatch, user]);
 
-  if (isLoading) return null; // або <Loader />
+  if (isLoading) return null;
 
   return (
     <div className="main-content">

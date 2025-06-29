@@ -7,8 +7,8 @@ const AuthError = () => {
 
   return (
     <div style={{ padding: "20px", color: "red" }}>
-      <h2>Помилка авторизації</h2>
-      <p>{error || "Щось пішло не так. Спробуйте ще раз."}</p>
+      <h2>Authorization error</h2>
+      <p>{error || "Something went wrong. Please try again."}</p>
     </div>
   );
 };

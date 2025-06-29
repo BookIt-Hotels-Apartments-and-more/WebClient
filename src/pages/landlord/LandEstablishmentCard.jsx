@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   getApartmentsByEstablishment,
   deleteApartment,
+  createApartment,
 } from "../../api/apartmentApi";
 import {
   getAllBookings,
@@ -15,12 +16,18 @@ import {
 import { deleteEstablishment } from "../../api/establishmentsApi";
 import { Link } from "react-router-dom";
 
-const LandEstablishmentCard = ({ est }) => {
+const LandEstablishmentCard = ({ est, reloadStats  }) => {
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [showAddApartment, setShowAddApartment] = useState(false);
-  const [newApartment, setNewApartment] = useState({ name: "", price: 0 });
+  const [newApartment, setNewApartment] = useState({
+      name: "",
+      price: 0,
+      capacity: 1,
+      description: ""
+    });
+
 
   useEffect(() => {
     loadData();
@@ -28,57 +35,61 @@ const LandEstablishmentCard = ({ est }) => {
 
   const loadData = async () => {
     try {
-      const apartmentsData = await getApartmentsByEstablishment(est.id);
-      setApartments(apartmentsData);
+      const allApts = await getApartmentsByEstablishment(est.id);
+      setApartments(allApts);
 
       const bookingsData = await getAllBookings();
-      const filteredBookings = bookingsData.filter((b) =>
-        apartmentsData.some((a) => a.id === b.apartmentId)
+      const filteredBookings = bookingsData.filter(
+      b => b.apartment && b.apartment.establishment.id === est.id
       );
       setBookings(filteredBookings);
 
       const reviewsData = await getAllReviews();
-      const filteredReviews = reviewsData.filter((r) =>
-        apartmentsData.some((a) => a.id === r.apartmentId)
+      const filteredReviews = reviewsData.filter(
+      r =>
+        r.booking &&
+        r.booking.apartment &&
+        r.booking.apartment.establishment.id === est.id
       );
       setReviews(filteredReviews);
     } catch (err) {
-      console.error("❌ Помилка при завантаженні:", err);
+      console.error("❌ Error while loading:", err);
     }
   };
 
   const handleDeleteHotel = async () => {
-    if (confirm("Ви впевнені, що хочете видалити готель?")) {
+    if (confirm("Are you sure you want to delete the hotel?")) {
       await deleteEstablishment(est.id);
       window.location.reload();
     }
   };
 
   const handleDeleteApartment = async (id) => {
-    if (confirm("Видалити номер?")) {
-      await deleteApartment(id);
-      setApartments((prev) => prev.filter((a) => a.id !== id));
-    }
-  };
+      if (confirm("Delete room?")) {
+        await deleteApartment(id);
+        await loadData();
+        if (reloadStats) reloadStats();
+      }
+    };
 
   const handleCheckIn = async (bookingId) => {
     try {
       await checkInBooking(bookingId);
       await loadData();
     } catch (err) {
-      console.error("❌ Помилка при check-in:", err);
+      console.error("❌ Error during check-in:", err);
     }
   };
 
   const handleCancelBooking = async (bookingId) => {
-    if (confirm("Скасувати бронювання?")) {
+    if (confirm("Cancel booking?")) {
       await deleteBooking(bookingId);
       await loadData();
     }
   };
 
   const handleDeleteReview = async (reviewId) => {
-    if (confirm("Видалити відгук?")) {
+    if (confirm("Delete review?")) {
       await deleteReview(reviewId);
       setReviews((prev) => prev.filter((r) => r.id !== reviewId));
     }
@@ -89,17 +100,31 @@ const LandEstablishmentCard = ({ est }) => {
   };
 
   const handleAddApartment = async (e) => {
-    e.preventDefault();
-    // Тут можна реалізувати додавання через API
-    setShowAddApartment(false);
-  };
+      e.preventDefault();
+      try {
+        await createApartment({
+          ...newApartment,
+          establishmentId: est.id, 
+        });
+        await loadData();
+        if (reloadStats) reloadStats();
+        setShowAddApartment(false);
+        setNewApartment({ name: "", price: 0, capacity: 0, description: "" });
+      } catch (err) {
+        alert("❌ Error adding apartment");
+        console.error(err);
+      }
+    };
+
+
+
 
   return (
     <div className="card mb-4 shadow-sm">
       <div className="card-body">
         <h5 className="card-title">{est.name}</h5>
         <p className="text-muted">
-          Загальна кількість номерів: {apartments.length}
+          Total number of apartment: {apartments.length}
         </p>
 
         <p className="card-text text-muted">{est.location}</p>
@@ -108,13 +133,13 @@ const LandEstablishmentCard = ({ est }) => {
           className="btn btn-danger btn-sm me-2"
           onClick={handleDeleteHotel}
         >
-          Видалити готель
+          Remove hotel
         </button>
         <Link
           to={`/edit-hotel/${est.id}`}
           className="btn btn-outline-primary btn-sm"
         >
-          Редагувати
+          Edit
         </Link>
 
         <hr />
@@ -123,7 +148,7 @@ const LandEstablishmentCard = ({ est }) => {
           className="btn btn-sm btn-outline-success mb-3"
           onClick={() => setShowAddApartment(true)}
         >
-          ➕ Додати номер
+          ➕ Add apartment
         </button>
 
         {showAddApartment && (
@@ -136,7 +161,7 @@ const LandEstablishmentCard = ({ est }) => {
                 type="text"
                 className="form-control"
                 name="name"
-                placeholder="Назва"
+                placeholder="Name"
                 value={newApartment.name}
                 onChange={handleChangeApartment}
                 required
@@ -147,20 +172,45 @@ const LandEstablishmentCard = ({ est }) => {
                 type="number"
                 className="form-control"
                 name="price"
-                placeholder="Ціна"
+                placeholder="Price"
                 value={newApartment.price}
                 onChange={handleChangeApartment}
                 required
               />
             </div>
+            <div className="mb-2">
+              <input
+                type="capacity"
+                className="form-control"
+                name="capacity"
+                placeholder="Capacity"
+                value={newApartment.capacity}
+                onChange={handleChangeApartment}
+                min={1}
+                required
+              />
+            </div>
+            <div className="mb-2">
+              <input
+                type="description"
+                className="form-control"
+                name="description"
+                placeholder="Description"
+                value={newApartment.description}
+                onChange={handleChangeApartment}
+                required
+              />
+            </div>        
+                      
+              
             <button className="btn btn-primary btn-sm" type="submit">
-              Додати
+              Add
             </button>
           </form>
         )}
 
         <hr />
-        <h6>Номери:</h6>
+        <h6>Apartment:</h6>
         {apartments.map((apt) => (
           <div
             key={apt.id}
@@ -174,22 +224,22 @@ const LandEstablishmentCard = ({ est }) => {
                 className="btn btn-outline-danger btn-sm"
                 onClick={() => handleDeleteApartment(apt.id)}
               >
-                Видалити
+                Remove
               </button>
               <Link
                 to={`/edit-apartment/${apt.id}`}
                 className="btn btn-outline-secondary btn-sm ms-2"
               >
-                Редагувати
+                Edit
               </Link>
             </div>
           </div>
         ))}
 
         <hr />
-        <h6 className="mt-4">Бронювання:</h6>
+        <h6 className="mt-4">Booking:</h6>
         {bookings.length === 0 ? (
-          <p className="text-muted">Немає бронювань</p>
+          <p className="text-muted">No reservations</p>
         ) : (
           <ul className="list-group">
             {bookings.map((b) => (
@@ -198,20 +248,20 @@ const LandEstablishmentCard = ({ est }) => {
                 className="list-group-item d-flex justify-content-between"
               >
                 <div>
-                  🧑 Користувач {b.userId} — {b.dateFrom} ➝ {b.dateTo}
+                  🧑 User {b.userId} — {b.dateFrom} ➝ {b.dateTo}
                 </div>
                 <div>
                   <button
                     className="btn btn-sm btn-outline-success me-2"
                     onClick={() => handleCheckIn(b.id)}
                   >
-                    Підтвердити
+                    Confirm
                   </button>
                   <button
                     className="btn btn-sm btn-outline-danger"
                     onClick={() => handleCancelBooking(b.id)}
                   >
-                    Скасувати
+                    Cancel
                   </button>
                 </div>
               </li>
@@ -220,9 +270,9 @@ const LandEstablishmentCard = ({ est }) => {
         )}
 
         <hr />
-        <h6 className="mt-4">Відгуки:</h6>
+        <h6 className="mt-4">Reviews:</h6>
         {reviews.length === 0 ? (
-          <p className="text-muted">Відгуків поки немає</p>
+          <p className="text-muted">No reviews yet</p>
         ) : (
           <ul className="list-group">
             {reviews.map((r) => (
@@ -237,7 +287,7 @@ const LandEstablishmentCard = ({ est }) => {
                   className="btn btn-sm btn-outline-danger"
                   onClick={() => handleDeleteReview(r.id)}
                 >
-                  Видалити
+                  Remove
                 </button>
               </li>
             ))}

@@ -1,9 +1,6 @@
-import { useLanguage } from "../context/LanguageContext";
-import { translations } from "../locales/translations";
+
 
 const Footer = () => {
-  const { language } = useLanguage();
-  const t = translations[language];
   const currentYear = new Date().getFullYear();
 
   const linkBaseClasses = "text-decoration-none text-dark transition";
@@ -15,7 +12,7 @@ const Footer = () => {
     <footer className="bg-light text-dark py-4 mt-auto border-top">
       <div className="container d-flex flex-column flex-md-row justify-content-between align-items-center">
         <p className="mb-2 mb-md-0">
-          © {currentYear} BookIt. {t.allRightsReserved || "Усі права захищено."}
+          © {currentYear} BookIt. All rights reserved.
         </p>
         <div className="d-flex gap-3">
           <a

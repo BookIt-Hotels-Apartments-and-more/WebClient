@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { getEstablishmentsByOwner } from "../../api/establishmentsApi";
 import LandEstablishmentCard from "./LandEstablishmentCard";
+import { getAllEstablishments } from "../../api/establishmentsApi";
+import { fetchApartments } from "../../api/apartmentApi";
 import { Link } from "react-router-dom";
 
 const LandPanel = () => {
@@ -24,7 +26,7 @@ const LandPanel = () => {
   };
 
   const handleSave = () => {
-    console.log("📤 Збережено нові дані:", editedUser);
+    console.log("📤 New data saved:", editedUser);
     // TODO: відправити PATCH на бекенд
     setIsEditing(false);
   };
@@ -37,71 +39,57 @@ const LandPanel = () => {
     setIsEditing(false);
   };
 
-  // useEffect(() => {
-  //   if (user?.id) {
-  //     getEstablishmentsByOwner(user.id)
-  //       .then((data) => {
-  //         setEstablishments(data);
+    useEffect(() => {
+      if (user?.id) {
+        Promise.all([getAllEstablishments(), fetchApartments()])
+          .then(([estData, aptData]) => {
+            const myEstablishments = estData.filter(e => e.owner && e.owner.email === user.email);
+            const myEstIds = myEstablishments.map(e => e.id);
+            const myApartments = aptData.filter(a => myEstIds.includes(a.establishment.id));
 
-  //         // Загальна статистика
-  //         let allApts = 0;
-  //         let allBookings = 0;
-  //         data.forEach((e) => {
-  //           allApts += e.apartmentCount || 0;
-  //           allBookings += e.bookingCount || 0;
-  //         });
-  //         setTotalApartments(allApts);
-  //         setTotalBookings(allBookings);
-  //       })
-  //       .catch(console.error);
-  //   }
-  // }, [user]);
+            setEstablishments(myEstablishments);
+            setTotalApartments(myApartments.length);
+            // Аналогічно рахуємо totalBookings, якщо потрібно
+          })
+          .catch(console.error);
+      }
+    }, [user]);
 
-  useEffect(() => {
-  // Тестові готелі (мок-дані)
-  const mockHotels = [
-    {
-      id: 1,
-      name: "Elysium Resort & Spa",
-      location: "Львів, просп. Свободи 5",
-      description: "Розкішний готель з видом на центр Львова",
-      apartmentCount: 4,
-      bookingCount: 12,
-    },
-    {
-      id: 2,
-      name: "Mountain Chalet",
-      location: "Карпати, Яремче",
-      description: "Гірський курорт із сауною та джакузі",
-      apartmentCount: 7,
-      bookingCount: 25,
-    },
-  ];
+    const reloadStats = () => {
+      if (user?.id) {
+        Promise.all([getAllEstablishments(), fetchApartments()])
+          .then(([estData, aptData]) => {
+            const myEstablishments = estData.filter(e => e.owner && e.owner.email === user.email);
+            const myEstIds = myEstablishments.map(e => e.id);
+            const myApartments = aptData.filter(a => myEstIds.includes(a.establishment.id));
 
-  setEstablishments(mockHotels);
+            setEstablishments(myEstablishments);
+            setTotalApartments(myApartments.length);
+            // тут якщо треба totalBookings - так само, фільтруй по апартаментам
+          })
+          .catch(console.error);
+      }
+    };
 
-  // Обчислюємо загальну статистику
-  const totalApts = mockHotels.reduce((sum, e) => sum + (e.apartmentCount || 0), 0);
-  const totalBooks = mockHotels.reduce((sum, e) => sum + (e.bookingCount || 0), 0);
 
-  setTotalApartments(totalApts);
-  setTotalBookings(totalBooks);
-}, []);
+      useEffect(reloadStats, [user]);
+
+  
 
 
   return (
     <div className="container mt-4">
-      <h2 className="mb-4">👤 Панель орендодавця</h2>
+      <h2 className="mb-4">👤 Landlord Panel</h2>
 
       {/* Особиста інформація */}
       <div className="card mb-4 shadow-sm">
         <div className="card-body">
-          <h5 className="card-title">Особиста інформація</h5>
+          <h5 className="card-title">Personal information</h5>
 
           {isEditing ? (
             <>
               <div className="mb-2">
-                <label>Ім’я</label>
+                <label>Name</label>
                 <input
                   type="text"
                   name="username"
@@ -121,18 +109,18 @@ const LandPanel = () => {
                 />
               </div>
               <button className="btn btn-sm btn-outline-success me-2" onClick={handleSave}>
-                Зберегти
+                Save
               </button>
               <button className="btn btn-sm btn-outline-secondary" onClick={handleCancel}>
-                Скасувати
+                Cancel
               </button>
             </>
           ) : (
             <>
-              <p><strong>Ім’я:</strong> {user?.username}</p>
+              <p><strong>Name:</strong> {user?.username}</p>
               <p><strong>Email:</strong> {user?.email}</p>
               <button className="btn btn-sm btn-outline-primary" onClick={() => setIsEditing(true)}>
-                ✏️ Редагувати
+                ✏️ Edit
               </button>
             </>
           )}
@@ -142,35 +130,36 @@ const LandPanel = () => {
       {/* Загальна статистика */}
       <div className="card mb-4 shadow-sm">
         <div className="card-body">
-          <h5 className="card-title">📊 Загальна статистика</h5>
-          <p><strong>Готелів:</strong> {establishments.length}</p>
-          <p><strong>Номерів:</strong> {totalApartments}</p>
-          <p><strong>Бронювань:</strong> {totalBookings}</p>
+          <h5 className="card-title">📊 General statistics</h5>
+          <p><strong>Hotels:</strong> {establishments.length}</p>
+          <p><strong>Apartment:</strong> {totalApartments}</p>
+          <p><strong>Reservations:</strong> {totalBookings}</p>
         </div>
       </div>
 
       {/* Кнопки дій */}
       <div className="d-flex flex-wrap gap-3 mb-4">
         <button className="btn btn-outline-primary" onClick={() => setShowHotels(!showHotels)}>
-          {showHotels ? "❌ Приховати готелі" : "🏨 Переглянути мої готелі"}
+          {showHotels ? "❌ Hide hotels" : "🏨 View my hotels"}
         </button>
         <Link to="/add-hotel" className="btn btn-success">
-          ➕ Додати новий готель
+          ➕ Add a new hotel
         </Link>
       </div>
 
-      {/* Готелі */}
+            {/* Готелі */}
       {showHotels && (
         <div>
           {establishments.length === 0 ? (
-            <p className="text-muted">У вас ще немає готелів.</p>
+            <p className="text-muted">You don't have any hotels yet.</p>
           ) : (
             establishments.map((est) => (
-              <LandEstablishmentCard key={est.id} est={est} />
+              <LandEstablishmentCard key={est.id} est={est} reloadStats={reloadStats} />
             ))
           )}
         </div>
       )}
+
     </div>
   );
 };

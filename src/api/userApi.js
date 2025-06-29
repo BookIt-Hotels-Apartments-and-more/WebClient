@@ -1,7 +1,7 @@
 import {axiosInstance} from "./axios";
 
 export const getAllUsers = async () => {
-  const res = await axiosInstance.get("/users");
+  const res = await axiosInstance.get("/users"); // надеюсь потом будет такой метод
   return res.data;
 };
 

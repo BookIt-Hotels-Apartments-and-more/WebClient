@@ -5,14 +5,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 import { Provider } from 'react-redux';
 import { store } from './store';
-import { LanguageProvider } from "./context/LanguageContext";
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <LanguageProvider>      
+  <React.StrictMode>  
       <Provider store={store}>
         <App />
-      </Provider>    
-    </LanguageProvider>    
+      </Provider>     
   </React.StrictMode>
 );

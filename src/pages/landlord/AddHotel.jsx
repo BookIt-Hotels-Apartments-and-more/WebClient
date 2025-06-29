@@ -5,12 +5,13 @@ import { createEstablishment } from "../../api/establishmentsApi";
 
 const AddHotel = () => {
   const navigate = useNavigate();
-  const user = useSelector((state) => state.user.user); // отримуємо користувача з Redux
+  const user = useSelector((state) => state.user.user); 
   const [hotel, setHotel] = useState({
     name: "",
-    location: "",
+    address: "",
     description: ""
   });
+
 
   const handleChange = (e) => {
     setHotel({ ...hotel, [e.target.name]: e.target.value });
@@ -24,40 +25,50 @@ const AddHotel = () => {
     }
 
     try {
-      const payload = { ...hotel, ownerId: user.id };
+      const payload = { ...hotel, ownerId: user.id, photos: [] };
       await createEstablishment(payload);
       navigate("/landlordpanel");
     } catch (err) {
-      console.error("❌ Помилка додавання готелю:", err);
+      console.error("❌ Error adding hotel:", err);
     }
+
   };
 
   return (
     <div className="container mt-4">
-      <h3>➕ Додати новий готель</h3>
+      <h3>➕ Add a new hotel</h3>
       <form onSubmit={handleSubmit}>
         <input
           name="name"
-          placeholder="Назва готелю"
+          placeholder="Name of the hotel"
           className="form-control mb-2"
           onChange={handleChange}
           required
         />
         <input
-          name="location"
-          placeholder="Місто, адреса"
+          name="address"
+          placeholder="City, address"
           className="form-control mb-2"
           onChange={handleChange}
           required
         />
         <textarea
           name="description"
-          placeholder="Короткий опис"
+          placeholder="Brief description"
           className="form-control mb-3"
           onChange={handleChange}
           required
-        />
-        <button className="btn btn-primary">Додати готель</button>
+        /> 
+         {/* <input
+          type="file"
+          name="photos"
+          accept="image/*"
+          multiple
+          className="form-control mb-3"
+          onChange={handleFileChange}
+        /> */}
+
+        <button className="btn btn-primary">Add a hotel</button>
       </form>
     </div>
   );
