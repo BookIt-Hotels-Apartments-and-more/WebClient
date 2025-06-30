@@ -252,18 +252,26 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                 </div>
                 <div>
                   <button
-                    className="btn btn-sm btn-outline-success me-2"
+                    className={`btn btn-sm me-2 ${b.isCheckedIn ? "btn-success" : "btn-outline-primary"}`}
+                    disabled={b.isCheckedIn}
                     onClick={() => handleCheckIn(b.id)}
                   >
-                    Confirm
+                    {b.isCheckedIn ? "Checked In" : "Confirm"}
                   </button>
                   <button
-                    className="btn btn-sm btn-outline-danger"
+                    className="btn btn-sm me-2 btn-outline-danger"
                     onClick={() => handleCancelBooking(b.id)}
                   >
                     Cancel
                   </button>
+                  <button
+                    className="btn btn-sm btn-outline-primary"
+                    // Додати реалізацію оцінки клієнта (куди і як будемо застосовувати рейтинг)                    
+                  >
+                    Rate the client
+                  </button>
                 </div>
+
               </li>
             ))}
           </ul>
