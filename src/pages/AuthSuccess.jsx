@@ -1,35 +1,33 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {axiosInstance} from "../api/axios";
+import { getCurrentUser } from "../api/authApi";
 import { useDispatch } from "react-redux";
 import { setUser } from "../store/slices/userSlice";
-import { getCurrentUser } from "../api/authApi";
 
 const AuthSuccess = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get("token");
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get("token");
 
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    if (token) {
+      localStorage.setItem("token", token);
+      axiosInstance.defaults.headers["Authorization"] = `Bearer ${token}`;
+      console.log("TOKEN from Google:", token);
 
-    localStorage.setItem("token", token);
-
-    getCurrentUser()
-      .then((userData) => {
-        dispatch(setUser(userData));
+      getCurrentUser().then(user => {
+        console.log("USER from /auth/me:", user);
+        localStorage.setItem("user", JSON.stringify(user));
+        dispatch(setUser(user));
         navigate("/");
-      })
-       .catch(() => {
-        localStorage.removeItem("token");
-        navigate("/login");
       });
+    }
   }, [dispatch, navigate]);
 
-  return <div style={{ padding: "2rem", textAlign: "center" }}>Login successful, redirecting...</div>;
+  return <div>Logging in...</div>;
 };
 
 export default AuthSuccess;

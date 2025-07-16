@@ -6,7 +6,6 @@ const GoogleCallback = () => {
     const code = params.get("code");
 
     if (code) {
-      // Правильне перенаправлення на бекенд
       window.location.href = `https://localhost:7065/google-auth/callback?code=${code}`;
     } else {
       alert("Authorization code not found");

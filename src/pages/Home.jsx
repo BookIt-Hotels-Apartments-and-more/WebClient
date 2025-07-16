@@ -1,38 +1,49 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { getAllEstablishments } from "../api/establishmentsApi";
 import { axiosInstance } from "../api/axios";
-import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useMemo } from "react";
+import BookingBannerForm from '../components/BookingBannerForm';
+import QuickPlanning from '../components/QuickPlanning';
+import PopularDestinations from '../components/PopularDestinations';
+import TopTrendingHotels from '../components/TopTrendingHotels';
+import BestToursAndDeals from '../components/BestToursAndDeals';
+import WhyChooseUs from '../components/WhyChooseUs';
+import AppBanner from '../components/AppBanner';
+import AddComment from '../components/AddComment';
+
 
 const Home = () => {
   const [search, setSearch] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [sortBy, setSortBy] = useState("");
   const [hotels, setHotels] = useState([]);
   const [apartments, setApartments] = useState([]);
-  const [checkIn, setCheckIn] = useState(null);
-  const [checkOut, setCheckOut] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [recentHotels, setRecentHotels] = useState([]);
+  const [sortBy, setSortBy] = useState(""); 
+  const location = useLocation();
+  
 
+
+  useEffect(() => {
+    getAllEstablishments().then(setHotels);
+    axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
+    axiosInstance.get("/api/bookings").then(res => setBookings(res.data));
+  }, []);
+
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
         const data = await getAllEstablishments();
-        //console.log("📦 All hotels from backend:", data);
         setHotels(data);
       } catch (err) {
         console.error("❌ Помилка при завантаженні готелів:", err);
       }
     };
     fetchData();
-  }, []);
-
-  useEffect(() => {
-    getAllEstablishments().then(setHotels);
-    axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
-  }, []);
+  }, []);  
 
   const hotelsWithPrice = useMemo(() => {
       return hotels.map(hotel => {
@@ -42,20 +53,40 @@ const Home = () => {
         if (prices.length > 0) {
           price = Math.min(...prices);
         }
-        return { ...hotel, price }; // додаємо price до об'єкту hotel
+        return { ...hotel, price }; 
       });
     }, [hotels, apartments]);
 
+    useEffect(() => {
+    const ids = JSON.parse(localStorage.getItem("recentHotels") || "[]");
+    if (ids.length > 0) {
+      setRecentHotels(hotelsWithPrice.filter(h => ids.includes(h.id)));
+    }
+  }, [hotelsWithPrice]);
+
+
   const filteredHotels = hotelsWithPrice.filter((hotel) => {
-      const matchSearch =
-        hotel.name.toLowerCase().includes(search.toLowerCase()) ||
-        hotel.address.toLowerCase().includes(search.toLowerCase());
+    const searchLower = search.trim().toLowerCase();
+    const country = (hotel.geolocation?.country || "").toLowerCase();
+    const city = (hotel.geolocation?.city || "").toLowerCase();
+    return (
+      hotel.name.toLowerCase().includes(searchLower) ||
+      country.includes(searchLower) ||
+      city.includes(searchLower)
+    );
+  });
 
-      const matchMin = minPrice === "" || hotel.price >= parseInt(minPrice) || hotel.price == null;
-      const matchMax = maxPrice === "" || hotel.price <= parseInt(maxPrice) || hotel.price == null;
 
-      return matchSearch && matchMin && matchMax;
-    });
+  
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const selectedCountry = params.get("country");
+    if (selectedCountry) {
+      setSearch(selectedCountry);
+    }
+  }, [location.search]);
+  
+
 
     const sortedHotels = [...filteredHotels].sort((a, b) => {
       switch (sortBy) {
@@ -72,128 +103,75 @@ const Home = () => {
       }
     });
 
+    // Популярні готелі
+    const popularCities = useMemo(() => {
+      const cityCount = {};
+      hotels.forEach(h => {
+        const city = h.geolocation?.city || "Unknown";
+        cityCount[city] = (cityCount[city] || 0) + 1;
+      });
+      return Object.entries(cityCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([city, count]) => ({ city, count }));
+    }, [hotels]);
+
+    //  Готелі з найкращими рейтингами
+    const topRatedHotels = useMemo(() =>
+      [...hotelsWithPrice]
+        .filter(h => typeof h.rating === "number")
+        .sort((a, b) => b.rating - a.rating)
+        .slice(0, 8), [hotelsWithPrice]);
+
+        // Популярні готелі серед користувачів
+    const hotelsByBookings = useMemo(() => {
+      const countMap = {};
+      bookings.forEach(b => {
+        if (b.apartment?.establishment?.id) {
+          const hotelId = b.apartment.establishment.id;
+          countMap[hotelId] = (countMap[hotelId] || 0) + 1;
+        }
+      });
+      const topHotelIds = Object.entries(countMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([id]) => +id);
+
+      return hotelsWithPrice.filter(h => topHotelIds.includes(h.id));
+    }, [bookings, hotelsWithPrice]);
+
+
+
   return (
-  <div className="container py-5">
-    <h1 className="mb-4 fw-bold">Find the best hotels</h1>
+    <div>
+      {/* Банер */}
+      <div className='baner'
+        style={{
+          width: '100%',
+          maxWidth: '1955px',
+          minHeight: '687px',
+          backgroundImage: "url('/images/mainbaner.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          margin: '0 auto',
+          marginTop: '-110px',
+          marginBlockEnd: '-110px',
+          zIndex: 1
+        }}>
+      </div>
+      <BookingBannerForm search={search} setSearch={setSearch} />
 
-    {/* 🔍 Пошук та фільтрація */}
-    <div className="row mb-4">
-      <div className="col-md-3 mb-2">
-        <input
-          type="text"
-          className="form-control"
-          placeholder="Search by name or location"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-      <div className="col-md-2 mb-2">
-        <input
-          type="number"
-          className="form-control"
-          placeholder="Min. price"
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-        />
-      </div>
-      <div className="col-md-2 mb-2">
-        <input
-          type="number"
-          className="form-control"
-          placeholder="Max. price"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-        />
-      </div>
-      <div className="col-md-3 mb-2 d-flex gap-1 align-items-center">
-        <DatePicker
-          selected={checkIn}
-          onChange={date => {
-            setCheckIn(date);
-            if (checkOut && date && date >= checkOut) setCheckOut(null);
-          }}
-          selectsStart
-          startDate={checkIn}
-          endDate={checkOut}
-          minDate={new Date()}
-          dateFormat="dd.MM.yyyy"
-          placeholderText="Check-in"
-          className="form-control"
-        />
-        <span>—</span>
-        <DatePicker
-          selected={checkOut}
-          onChange={date => setCheckOut(date)}
-          selectsEnd
-          startDate={checkIn}
-          endDate={checkOut}
-          minDate={checkIn || new Date()}
-          dateFormat="dd.MM.yyyy"
-          placeholderText="Departure"
-          className="form-control"
-          disabled={!checkIn}
-        />
-      </div>
-      <div className="col-md-2 mb-2 d-flex align-items-center">
-        <button className="btn btn-outline-primary w-100" style={{whiteSpace: 'nowrap', minWidth: 100}}>
-          🔍 Search
-        </button>
-      </div>
+      <QuickPlanning />
+      <PopularDestinations />
+      <TopTrendingHotels />
+      <BestToursAndDeals />
+      <WhyChooseUs />
+      <AppBanner />
+      <AddComment />
+
     </div>
-
-    {/* 🏨 Вивід готелів */}
-    <div className="row">
-      {sortedHotels.length > 0 ? (
-        sortedHotels.map((hotel) => {
-          // Знаходимо всі номери для готелю
-          const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
-          const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
-          let priceText = "See the price when choosing a room.";
-
-          if (prices.length > 0) {
-            const allSame = prices.every(p => p === prices[0]);
-            if (allSame) {
-              priceText = `${prices[0]} ₴ / night`;
-            } else {
-              const minPrice = Math.min(...prices);
-              priceText = `from ${minPrice} ₴ / night`;
-            }
-          }
-
-          return (
-            <div className="col-md-6 col-lg-3 mb-4" key={hotel.id}>
-              <div className="card h-100 shadow-sm">
-                <img
-                  src={hotel.photos?.[0] || "/noimage.png"}
-                  className="card-img-top"
-                  alt={hotel.name}
-                  style={{ height: "180px", objectFit: "cover" }}
-                />
-                <div className="card-body d-flex flex-column">
-                  <h5 className="card-title">{hotel.name}</h5>
-                  <p className="card-text text-muted small mb-1">{hotel.address}</p>
-                  <p className="card-text small flex-grow-1">{hotel.description}</p>
-                  <p className="fw-bold mt-2">{priceText}</p>
-                  <Link
-                    to={`/hotels/${hotel.id}`}
-                    className="btn btn-outline-primary btn-sm mt-auto"
-                  >
-                    Review
-                  </Link>
-                </div>
-              </div>
-            </div>
-          );
-        })
-      ) : (
-        <div className="col-12">
-          <p className="text-center text-muted">
-            No hotels found according to the specified parameters.
-          </p>
-        </div>
-      )}
-    </div>
-  </div>
+    
+  
 );
 };
 

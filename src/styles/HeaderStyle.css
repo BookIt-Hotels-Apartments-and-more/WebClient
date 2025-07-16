@@ -1,0 +1,57 @@
+.header-absolute {
+   position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  max-width: '1955px';
+  margin: 0 auto;
+  z-index: 10;
+  background: rgba(255,255,255,0.0); 
+  min-height: 88px;
+  backdrop-filter: blur(1px);           /* ефект скла */
+  -webkit-backdrop-filter: blur(8px);   /* для Safari */
+}
+
+
+.signin-btn {
+  width: 105px;
+  height: 43px;
+  background: #c9e7f4 !important;
+  color: #253858 !important;
+  font-weight: 700 !important;
+  font-size: 18px !important;
+  font-family: 'Sora', sans-serif !important;
+  border-radius: 10px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: background 0.2s;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+}
+.signin-btn:hover, .signin-btn:focus {
+  background: #c9e7f4 !important;
+  color:rgb(255, 140, 0) !important;
+}
+
+.main-btn {
+  color: #062C43 !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-size: 18px;
+  font-weight: 700 !important;
+  padding: 10px 10px !important;
+  width: 120px;
+  height: 43px;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  font-family: 'Sora', sans-serif !important;
+}
+.main-btn:hover, .main-btn:focus {
+  color:rgb(255, 140, 0) !important;
+}

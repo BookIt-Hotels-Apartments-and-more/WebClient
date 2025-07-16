@@ -5,6 +5,9 @@ import { getApartmentById, updateApartment } from "../../api/apartmentApi";
 const EditApartment = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [existingPhotos, setExistingPhotos] = useState([]); 
+  const [newPhotos, setNewPhotos] = useState([]);
+
 
   const [apartment, setApartment] = useState({
       name: "",
@@ -39,6 +42,29 @@ const EditApartment = () => {
     fetchApartment();
   }, [id]);
 
+  useEffect(() => {
+    const fetchApartment = async () => {
+      try {
+        const data = await getApartmentById(id);
+        setApartment({
+          name: data.name || "",
+          price: data.price || 0,
+          capacity: data.capacity || 1,
+          description: data.description || "",
+          establishmentId: data.establishment?.id || 0,
+        });
+        setExistingPhotos(data.photos || []);
+      } catch (error) {
+        console.error("❌ Error loading apartment:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApartment();
+  }, [id]);
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setApartment((prev) => ({
@@ -47,15 +73,46 @@ const EditApartment = () => {
     }));
   };
 
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setNewPhotos(prev => [...prev, ev.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleDeletePhoto = (idx, isExisting) => {
+    if (isExisting) {
+      setExistingPhotos(prev => prev.filter((_, i) => i !== idx));
+    } else {
+      setNewPhotos(prev => prev.filter((_, i) => i !== idx));
+    }
+  };
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await updateApartment(id, apartment);
-      navigate("/landlordpanel"); 
+      const existingPhotosIds = existingPhotos.map(p => p.id);
+      const getPureBase64 = (dataUrl) => dataUrl.split(',')[1];
+      const base64Only = newPhotos.map(getPureBase64);
+
+      const payload = {
+        ...apartment,
+        existingPhotosIds,
+        newPhotosBase64: base64Only,
+      };
+
+      await updateApartment(id, payload);
+      navigate("/landlordpanel");
     } catch (error) {
       console.error("❌ Error updating apartment:", error);
     }
   };
+
 
   if (loading) return <div className="container mt-4">Loading...</div>;
 
@@ -85,6 +142,29 @@ const EditApartment = () => {
             required
           />
         </div>
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          className="form-control mb-3"
+          onChange={handleFileChange}
+        />
+
+        <div className="mb-3 d-flex flex-wrap">
+          {existingPhotos.map((p, idx) => (
+            <div key={p.id} className="me-2 mb-2 position-relative">
+              <img src={p.blobUrl} alt="apartment" width={80} height={80} style={{ objectFit: "cover", borderRadius: 8, border: '1px solid #eee' }} />
+              <button type="button" className="btn btn-sm btn-danger position-absolute top-0 end-0" style={{zIndex:1}} onClick={() => handleDeletePhoto(idx, true)}>×</button>
+            </div>
+          ))}
+          {newPhotos.map((p, idx) => (
+            <div key={`new_${idx}`} className="me-2 mb-2 position-relative">
+              <img src={p} alt="new apartment" width={80} height={80} style={{ objectFit: "cover", borderRadius: 8, border: '1px solid #eee' }} />
+              <button type="button" className="btn btn-sm btn-danger position-absolute top-0 end-0" style={{zIndex:1}} onClick={() => handleDeletePhoto(idx, false)}>×</button>
+            </div>
+          ))}
+        </div>
+
         <button className="btn btn-success">Save</button>
         <button
           type="button"

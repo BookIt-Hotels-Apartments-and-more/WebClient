@@ -60,7 +60,7 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
   const handleDeleteHotel = async () => {
     if (confirm("Are you sure you want to delete the hotel?")) {
       await deleteEstablishment(est.id);
-      window.location.reload();
+      reloadStats();
     }
   };
 
@@ -116,6 +116,11 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
       }
     };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    return new Date(dateStr).toISOString().split("T")[0];
+  };
+
 
 
 
@@ -141,6 +146,32 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
         >
           Edit
         </Link>
+
+        <hr />
+
+        {/* Вивід фото готелю */}
+        <p className="card-text">Hotel photos:</p>
+        {est.photos && est.photos.length > 0 && (
+          <div className="d-flex flex-wrap gap-2 my-2">
+            {est.photos.map((photo, idx) => (
+              <img
+                key={photo.id || photo.blobUrl || idx}
+                src={photo.blobUrl}
+                alt="Hotel"
+                width={88}
+                height={68}
+                style={{
+                  objectFit: "cover",
+                  borderRadius: 8,
+                  border: "1px solid #e0e0e0",
+                  marginRight: 8,
+                  marginBottom: 6
+                }}
+              />
+            ))}
+          </div>
+        )}
+
 
         <hr />
 
@@ -211,30 +242,54 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
 
         <hr />
         <h6>Apartment:</h6>
-        {apartments.map((apt) => (
-          <div
-            key={apt.id}
-            className="border p-2 mb-2 rounded d-flex justify-content-between"
-          >
-            <div>
-              🛏 {apt.name} — {apt.price}₴
+          {apartments.map((apt) => (
+            <div
+              key={apt.id}
+              className="border p-2 mb-2 rounded"
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  🛏 {apt.name} — {apt.price}₴
+                </div>
+                <div>
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={() => handleDeleteApartment(apt.id)}
+                  >
+                    Remove
+                  </button>
+                  <Link
+                    to={`/edit-apartment/${apt.id}`}
+                    className="btn btn-outline-secondary btn-sm ms-2"
+                  >
+                    Edit
+                  </Link>
+                </div>
+              </div>
+
+              {/* Фото апартамента */}
+              {apt.photos && apt.photos.length > 0 && (
+                <div className="d-flex gap-2 mt-2 mb-1 flex-wrap">
+                  {apt.photos.map((photo, idx) => (
+                    <img
+                      key={photo.id || photo.blobUrl || idx}
+                      src={photo.blobUrl}
+                      alt="Apartment"
+                      width={70}
+                      height={54}
+                      style={{
+                        objectFit: "cover",
+                        borderRadius: 8,
+                        border: "1px solid #e0e0e0"
+                      }}
+                    />
+                  ))}
+
+                </div>
+              )}
             </div>
-            <div>
-              <button
-                className="btn btn-outline-danger btn-sm"
-                onClick={() => handleDeleteApartment(apt.id)}
-              >
-                Remove
-              </button>
-              <Link
-                to={`/edit-apartment/${apt.id}`}
-                className="btn btn-outline-secondary btn-sm ms-2"
-              >
-                Edit
-              </Link>
-            </div>
-          </div>
-        ))}
+          ))}
+
 
         <hr />
         <h6 className="mt-4">Booking:</h6>
@@ -248,7 +303,7 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                 className="list-group-item d-flex justify-content-between"
               >
                 <div>
-                  🧑 User {b.userId} — {b.dateFrom} ➝ {b.dateTo}
+                  🧑 User: {b.customer.username} (e-mail: {b.customer.email}) — from {formatDate(b.dateFrom)} ➝ to {formatDate(b.dateTo)}
                 </div>
                 <div>
                   <button
@@ -266,7 +321,7 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                   </button>
                   <button
                     className="btn btn-sm btn-outline-primary"
-                    // Додати реалізацію оцінки клієнта (куди і як будемо застосовувати рейтинг)                    
+                    // Додати реалізацію оцінки клієнта (куди і як будемо застосовувати рейтинг?)                    
                   >
                     Rate the client
                   </button>

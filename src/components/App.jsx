@@ -1,8 +1,12 @@
+window.addEventListener('beforeunload', () => {
+  localStorage.removeItem('bookingForm');
+});
 import AppRouter from '../router/AppRouter';
 import { useState, useEffect } from "react";
 import { setUser } from "../store/slices/userSlice";
 import { axiosInstance } from "../api/axios"; 
 import { useDispatch, useSelector } from "react-redux";
+import 'leaflet/dist/leaflet.css';
 
 
 
@@ -21,6 +25,7 @@ const App = () => {
         }
 
         const res = await axiosInstance.get("/auth/me");
+        //console.log("USER DATA:", res.data.user);
         if (res?.data?.user) {
           dispatch(setUser(res.data.user));
         } else {
