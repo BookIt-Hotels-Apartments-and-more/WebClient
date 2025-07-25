@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   getApartmentsByEstablishment,
   deleteApartment,
-  createApartment,
 } from "../../api/apartmentApi";
 import {
   getAllBookings,
@@ -15,18 +14,12 @@ import {
 } from "../../api/reviewApi";
 import { deleteEstablishment } from "../../api/establishmentsApi";
 import { Link } from "react-router-dom";
+import { APARTMENT_FEATURE_LABELS } from "../../utils/enums";
 
 const LandEstablishmentCard = ({ est, reloadStats  }) => {
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [reviews, setReviews] = useState([]);
-  const [showAddApartment, setShowAddApartment] = useState(false);
-  const [newApartment, setNewApartment] = useState({
-      name: "",
-      price: 0,
-      capacity: 1,
-      description: ""
-    });
 
 
   useEffect(() => {
@@ -95,26 +88,11 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
     }
   };
 
-  const handleChangeApartment = (e) => {
-    setNewApartment({ ...newApartment, [e.target.name]: e.target.value });
-  };
-
-  const handleAddApartment = async (e) => {
-      e.preventDefault();
-      try {
-        await createApartment({
-          ...newApartment,
-          establishmentId: est.id, 
-        });
-        await loadData();
-        if (reloadStats) reloadStats();
-        setShowAddApartment(false);
-        setNewApartment({ name: "", price: 0, capacity: 0, description: "" });
-      } catch (err) {
-        alert("❌ Error adding apartment");
-        console.error(err);
-      }
-    };
+  function getApartmentFeatureNames(features) {
+    return Object.keys(APARTMENT_FEATURE_LABELS)
+      .filter(key => (features & (1 << APARTMENT_FEATURE_LABELS[key])) !== 0)
+      .join(", ");
+  }
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
@@ -140,6 +118,7 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
         >
           Remove hotel
         </button>
+        
         <Link
           to={`/edit-hotel/${est.id}`}
           className="btn btn-outline-primary btn-sm"
@@ -172,73 +151,29 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
           </div>
         )}
 
+        {/* Вивід удобств */}
+        <p className="card-text mb-1 fw-bold">Facilities:</p>
+          {est.features && Object.keys(est.features).filter(f => est.features[f]).length > 0 ? (
+            <div className="mb-2">
+              {Object.keys(est.features)
+                .filter(key => est.features[key])
+                .map(key =>
+                  <span key={key} className="badge rounded-pill bg-info text-dark me-2 mb-1" style={{fontSize: 13}}>
+                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                  </span>)}
+            </div>
+          ) : (
+            <div className="text-muted mb-2">No facilities specified</div>
+          )}
 
         <hr />
 
-        <button
-          className="btn btn-sm btn-outline-success mb-3"
-          onClick={() => setShowAddApartment(true)}
-        >
-          ➕ Add apartment
-        </button>
+        <Link
+          to={`/add-apartment/${est.id}`}
+          className="btn btn-success btn-sm mt-2">
+          Add apartment
+        </Link>
 
-        {showAddApartment && (
-          <form
-            onSubmit={handleAddApartment}
-            className="border p-3 mb-3 rounded bg-light"
-          >
-            <div className="mb-2">
-              <input
-                type="text"
-                className="form-control"
-                name="name"
-                placeholder="Name"
-                value={newApartment.name}
-                onChange={handleChangeApartment}
-                required
-              />
-            </div>
-            <div className="mb-2">
-              <input
-                type="number"
-                className="form-control"
-                name="price"
-                placeholder="Price"
-                value={newApartment.price}
-                onChange={handleChangeApartment}
-                required
-              />
-            </div>
-            <div className="mb-2">
-              <input
-                type="capacity"
-                className="form-control"
-                name="capacity"
-                placeholder="Capacity"
-                value={newApartment.capacity}
-                onChange={handleChangeApartment}
-                min={1}
-                required
-              />
-            </div>
-            <div className="mb-2">
-              <input
-                type="description"
-                className="form-control"
-                name="description"
-                placeholder="Description"
-                value={newApartment.description}
-                onChange={handleChangeApartment}
-                required
-              />
-            </div>        
-                      
-              
-            <button className="btn btn-primary btn-sm" type="submit">
-              Add
-            </button>
-          </form>
-        )}
 
         <hr />
         <h6>Apartment:</h6>
@@ -249,7 +184,7 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
             >
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  🛏 {apt.name} — {apt.price}₴
+                  🛏 {apt.name} — {apt.area} (м²) — {apt.price}$
                 </div>
                 <div>
                   <button
@@ -283,10 +218,26 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                         border: "1px solid #e0e0e0"
                       }}
                     />
-                  ))}
-
-                </div>
+                  ))}             
+                </div>                
               )}
+              {apt.description}
+              {/* Вивід зручностей апартаменту */}
+              {apt.features && Object.keys(apt.features).filter(f => apt.features[f]).length > 0 ? (
+                <div className="mb-2 mt-1">
+                  {Object.keys(apt.features)
+                    .filter(key => apt.features[key])
+                    .map(key =>
+                      <span key={key} className="badge rounded-pill bg-info text-dark me-2 mb-1" style={{fontSize: 12}}>
+                        {key.charAt(0).toUpperCase() + key.slice(1)}
+                      </span>
+                    )
+                  }
+                </div>
+              ) : (
+                <div className="text-muted mb-2">No facilities</div>
+              )}
+
             </div>
           ))}
 

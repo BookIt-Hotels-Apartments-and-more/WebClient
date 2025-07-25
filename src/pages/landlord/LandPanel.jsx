@@ -345,18 +345,14 @@ const LandPanel = () => {
             </div>
 
             {/* Кнопки дій */}
-            <div style={{ display: "flex", gap: 16 }}>
-              <button className="btn btn-outline-primary" onClick={() => setShowHotels(!showHotels)}>
-                {showHotels ? "❌ Hide hotels" : "🏨 View my hotels"}
-              </button>
+            <div style={{ display: "flex", gap: 16 }}>              
               <Link to="/add-hotel" className="btn btn-success">
                 ➕ Add a new hotel
               </Link>
             </div>
 
             {/* Список готелів */}
-            {showHotels && (
-              <div style={{
+            {<div style={{
                 background: "#fcfcfc",
                 borderRadius: 18,
                 padding: 24,
@@ -375,8 +371,7 @@ const LandPanel = () => {
                     ))}
                   </div>
                 )}
-              </div>
-            )}
+              </div>}
           </div>
 
           {/* ПРАВА КОЛОНКА (можливості сторінки, або можна буде додати допоміжну інформацію) */}

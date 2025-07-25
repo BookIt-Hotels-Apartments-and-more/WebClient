@@ -46,3 +46,20 @@ export function getEstablishmentTypeName(typeId) {
     .find(([key, value]) => value === typeId);
   return entry ? entry[0] : "";
 }
+
+/**
+ * Преобразує об'єкт features з бекенду (маленькі букви) у фронтовий енам-об'єкт (великі).
+ * @param {object} backendFeatures
+ * @param {object} LABELS — твій enum
+ * @returns {object} — об'єкт для чекбоксів з правильними ключами
+ */
+export function normalizeFeaturesForCheckboxes(backendFeatures, LABELS) {
+  const result = {};
+  Object.keys(LABELS).forEach(enumKey => {
+    // Перевести ключ із великої у малу (FreeWifi -> freeWifi)
+    const backendKey = enumKey.charAt(0).toLowerCase() + enumKey.slice(1);
+    result[enumKey] = backendFeatures ? !!backendFeatures[backendKey] : false;
+  });
+  return result;
+}
+

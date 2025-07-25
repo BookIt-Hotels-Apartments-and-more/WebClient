@@ -69,20 +69,21 @@ const AddHotel = () => {
       return;
     }
     try {
-      const base64Only = photos.map(getPureBase64);
       const payload = {
         name: hotel.name,
         description: hotel.description,
         type: hotel.type,
         features: hotel.features,
-        checkInTime: `${checkInHour.toString().padStart(2, "0")}:${checkInMinute.toString().padStart(2, "0")}`,
-        checkOutTime: `${checkOutHour.toString().padStart(2, "0")}:${checkOutMinute.toString().padStart(2, "0")}`,
+        checkInTime: `${checkInHour.toString().padStart(2, '0')}:${checkInMinute.toString().padStart(2, '0')}:00`,
+        checkOutTime: `${checkOutHour.toString().padStart(2, '0')}:${checkOutMinute.toString().padStart(2, '0')}:00`,
         latitude: position[0],
         longitude: position[1],
         ownerId: user.id,
         existingPhotosIds: [],
-        newPhotosBase64: base64Only
+        newPhotosBase64: photos
       };
+
+
 
       console.log("Submitting establishment payload:", payload);
       await createEstablishment(payload);
@@ -148,6 +149,7 @@ const AddHotel = () => {
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
+        <p style={{fontSize: 12}}>* Select your object type.</p>
 
 
         {/* Геопозиція */}
@@ -161,8 +163,9 @@ const AddHotel = () => {
           onChange={handleChange}
           required
         />
+        <p style={{fontSize: 12}}>* The description must be at least 50 characters long.</p>
           {/* Час заїзду та виїзду */}
-        <div className="mb-2 row" style={{marginTop: 20}}>
+        <div className="mb-2 row" style={{marginTop: 40}}>
           <div className="col-auto">
             <label style={{ fontWeight: 500 }}>Check-in time:</label>
             <div className="d-flex align-items-center">

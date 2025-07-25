@@ -16,6 +16,21 @@ const Register = () => {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  const validatePassword = (password, username = "") => {
+  const specialChars = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+  let errors = [];
+  if (!/[A-Z]/.test(password)) errors.push("one uppercase letter");
+  if (!/[a-z]/.test(password)) errors.push("one lowercase letter");
+  if (!/[0-9]/.test(password)) errors.push("one number");
+  if (!new RegExp(`[${specialChars.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}]`).test(password))
+    errors.push("one special character");
+  if (/(.)\1\1/.test(password)) errors.push("no more than 2 identical characters in a row");
+  if (username && password.toLowerCase().includes(username.toLowerCase()))
+    errors.push("not contain your username");
+  return errors;
+};
+
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -24,11 +39,20 @@ const Register = () => {
       return;
     }
 
+    const passwordErrors = validatePassword(formData.password, formData.fullName);
+    if (passwordErrors.length > 0) {
+      setError(
+        "Password must contain at least " +
+          passwordErrors.join(", ")
+      );
+      return;
+    }
+
     registerUser({
       username: formData.fullName,
       email: formData.email,
       password: formData.password,
-      role: selectedRole,
+      //role: selectedRole,
     })
       .then((data) => {
         alert("You have successfully registered in our service!");
@@ -192,6 +216,12 @@ const Register = () => {
               onChange={handleChange}
             />
           </div>
+          <div>
+            <p style={{fontSize: 12, textAlign: 'center'}}>
+              Password must contain uppercase and lowercase letters, a number, a special character (!@#$%^&amp;*()_+-=[]{'{'}{'}'}|;:,.&lt;&gt;?), no more than 2 identical characters in a row, and must not contain your username.
+            </p>
+          </div>          
+
           <div style={{ position: "relative", marginBottom: 24 }}>
             <img
               src="/images/email-icon.png"

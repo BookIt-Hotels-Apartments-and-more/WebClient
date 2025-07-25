@@ -17,6 +17,7 @@ import AdminPanel from '../pages/admin/AdminPanel';
 import AdminAuth from '../pages/admin/AdminAuth'; 
 import AddHotel from "../pages/landlord/AddHotel";
 import EditHotel from "../pages/landlord/EditHotel";
+import AddApartment from "../pages/landlord/AddApartment";
 import EditApartment from "../pages/landlord/EditApartment";
 import Countries from "../pages/Countries";
 import CountrySelect from "../pages/CountrySelect";
@@ -47,6 +48,7 @@ const AppRouter = () => {
           <Route path="/landlordpanel" element={<LandPanel />} />
           <Route path="/add-hotel" element={<AddHotel />} />
           <Route path="/edit-hotel/:id" element={<EditHotel />} />
+          <Route path="/add-apartment/:establishmentId" element={<AddApartment />} />
           <Route path="/edit-apartment/:id" element={<EditApartment />} />
           <Route path="/countries" element={<Countries />} />
           <Route path="/country-select" element={<CountrySelect />} />

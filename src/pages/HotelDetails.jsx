@@ -226,6 +226,32 @@ const HotelDetails = () => {
     </div>
   );
 
+  function getFeatureBadges(features) {
+  if (!features) return null;
+  return Object.keys(features)
+    .filter(key => features[key])
+    .map((key, i) =>
+      <span
+        key={i}
+        style={{
+          background: "#D6E7EE", 
+          color: "#001B48",
+          fontWeight: 500,
+          fontSize: 15,
+          borderRadius: 16,
+          padding: "4px 16px",
+          boxShadow: "0 1px 4px #e2e8f0",
+          marginRight: 8,
+          marginBottom: 4,
+          display: "inline-block"
+        }}
+      >
+        {key.charAt(0).toUpperCase() + key.slice(1)}
+      </span>
+    );
+}
+
+
 
   if (!hotel) return <div>Loading...</div>;
 
@@ -262,30 +288,12 @@ const HotelDetails = () => {
             />
 
             <div
-                className="position-absolute top-0 start-0 w-100 px-4 pt-3 d-flex flex-wrap gap-2"
-                style={{ zIndex: 2 }}
-              >
-                {decodeFlags(hotel.features, ESTABLISHMENT_FEATURE_LABELS)
-                  .split(",")
-                  .map((feature, i) =>
-                    feature.trim() ? (
-                      <span
-                        key={i}
-                        style={{
-                          background: "#D6E7EE", 
-                          color: "#001B48",
-                          fontWeight: 500,
-                          fontSize: 15,
-                          borderRadius: 16,
-                          padding: "4px 16px",
-                          boxShadow: "0 1px 4px #e2e8f0"
-                        }}
-                      >
-                        {feature.trim()}
-                      </span>
-                    ) : <p key={i}>Feature hotel:</p>
-                  )}
-              </div>
+              className="position-absolute top-0 start-0 w-100 px-4 pt-3 d-flex flex-wrap gap-2"
+              style={{ zIndex: 2 }}
+            >
+              {getFeatureBadges(hotel.features)}
+            </div>
+
 
             {/* Назва, рейтинг та ціна поверх фото */}
             <div className="position-absolute bottom-0 start-0 w-100 p-4" style={{ background: "rgba(0,0,0,0.05)" }}>
@@ -305,7 +313,7 @@ const HotelDetails = () => {
               </span>
             </span>
 
-                  {/* Кнопки перемикання фото */}
+            {/* Кнопки перемикання фото */}
             <div
               className="position-absolute"
               style={{
@@ -377,7 +385,7 @@ const HotelDetails = () => {
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.google.com/maps?q=${encodeURIComponent(hotel.address)}&output=embed`}
+                  src={`https://maps.google.com/maps?q=${hotel.geolocation.latitude},${hotel.geolocation.longitude}&z=13&output=embed`}
                   title="Hotel location"
                 />
               </div>

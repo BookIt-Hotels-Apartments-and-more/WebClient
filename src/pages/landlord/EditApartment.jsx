@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getApartmentById, updateApartment } from "../../api/apartmentApi";
+import { APARTMENT_FEATURE_LABELS, normalizeFeaturesForCheckboxes } from "../../utils/enums";
 
 const EditApartment = () => {
   const { id } = useParams();
@@ -8,15 +9,15 @@ const EditApartment = () => {
   const [existingPhotos, setExistingPhotos] = useState([]); 
   const [newPhotos, setNewPhotos] = useState([]);
 
-
   const [apartment, setApartment] = useState({
       name: "",
       price: 0,
+      area: 0,
       capacity: 1,
       description: "",
+      features: normalizeFeaturesForCheckboxes(data.features, APARTMENT_FEATURE_LABELS),
       establishmentId: 0,
     });
-
 
   const [loading, setLoading] = useState(true);
 
@@ -27,30 +28,10 @@ const EditApartment = () => {
         setApartment({
           name: data.name || "",
           price: data.price || 0,
+          area: data.area || 0,
           capacity: data.capacity || 1,
           description: data.description || "",
-          establishmentId: data.establishment?.id || 0,
-        });
-
-      } catch (error) {
-        console.error("❌ Error loading apartment:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchApartment();
-  }, [id]);
-
-  useEffect(() => {
-    const fetchApartment = async () => {
-      try {
-        const data = await getApartmentById(id);
-        setApartment({
-          name: data.name || "",
-          price: data.price || 0,
-          capacity: data.capacity || 1,
-          description: data.description || "",
+          features: data.features || {},
           establishmentId: data.establishment?.id || 0,
         });
         setExistingPhotos(data.photos || []);
@@ -60,11 +41,9 @@ const EditApartment = () => {
         setLoading(false);
       }
     };
-
     fetchApartment();
   }, [id]);
-
-
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setApartment((prev) => ({
@@ -97,13 +76,11 @@ const EditApartment = () => {
     e.preventDefault();
     try {
       const existingPhotosIds = existingPhotos.map(p => p.id);
-      const getPureBase64 = (dataUrl) => dataUrl.split(',')[1];
-      const base64Only = newPhotos.map(getPureBase64);
 
       const payload = {
         ...apartment,
         existingPhotosIds,
-        newPhotosBase64: base64Only,
+        newPhotosBase64: newPhotos,
       };
 
       await updateApartment(id, payload);
@@ -132,6 +109,17 @@ const EditApartment = () => {
           />
         </div>
         <div className="mb-3">
+          <label className="form-label">Area</label>
+          <input
+            type="number"
+            name="area"
+            className="form-control"
+            value={apartment.area}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
           <label className="form-label">Price</label>
           <input
             type="number"
@@ -142,6 +130,28 @@ const EditApartment = () => {
             required
           />
         </div>
+
+        <div className="mb-3">
+          <label className="form-label">Features</label>
+          <div className="d-flex flex-wrap gap-3 mt-1">
+            {Object.keys(APARTMENT_FEATURE_LABELS).map(key => (
+              <label key={key} style={{ fontWeight: 400, marginRight: 16 }}>
+                <input
+                  type="checkbox"
+                  checked={!!apartment.features[key]}
+                  onChange={() =>
+                    setApartment(ap => ({
+                      ...ap,
+                      features: { ...ap.features, [key]: !ap.features[key] }
+                    }))
+                  }
+                /> {key}
+              </label>
+            ))}
+
+          </div>
+        </div>
+
         <input
           type="file"
           accept="image/*"

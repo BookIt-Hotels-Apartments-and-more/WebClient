@@ -11,7 +11,7 @@ const Footer = () => {
           backgroundPosition: 'center',
           width: '100%',
           maxWidth: '1955px',
-          height: '550px',
+          height: '650px',
           margin: '0 auto'
         }}>
       </div>      

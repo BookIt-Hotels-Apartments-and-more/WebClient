@@ -59,6 +59,48 @@ const sectionBoxStyle = {
   boxShadow: "0 2px 12px #0002",
 };
 
+const CustomCheckbox = ({ checked }) => (
+  <span
+    style={{
+      display: "inline-block",
+      width: 30,
+      height: 30,
+      background: "#fff",
+      borderRadius: 8,
+      border: `2px solid ${checked ? "#FF6D1F" : "#DEDEDE"}`,
+      position: "relative",
+      marginRight: 13,
+      verticalAlign: "middle"
+    }}
+  >
+    {checked && (
+      <svg
+        viewBox="0 0 26 26"
+        style={{
+          position: "absolute",
+          top: 5,
+          left: 5,
+          width: 26,
+          height: 26
+        }}
+      >
+        <polyline
+          points="3.5,9 7,12.5 13,5.5"
+          style={{
+            fill: "none",
+            stroke: "#FF6D1F",
+            strokeWidth: 2.5,
+            strokeLinecap: "round",
+            strokeLinejoin: "round"
+          }}
+        />
+      </svg>
+    )}
+  </span>
+);
+
+
+
 export default function HotelFilters({
   filters,
   setFilters,
@@ -89,16 +131,15 @@ export default function HotelFilters({
       style={{
         background: "none",
         borderRadius: 24,
-        minWidth: 340,
-        maxWidth: 360,
-        marginBottom: 32,
-        fontFamily: "inherit"
+        minWidth: 300,
+        maxWidth: 320,
+        marginBottom: 32
       }}
     >
       {/* Country */}
       {showCountry && (
         <div style={{ ...sectionBoxStyle, marginBottom: 20 }}>
-          <div style={{ ...sectionHeaderStyle, borderRadius: "16px", fontSize: 20, marginBottom: 6 }}>
+          <div style={{ ...sectionHeaderStyle, borderRadius: "16px", fontSize: 18, marginBottom: 6 }}>
             Country
           </div>
           <div className="mb-2" style={{ margin: "20px" }}>            
@@ -122,222 +163,207 @@ export default function HotelFilters({
         </div>
       )}
 
-      {/* Budget */}
-      <div style={{ marginBottom: 26 }}>
-        <div style={sectionHeaderStyle}>
+      {/* BUDGET */}
+      <div style={{ ...sectionBoxStyle, marginBottom: 26, padding: 0 }}>
+        <div
+          style={{
+            ...sectionHeaderStyle,
+            borderRadius: "16px 16px 0 0",
+            fontSize: 18,
+            marginBottom: 0,
+            textAlign: "left",
+            background: "#D6E7EE",
+            padding: "18px 28px 18px 28px",
+          }}
+        >
           Your budget per day
         </div>
-        <div style={sectionBoxStyle}>
-          <div className="d-flex flex-column gap-2">
-            {BUDGETS.map((b, idx) => (
-                <label
-                    key={b.label}
-                    className="d-flex align-items-center"
-                    style={{
-                    cursor: "pointer",
-                    fontWeight: 500,
-                    color: (Array.isArray(filters.budget) && filters.budget.includes(idx)) ? "#FF6D1F" : "#16396A",
-                    fontSize: 15,
-                    marginBottom: 2
-                    }}
-                >
-                    <input
-                    type="checkbox"
-                    checked={Array.isArray(filters.budget) && filters.budget.includes(idx)}
-                    onChange={() => toggleBudget(idx)}
-                    style={{
-                        marginRight: 13,
-                        accentColor: b.color,
-                        width: 20,
-                        height: 20,
-                        borderRadius: 6,
-                        border: "2px solid #DEDEDE"
-                    }}
-                    />
-                    <span
-                    style={{
-                        marginRight: 12,
-                        width: 16,
-                        height: 16,
-                        borderRadius: "50%",
-                        background: b.color,
-                        display: "inline-block"
-                    }}
-                    />
-                    {b.label}
-                </label>
-                ))}
+        <div style={{ padding: "18px 28px 0 28px" }}>
+          {BUDGETS.map((b, idx) => {
+            const isOrange = b.label === "$0 - $200" || b.label === "SALE";
+            const isChecked = Array.isArray(filters.budget) && filters.budget.includes(idx);
 
-          </div>
-          <div style={{ color: "#9DB0C0", fontSize: 15, marginTop: 14, fontWeight: 500 }}>
+            return (
+              <label
+                key={b.label}
+                className="d-flex align-items-center"
+                style={{
+                  cursor: "pointer",
+                  fontWeight: 300,
+                  color: isOrange
+                    ? "#FF6D1F"
+                    : "#16396A",
+                  fontSize: 18,
+                  marginBottom: 8,
+                  letterSpacing: "0.02em",
+                  transition: "color 0.2s",
+                  ...(isChecked && isOrange && { color: "#FF6D1F" }),
+                  ...(isChecked && !isOrange && { color: "#16396A" }),
+                  userSelect: "none"
+                }}
+                onClick={() => toggleBudget(idx)}
+              >
+                <CustomCheckbox checked={isChecked} />
+                {b.label}
+              </label>
+            );
+          })}
+          <div
+            style={{
+              color: "#9DB0C0",
+              fontSize: 16,
+              margin: 15,
+              paddingBlockEnd: 20,
+              fontWeight: 400,
+              marginBottom: 6,
+              letterSpacing: "0.01em",
+            }}
+          >
             Set your own budget
           </div>
-          <div className="d-flex gap-2 mt-1">
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Min"
-              style={{ maxWidth: 85, borderRadius: 8, fontSize: 15 }}
-              value={filters.customMin || ""}
-              onChange={e => setFilters(f => ({ ...f, customMin: e.target.value }))}
-            />
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Max"
-              style={{ maxWidth: 85, borderRadius: 8, fontSize: 15 }}
-              value={filters.customMax || ""}
-              onChange={e => setFilters(f => ({ ...f, customMax: e.target.value }))}
-            />
-          </div>
         </div>
       </div>
 
-      {/* Rating */}
-      <div style={{ marginBottom: 26 }}>
-        <div style={sectionHeaderStyle}>Rating</div>
-        <div style={sectionBoxStyle}>
-          <div style={{ color: "#6287A7", fontWeight: 500, marginBottom: 8 }}>Show only ratings more than</div>
-          <div className="d-flex flex-wrap gap-2">
-            {RATINGS.map(r => (
-              <button
-                key={r}
-                onClick={() => setRating(r)}
-                style={{
-                  borderRadius: 10,
-                  background: filters.rating === r ? "#FF6D1F" : "#fff",
-                  color: filters.rating === r ? "#fff" : "#16396A",
-                  border: "2px solid #E4E9EE",
-                  fontWeight: 700,
-                  fontSize: 17,
-                  padding: "5px 14px",
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: 4,
-                  boxShadow: filters.rating === r ? "0 2px 10px #FF6D1F30" : "none"
-                }}
-                type="button"
-              >
-                {r}
-                <span style={{
-                  marginLeft: 3,
-                  color: filters.rating === r ? "#fff" : "#FF993A",
-                  fontSize: 17
-                }}>&#9733;</span>
-              </button>
-            ))}
-          </div>
+      {/* RATING */}
+      <div style={{ ...sectionBoxStyle, marginBottom: 26 }}>
+        <div style={{...sectionHeaderStyle, borderRadius: "16px", fontSize: 18, marginBottom: 6}}>Rating</div>
+        <div style={{ color: "#6287A7", fontWeight: 500, marginBottom: 8, marginTop: 10, marginLeft: 20 }}>Show only ratings more than</div>
+        <div className="d-flex flex-wrap gap-2" style={{marginLeft: 20, alignItems: "center"}}>
+          {RATINGS.map(r => (
+            <button
+              key={r}
+              onClick={() => setRating(r)}
+              style={{
+                borderRadius: 10,
+                background: filters.rating === r ? "#FF6D1F" : "#fff",
+                color: filters.rating === r ? "#fff" : "#FF6D1F",
+                border: "2px solid #E4E9EE",
+                fontWeight: 700,
+                fontSize: 14,
+                width: 50,
+                padding: "5px 10px",
+                display: "flex",
+                alignItems: "center",
+                boxShadow: filters.rating === r ? "0 2px 10px #FF6D1F30" : "none"
+              }}
+              type="button"
+            >
+              {r}
+              <span style={{
+                marginLeft: 3,
+                color: filters.rating === r ? "#fff" : "#FF993A",
+                fontSize: 15
+              }}>&#9733;</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Facilities */}
-      <div style={{ marginBottom: 26 }}>
-        <div style={sectionHeaderStyle}>Facilities</div>
-        <div style={sectionBoxStyle}>
-          <div className="d-flex flex-column gap-2">
-            {FACILITIES.map(fac => (
-              <label key={fac.key}
+      {/* FACILITIES */}
+      <div style={{ ...sectionBoxStyle, marginBottom: 26 }}>
+        <div style={{ ...sectionHeaderStyle, borderRadius: "16px", fontSize: 18, marginBottom: 6 }}>
+          Facilities
+        </div>
+        <div className="d-flex flex-column gap-2" style={{ marginTop: 10, marginLeft: 20 }}>
+          {FACILITIES.map(fac => {
+            const isChecked = filters[fac.key] || false;
+            return (
+              <label
+                key={fac.key}
                 className="d-flex align-items-center"
                 style={{
                   cursor: "pointer",
-                  color: fac.highlight && filters[fac.key] ? "#FF6D1F" : "#16396A",
-                  fontSize: 16,
-                  fontWeight: 500
-                }}>
-                <input
-                  type="checkbox"
-                  checked={filters[fac.key] || false}
-                  onChange={e => setFilters(fltrs => ({
+                  color: isChecked ? "#FF6D1F" : "#16396A",
+                  fontSize: 14,
+                  fontWeight: 400,
+                  marginBottom: 4,
+                  transition: "color 0.2s",
+                  userSelect: "none"
+                }}
+                onClick={() =>
+                  setFilters(fltrs => ({
                     ...fltrs,
-                    [fac.key]: e.target.checked
-                  }))}
-                  style={{
-                    marginRight: 13,
-                    accentColor: "#FF6D1F",
-                    width: 20,
-                    height: 20,
-                    borderRadius: 6,
-                    border: "2px solid #DEDEDE"
-                  }}
-                />
+                    [fac.key]: !isChecked
+                  }))
+                }
+              >
+                <CustomCheckbox checked={isChecked} />
                 {fac.label}
               </label>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Activities */}
-      <div style={{ marginBottom: 26 }}>
-        <div style={sectionHeaderStyle}>Activities</div>
-        <div style={sectionBoxStyle}>
-          <div className="d-flex flex-column gap-2">
-            {ACTIVITIES.map(act => (
-              <label key={act.key}
+      {/* ACTIVITIES */}
+      <div style={{ ...sectionBoxStyle, marginBottom: 26 }}>
+        <div style={{ ...sectionHeaderStyle, borderRadius: "16px", fontSize: 18, marginBottom: 6 }}>
+          Activities
+        </div>
+        <div className="d-flex flex-column gap-2" style={{ marginTop: 10, marginLeft: 20 }}>
+          {ACTIVITIES.map(act => {
+            const isChecked = filters[act.key] || false;
+            return (
+              <label
+                key={act.key}
                 className="d-flex align-items-center"
                 style={{
                   cursor: "pointer",
-                  color: act.highlight && filters[act.key] ? "#FF6D1F" : "#16396A",
-                  fontSize: 16,
-                  fontWeight: 500
-                }}>
-                <input
-                  type="checkbox"
-                  checked={filters[act.key] || false}
-                  onChange={e => setFilters(fltrs => ({
+                  color: isChecked ? "#FF6D1F" : "#16396A",
+                  fontSize: 14,
+                  fontWeight: 400,
+                  marginBottom: 4,
+                  transition: "color 0.2s",
+                  userSelect: "none"
+                }}
+                onClick={() =>
+                  setFilters(fltrs => ({
                     ...fltrs,
-                    [act.key]: e.target.checked
-                  }))}
-                  style={{
-                    marginRight: 13,
-                    accentColor: "#FF6D1F",
-                    width: 20,
-                    height: 20,
-                    borderRadius: 6,
-                    border: "2px solid #DEDEDE"
-                  }}
-                />
+                    [act.key]: !isChecked
+                  }))
+                }
+              >
+                <CustomCheckbox checked={isChecked} />
                 {act.label}
               </label>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Special */}
-      <div style={{ marginBottom: 26 }}>
-        <div style={sectionHeaderStyle}>Special</div>
-        <div style={sectionBoxStyle}>
-          <div className="d-flex flex-column gap-2">
-            {SPECIAL.map(sp => (
-              <label key={sp.key}
+      {/* SPECIAL */}
+      <div style={{ ...sectionBoxStyle, marginBottom: 26 }}>
+        <div style={{ ...sectionHeaderStyle, borderRadius: "16px", fontSize: 18, marginBottom: 6 }}>
+          Special
+        </div>
+        <div className="d-flex flex-column gap-2" style={{ marginTop: 10, marginLeft: 20 }}>
+          {SPECIAL.map(sp => {
+            const isChecked = filters[sp.key] || false;
+            return (
+              <label
+                key={sp.key}
                 className="d-flex align-items-center"
                 style={{
                   cursor: "pointer",
-                  color: sp.highlight && filters[sp.key] ? "#FF6D1F" : "#16396A",
-                  fontSize: 16,
-                  fontWeight: 500
-                }}>
-                <input
-                  type="checkbox"
-                  checked={filters[sp.key] || false}
-                  onChange={e => setFilters(fltrs => ({
+                  color: isChecked ? "#FF6D1F" : "#16396A",
+                  fontSize: 14,
+                  fontWeight: 400,
+                  marginBottom: 4,
+                  transition: "color 0.2s",
+                  userSelect: "none"
+                }}
+                onClick={() =>
+                  setFilters(fltrs => ({
                     ...fltrs,
-                    [sp.key]: e.target.checked
-                  }))}
-                  style={{
-                    marginRight: 13,
-                    accentColor: "#FF6D1F",
-                    width: 20,
-                    height: 20,
-                    borderRadius: 6,
-                    border: "2px solid #DEDEDE"
-                  }}
-                />
+                    [sp.key]: !isChecked
+                  }))
+                }
+              >
+                <CustomCheckbox checked={isChecked} />
                 {sp.label}
               </label>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
 

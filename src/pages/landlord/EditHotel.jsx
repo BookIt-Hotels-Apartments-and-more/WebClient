@@ -7,6 +7,7 @@ import {
   ESTABLISHMENT_TYPE_LABELS,
   ESTABLISHMENT_FEATURE_LABELS
 } from '../../utils/enums';
+import { APARTMENT_FEATURE_LABELS, normalizeFeaturesForCheckboxes } from "../../utils/enums";
 
 const EditHotel = () => {
   const { id } = useParams();
@@ -78,9 +79,6 @@ const EditHotel = () => {
       .catch(console.error);
   }, [id]);
 
-
-
-
   const handleChange = (e) => {
     setHotel((prev) => ({
       ...prev,
@@ -107,24 +105,24 @@ const EditHotel = () => {
     }
   };
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const existingPhotosIds = existingPhotos.map(p => p.id);
-      const getPureBase64 = (dataUrl) => dataUrl.split(',')[1];
-      const base64Only = newPhotos.map(getPureBase64);
+      const existingPhotosIds = existingPhotos
+        .map(p => p.id)
+        .filter(id => typeof id === "number" && !isNaN(id));
+
 
       const payload = {
         name: hotel.name,
         description: hotel.description,
         type: hotel.type,
         features: hotel.features,
-        checkInTime: `${String(checkInHour).padStart(2, '0')}:${String(checkInMinute).padStart(2, '0')}:00`,
-        checkOutTime: `${String(checkOutHour).padStart(2, '0')}:${String(checkOutMinute).padStart(2, '0')}:00`,
+        checkInTime: `${checkInHour.toString().padStart(2, '0')}:${checkInMinute.toString().padStart(2, '0')}:00`,
+        checkOutTime: `${checkOutHour.toString().padStart(2, '0')}:${checkOutMinute.toString().padStart(2, '0')}:00`,
         ownerId: hotel.ownerId || user?.id,
         existingPhotosIds,
-        newPhotosBase64: base64Only,
+        newPhotosBase64: newPhotos,
         latitude: position[0],
         longitude: position[1],        
       };
@@ -141,9 +139,6 @@ const EditHotel = () => {
       console.error("❌ Update failed", err);
     }
   };
-
-
-
 
   return (
     <div className="container mt-4">

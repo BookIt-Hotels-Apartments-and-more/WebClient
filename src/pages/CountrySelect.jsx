@@ -66,7 +66,7 @@ export default function CountrySelect() {
         style={{
           width: '100%',
           maxWidth: '1955px',
-          minHeight: '487px',
+          minHeight: '687px',
           backgroundImage: "url('/images/homebaner.png')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
@@ -78,7 +78,7 @@ export default function CountrySelect() {
       </div>
       <BookingBannerForm search={search} setSearch={setSearch} />
 
-      <div className="container py-5">
+      <div className="container py-5" style={{ width: 2800}}>
         <div className="breadcrumbs"
           style={{
             display: "flex",
@@ -99,20 +99,12 @@ export default function CountrySelect() {
           />
         </div>
 
-        <h2 className="fw-bold mb-3">
-          <svg
-            width="40"
-            height="40"
-            viewBox="0 0 40 40"
-            fill="none"
-            stroke="#082957"
-            strokeWidth="3.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M6 8H34L24 22V32L16 28V22L6 8Z" fill="none"/>
-          </svg>
+        <h2 className="fw-bold mb-3 d-flex align-items-center" style={{color: '#16396A'}}>
+          <img
+            src="/images/filter.png"
+            alt="Filters icon"
+            style={{ width: 40, height: 40, marginRight: 14 }}
+          />
           Filters by
         </h2>
 
