@@ -63,3 +63,10 @@ export function normalizeFeaturesForCheckboxes(backendFeatures, LABELS) {
   return result;
 }
 
+export function featuresObjectToBitmask(featuresObj, featureLabels) {
+  return Object.entries(featureLabels)
+    .filter(([key]) => featuresObj[key])
+    .reduce((sum, [, value]) => sum + value, 0);
+}
+
+

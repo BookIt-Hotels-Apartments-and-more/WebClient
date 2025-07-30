@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getApartmentById, updateApartment } from "../../api/apartmentApi";
-import { APARTMENT_FEATURE_LABELS, normalizeFeaturesForCheckboxes } from "../../utils/enums";
+import { APARTMENT_FEATURE_LABELS, normalizeFeaturesForCheckboxes, featuresObjectToBitmask } from "../../utils/enums";
 
 const EditApartment = () => {
   const { id } = useParams();
@@ -10,14 +10,14 @@ const EditApartment = () => {
   const [newPhotos, setNewPhotos] = useState([]);
 
   const [apartment, setApartment] = useState({
-      name: "",
-      price: 0,
-      area: 0,
-      capacity: 1,
-      description: "",
-      features: normalizeFeaturesForCheckboxes(data.features, APARTMENT_FEATURE_LABELS),
-      establishmentId: 0,
-    });
+    name: "",
+    price: 0,
+    area: 0,
+    capacity: 1,
+    description: "",
+    features: {},
+    establishmentId: 0,
+  });
 
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +31,7 @@ const EditApartment = () => {
           area: data.area || 0,
           capacity: data.capacity || 1,
           description: data.description || "",
-          features: data.features || {},
+          features: normalizeFeaturesForCheckboxes(data.features, APARTMENT_FEATURE_LABELS),
           establishmentId: data.establishment?.id || 0,
         });
         setExistingPhotos(data.photos || []);
@@ -43,6 +43,9 @@ const EditApartment = () => {
     };
     fetchApartment();
   }, [id]);
+
+  const featuresBitmask = featuresObjectToBitmask(apartment.features, APARTMENT_FEATURE_LABELS);
+
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -79,6 +82,7 @@ const EditApartment = () => {
 
       const payload = {
         ...apartment,
+        features: featuresBitmask,
         existingPhotosIds,
         newPhotosBase64: newPhotos,
       };

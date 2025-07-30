@@ -39,6 +39,28 @@ export default function Countries() {
                   marginBlockEnd: '-100px',
                   zIndex: 1
                 }}>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: '25%',
+                      top: '80%',
+                      transform: 'translate(-50%, -50%)',
+                      fontFamily: "'Sora', Arial, sans-serif",
+                      fontWeight: 300,
+                      fontSize: 50,
+                      lineHeight: 1.1,
+                      color: "white",
+                      WebkitTextStroke: "1.5px #fff",
+                      textStroke: "1.5px #fff",
+                      letterSpacing: "0px",
+                      whiteSpace: 'pre-line',
+                    }}
+                  >
+                    <span>Quick and Easy</span>
+                    <br />
+                    <span style={{ fontSize: 56 }}>PLANNING</span>
+                  </span>
+
               </div>
               <BookingBannerForm search={search} setSearch={setSearch} />
 

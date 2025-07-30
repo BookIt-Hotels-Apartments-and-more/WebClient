@@ -92,7 +92,7 @@ const Register = () => {
           padding: "48px 32px 48px 32px",
           minWidth: 480,
           width: 1100,
-          height: 670,
+          height: 700,
           marginTop: 80,
           boxShadow: "0 4px 32px 0 rgba(31, 38, 135, 0.13)",
           display: "flex",

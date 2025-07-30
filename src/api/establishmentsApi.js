@@ -30,6 +30,17 @@ export const updateEstablishment = async (id, data) => {
   return res.data;
 };
 
+export const getEstablishmentsByOwnerFiltered = async (ownerId, filters = {}) => {
+  const params = {
+    ownerId,
+    ...filters,
+  };
+  const res = await axiosInstance.get("/api/Establishments/filter", { params });
+  return res.data.items;
+};
+
+
+
 
 
 

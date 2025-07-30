@@ -51,10 +51,11 @@ const BookingBannerForm = ({ search, setSearch }) => {
         borderRadius: 22,
         boxShadow: "0 6px 36px 0 #d6e7ee",
         padding: "32px 35px 26px 35px",
-        maxWidth: 1050,
+        maxWidth: 850,
+        minWidth: 200,
         margin: "0 auto",
         position: "relative",
-        top: -450,
+        top: -350,
         zIndex: 10,
         display: "flex",
         flexDirection: "column",
@@ -68,6 +69,7 @@ const BookingBannerForm = ({ search, setSearch }) => {
           display: "flex",
           gap: 16,
           width: "100%",
+          minWidth: 180,
           justifyContent: "center",
           marginBottom: 6,
         }}
@@ -77,14 +79,13 @@ const BookingBannerForm = ({ search, setSearch }) => {
           className="form-control"
           placeholder="Enter directly, or name..."
           style={{
-            maxWidth: 820,
+            maxWidth: '100%',
+            minWidth: 150,
             height: 44,
             fontSize: 17,
             borderRadius: 11,
             background: "#fff",
             outline: "none",
-            paddingLeft: 18,
-            marginRight: 4,
           }}
           value={searchLocal}
           onChange={e => setSearchLocal(e.target.value)}
@@ -92,6 +93,7 @@ const BookingBannerForm = ({ search, setSearch }) => {
         <button
           className="btn"
           style={{
+            maxWidth: 100,
             minWidth: 100,
             height: 44,
             background: "#97cadb",
@@ -104,7 +106,7 @@ const BookingBannerForm = ({ search, setSearch }) => {
             justifyContent: "center",
             border: "none",
             boxShadow: "0 2px 8px #d6e7ee",
-            marginLeft: -120,
+            marginLeft: -100,
           }}
           onClick={() => setSearch(searchLocal)}
         >
@@ -113,15 +115,8 @@ const BookingBannerForm = ({ search, setSearch }) => {
       </div>
 
       {/* Нижній рядок: дати та люди */}
-      <div
-        style={{
-          display: "flex",
-          gap: 22,
-          width: "100%",
-          justifyContent: "center",
-        }}
-      >
-        <div style={{ minWidth: 260 }}>
+      <div className="fields-row d-flex flex-md-row flex-column align-items-stretch justify-content-center gap-2" style={{ width: "100%" }}>
+        <div style={{ minWidth: 180, flex: 1 }}>
           <DatePicker
             selected={checkIn}
             onChange={(date) => {
@@ -145,7 +140,7 @@ const BookingBannerForm = ({ search, setSearch }) => {
             }}
           />
         </div>
-        <div style={{ minWidth: 260 }}>
+        <div style={{ minWidth: 180, flex: 1 }}>
           <DatePicker
             selected={checkOut}
             onChange={setCheckOut}
@@ -171,13 +166,15 @@ const BookingBannerForm = ({ search, setSearch }) => {
           className="form-control"
           placeholder="Peoples"
           style={{
-            maxWidth: 260,
+            maxWidth: 180,
             height: 44,
             fontSize: 16,
             borderRadius: 11,
             border: "1.5px solid #cce2ec",
             background: "#fff",
             paddingLeft: 18,
+            flex: 1,
+            minWidth: 0,
           }}
           value={people}
           min={1}

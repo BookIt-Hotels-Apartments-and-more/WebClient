@@ -68,34 +68,36 @@ const TopTrendingHotels = () => {
 
   // Топові готелі за останні 30 днів
   const topHotels = useMemo(() => {
-    if (!hotels.length) return [];
+  if (!hotels.length) return [];
 
-    const now = new Date();
-    const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
-
-    // Рахуємо бронювання тільки за останній місяць
-    const bookingsCount = {};
-    bookings.forEach(b => {
-      const estId = b.apartment?.establishment?.id || b.establishment?.id;
-      const created = b.createdAt ? new Date(b.createdAt) : null;
-      if (estId && (!created || (now - created) < THIRTY_DAYS)) {
-        bookingsCount[estId] = (bookingsCount[estId] || 0) + 1;
-      }
-    });
-
-    let hotelsWithCount = hotels.map(hotel => ({
-      ...hotel,
-      bookingsCount: bookingsCount[hotel.id] || 0,
-    }));
-
-    // Фільтрація по країні
-    if (selectedCountry && selectedCountry !== "All") {
-      hotelsWithCount = hotelsWithCount.filter(h => h.geolocation?.country === selectedCountry);
+  const now = new Date();
+  const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
+  const bookingsCount = {};
+  bookings.forEach(b => {
+    const estId = b.apartment?.establishment?.id || b.establishment?.id;
+    const created = b.createdAt ? new Date(b.createdAt) : null;
+    if (estId && (!created || (now - created) < THIRTY_DAYS)) {
+      bookingsCount[estId] = (bookingsCount[estId] || 0) + 1;
     }
+  });
 
-    hotelsWithCount.sort((a, b) => b.bookingsCount - a.bookingsCount);
-    return hotelsWithCount.slice(0, 3);
-  }, [hotels, bookings, selectedCountry]);
+  let hotelsWithCount = hotels.map(hotel => ({
+    ...hotel,
+    bookingsCount: bookingsCount[hotel.id] || 0,
+  }));
+
+  // Фільтрація по країні
+  if (selectedCountry && selectedCountry !== "All") {
+    hotelsWithCount = hotelsWithCount.filter(h => h.geolocation?.country === selectedCountry);
+  }
+
+  hotelsWithCount.sort((a, b) => b.bookingsCount - a.bookingsCount);
+
+  return hotelsWithCount; // <-- Всі топові, без slice!
+}, [hotels, bookings, selectedCountry]);
+
+// Для рендера на Home:
+const displayTopHotels = topHotels.slice(0, 3);
 
   if (loading) {
     return (
@@ -143,8 +145,17 @@ const TopTrendingHotels = () => {
             <h2 className="fw-bold mb-0" style={{ fontSize: 24, color: "#1b3966" }}>Top trending hotel in world</h2>
           </div>
 
-          {/* Реалізувати вивід всіх готелів цієї категорії */}
-          <button className="btn btn-link fw-bold" style={{ color: "#1b3966", fontSize: 15, textDecoration: "none" }}>
+          <button
+              className="btn btn-link fw-bold"
+              style={{ color: "#1b3966", fontSize: 15, textDecoration: "none" }}
+              onClick={() => navigate("/hotels", {
+                state: {
+                  source: "TopTrendingHotels",
+                  hotels: topHotels, // <-- Передаєм ВСІ на HotelList
+                  title: "Top Trending Hotels"
+                }
+              })}
+          >
             See all →
           </button>
 
@@ -179,7 +190,7 @@ const TopTrendingHotels = () => {
                 minHeight: 290,
             }}
             >
-            {topHotels.map((hotel) => {
+            {displayTopHotels.map((hotel) => {
                 // Визначаємо apartmentId для фаворитів (візьми перший apartment готелю)
                 const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
                 const apartmentId = hotelApartments[0]?.id;

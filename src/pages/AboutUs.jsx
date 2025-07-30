@@ -7,29 +7,21 @@ const AboutUs = () => {
         style={{
           width: '100%',
           maxWidth: '1955px',
-          minHeight: '487px',
+          minHeight: '450px',
           backgroundImage: "url('/images/aboutus.png')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           margin: '0 auto',
           marginTop: '-110px',
-          zIndex: 1
+          zIndex: 1,
+          position: 'relative',
         }}>
-      </div>
-
-      {/* Outline-текст ЗВЕРХУ */}
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 1150,
-            textAlign: "center",
-            marginBottom: 18,
-            marginTop: '-320px',
-            marginBlockEnd: '300px',
-          }}
-        >
           <span
             style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
               fontFamily: "'Sora', Arial, sans-serif",
               fontWeight: 700,
               fontSize: 130,
@@ -38,19 +30,19 @@ const AboutUs = () => {
               WebkitTextStroke: "1.5px #fff",
               textStroke: "1.5px #fff",
               letterSpacing: "0px",
-              display: "inline-block",
+              whiteSpace: 'nowrap',
             }}
           >
             ABOUT US
           </span>
-        </div>
+              </div>              
 
       <div className="container my-5">
         <div className="row bg-white rounded-4 px-2  mx-0 align-items-center flex-md-row flex-column"
           style={{ maxWidth: '1300px', margin: '80px auto 0 auto' }}>
         
           <div className="col-md-7 col-12 mb-4 mb-md-0">
-            <h2 className="fw-normal mb-2" style={{ fontSize: '2.2rem' }}>
+            <h2 className="fw-normal mb-2" style={{ fontSize: '2.2rem', color: "#001B48" }}>
               Welcome to <b>BOOKIT</b>
             </h2>
             <p className="mb-3" style={{ fontSize: '1.25rem', color: '#3e3e3e' }}>
@@ -83,13 +75,74 @@ const AboutUs = () => {
           <div className="col-md-5 col-12 d-flex justify-content-center align-items-center">
             <img
               src="/images/aboutusbag.png"
-              alt="Дівчина на чемодані"
+              alt="Girls on the bag"
               className="img-fluid rounded-3"
               style={{ maxWidth: 340, minWidth: 180 }}
             />
           </div>
-        </div>
+
+          <h1 style={{marginTop: 50, marginBlockEnd: 30, color: "#001B48", textAlign: "center"}}>What We Offer</h1>
+
+          <div>
+            <img
+              src="/images/bookingsworldwide.png"
+              alt="bookings worldwide"
+              className="img-fluid rounded-3"
+              style={{ maxWidth: 210, minWidth: 210 }}
+            />
+            <img
+              src="/images/customtours.png"
+              alt="Custom tours"
+              className="img-fluid rounded-3"
+              style={{ maxWidth: 210, minWidth: 210 }}
+            />
+            <img
+              src="/images/airporttransfer.png"
+              alt="Airport transfer"
+              className="img-fluid rounded-3"
+              style={{ maxWidth: 210, minWidth: 210 }}
+            />
+            <img
+              src="/images/customerservice.png"
+              alt="Customer service"
+              className="img-fluid rounded-3"
+              style={{ maxWidth: 210, minWidth: 210 }}
+            />
+            <img
+              src="/images/safetransaction.png"
+              alt="Customer service"
+              className="img-fluid rounded-3"
+              style={{ maxWidth: 210, minWidth: 210 }}
+            />
+          </div>      
+        </div>        
       </div>
+
+      <div style={{width: '100%',
+          maxWidth: '1955px',
+          minHeight: '250px',
+          backgroundImage: "url('/images/makeyourvacation.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          margin: '0 auto',
+          zIndex: 1,
+          position: 'relative',}}>
+        </div>
+
+        <div className="container my-5" style={{marginBlockEnd: -200}}>
+          <h1 style={{marginTop: 50, marginBlockEnd: 30, color: "#001B48"}}>Why Choose Us:</h1>
+          <div style={{
+            width: '100%',
+            height: '500px',
+            backgroundImage: "url('/images/whychooseus2.png')",
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',            
+          }}>
+
+          </div>
+        </div>
+
     </div>
   );
 };

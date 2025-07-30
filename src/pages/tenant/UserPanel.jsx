@@ -16,7 +16,10 @@ const UserPanel = () => {
     username: user?.username || "",
     email: user?.email || "",
     phonenumber: user?.phonenumber,
+    photoBase64: "",
+    photoPreview: user?.photoUrl || "", // якщо є
   });
+
 
   // --- Додаткові дані для розділів (можна буде замінити на API)
   const [activeStep] = useState(2); // 1-2-3; поки статично
@@ -68,10 +71,18 @@ const UserPanel = () => {
     setEditedUser((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    // TODO: PATCH request to backend
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      if (editedUser.photoBase64) {
+        await uploadUserPhoto(editedUser.photoBase64);
+      }
+      // Додати потім інше для збереження профілю (ім’я, email і т.д.)
+      setIsEditing(false);
+    } catch (err) {
+      alert('Error saving profile!');
+    }
   };
+
 
   const handleCancel = () => {
     setEditedUser({
@@ -86,6 +97,21 @@ const UserPanel = () => {
     await removeFavorite(favoriteId);
     setFavorites(favorites.filter((f) => f.id !== favoriteId));
   };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setEditedUser(prev => ({
+        ...prev,
+        photoBase64: ev.target.result.split(',')[1],
+        photoPreview: ev.target.result
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
 
   // --- Розбивка бронювань
   const myBookings = bookings.filter(
@@ -158,10 +184,21 @@ const UserPanel = () => {
               <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 18 }}>Your details</div>
               <div className="d-flex align-items-center gap-3 mb-3">              
                 <div>
+
+                  {/*    EDIT    */}
                   {isEditing ? (
                     <>           
                   {/* Full name */}
                   <div style={{ marginBottom: 24 }}>
+                    {user?.photoUrl && (
+                      <img
+                        src={user.photoUrl}
+                        alt="User avatar"
+                        width={90}
+                        height={90}
+                        style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", marginBottom: 12 }}
+                      />
+                    )}
                     <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
                       Full name
                     </label>
@@ -236,6 +273,30 @@ const UserPanel = () => {
                       onChange={handleInputChange}
                       placeholder="Phone number"
                     />
+                    {/* User photo upload */}
+                    <div style={{ marginBottom: 32 }}>
+                      <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
+                        Profile photo
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="form-control"
+                        onChange={handlePhotoChange}
+                      />
+                      {editedUser.photoPreview && (
+                        <div style={{ marginTop: 10 }}>
+                          <img
+                            src={editedUser.photoPreview}
+                            alt="Profile preview"
+                            width={90}
+                            height={90}
+                            style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee" }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     <div style={{ fontSize: 13, color: "#6E7C87", fontWeight: 400, marginTop: 2 }}>
                       To confirm your level and be able to contact you if necessary
                     </div>

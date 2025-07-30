@@ -29,7 +29,7 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
   const loadData = async () => {
     try {
       const allApts = await getApartmentsByEstablishment(est.id);
-      setApartments(allApts);
+      setApartments(Array.isArray(allApts) ? allApts : []);
 
       const bookingsData = await getAllBookings();
       const filteredBookings = bookingsData.filter(

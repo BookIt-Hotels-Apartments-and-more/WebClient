@@ -4,6 +4,7 @@ const token = localStorage.getItem("token");
 
 export const axiosInstance = axios.create({
   baseURL: "https://localhost:7065",
+  //baseURL: "https://www.bookit.pp.ua",
   withCredentials: true,
   headers: {
     Authorization: token ? `Bearer ${token}` : "",

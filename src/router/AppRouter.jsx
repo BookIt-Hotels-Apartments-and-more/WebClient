@@ -22,6 +22,7 @@ import EditApartment from "../pages/landlord/EditApartment";
 import Countries from "../pages/Countries";
 import CountrySelect from "../pages/CountrySelect";
 import ScrollToTop from "../components/ScrollToTop";
+import HotelsList from "../components/HotelsList";
 
 
 
@@ -40,6 +41,7 @@ const AppRouter = () => {
           <Route path="/whoareyou" element={<WhoAreYou />} />
           <Route path="/register" element={<Register />} />
           <Route path="/hotels/:id" element={<HotelDetails />} />
+          <Route path="/hotels" element={<HotelsList />} />
           <Route path="/admin-auth" element={<AdminAuth />} />
           {/* <Route path="/adminpanel" element={<ProtectedRoute role={0}><AdminPanel /></ProtectedRoute>} />   */}
           <Route path="/adminpanel" element={<AdminPanel />} />  

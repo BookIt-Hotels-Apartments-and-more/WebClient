@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { getAllEstablishments } from "../api/establishmentsApi";
 import { getAllBookings } from "../api/bookingApi";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 
 
@@ -34,24 +35,27 @@ const PopularDestinations = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const topHotels = useMemo(() => {
-    if (!hotels.length) return [];
+  const popularHotels = useMemo(() => {
+  if (!hotels.length) return [];
 
-    const bookingsCount = {};
-    bookings.forEach(b => {
-      const estId = b.apartment?.establishment?.id || b.establishment?.id; 
-      if (estId) bookingsCount[estId] = (bookingsCount[estId] || 0) + 1;
-    });
+  const bookingsCount = {};
+  bookings.forEach(b => {
+    const estId = b.apartment?.establishment?.id || b.establishment?.id;
+    if (estId) bookingsCount[estId] = (bookingsCount[estId] || 0) + 1;
+  });
 
-    const hotelsWithCount = hotels.map(hotel => ({
-      ...hotel,
-      bookingsCount: bookingsCount[hotel.id] || 0,
-    }));
+  const hotelsWithCount = hotels.map(hotel => ({
+    ...hotel,
+    bookingsCount: bookingsCount[hotel.id] || 0,
+  }));
 
-    hotelsWithCount.sort((a, b) => b.bookingsCount - a.bookingsCount);
+  hotelsWithCount.sort((a, b) => b.bookingsCount - a.bookingsCount);
 
-    return hotelsWithCount.slice(0, 5);
-  }, [hotels, bookings]);
+  return hotelsWithCount; // ← ПОВНИЙ СПИСОК!
+}, [hotels, bookings]);
+
+const displayHotels = popularHotels.slice(0, 5);
+
 
   if (loading) {
     return (
@@ -63,7 +67,7 @@ const PopularDestinations = () => {
     );
   }
 
-  if (topHotels.length === 0) {
+  if (popularHotels.length === 0) {
     return (
       <section className="my-5">
         <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
@@ -82,9 +86,20 @@ const PopularDestinations = () => {
             <h2 className="fw-bold mb-0" style={{ fontSize: 24, color: "#1b3966" }}>Popular destinations</h2>
             <div style={{ fontSize: 15, color: "#ff9800", marginTop: 2 }}>Discover famous destination around the world</div>
           </div>
-          <button className="btn btn-link fw-bold" style={{ color: "#1b3966", fontSize: 15, textDecoration: "none" }}>
+          <button
+            className="btn btn-link fw-bold"
+            style={{ color: "#1b3966", fontSize: 15, textDecoration: "none" }}
+            onClick={() => navigate("/hotels", {
+              state: {
+                source: "PopularDestinations",
+                hotels: popularHotels, // ← передаєш усі!
+                title: "Popular Destinations"
+              }
+            })}
+          >
             See all →
           </button>
+
         </div>
         {/* Grid */}
         <div
@@ -111,7 +126,7 @@ const PopularDestinations = () => {
                     boxShadow: "none",
                     cursor: "pointer"
                 }}
-                onClick={() => navigate(`/hotels/${topHotels[0]?.id}`)}
+                onClick={() => navigate(`/hotels/${hotel.id}`)}
                 >
                 <div style={{
                     position: "relative",
@@ -124,8 +139,8 @@ const PopularDestinations = () => {
                     flexDirection: "column"
                     }}>
                     <img
-                        src={topHotels[0]?.photos?.[0]?.blobUrl || "/noimage.png"}
-                        alt={topHotels[0]?.name}
+                        src={popularHotels[0]?.photos?.[0]?.blobUrl || "/noimage.png"}
+                        alt={popularHotels[0]?.name}
                         style={{
                         width: "100%",
                         height: "100%",
@@ -151,7 +166,7 @@ const PopularDestinations = () => {
                     justifyContent: "flex-end"
                     }}>
                     <div className="d-flex align-items-center justify-content-between mb-1">
-                        <span style={{ fontWeight: 700, fontSize: 19, color: "#2C5C4E" }}>{topHotels[0]?.name}</span>
+                        <span style={{ fontWeight: 700, fontSize: 19, color: "#2C5C4E" }}>{popularHotels[0]?.name}</span>
                         <span style={{
                         background: "rgba(255,255,255,0.96)",
                         borderRadius: 12,
@@ -166,18 +181,18 @@ const PopularDestinations = () => {
                         }}>
                         
                         <img src="/images/reitingstar-orange.png" alt="" style={{ width: 16, height: 16, marginRight: 5, verticalAlign: "middle" }} />
-                        {topHotels[0]?.rating?.toFixed(1) ?? "—"}
+                        {displayHotels[0]?.rating?.toFixed(1) ?? "—"}
                         </span>
                     </div>
                     
-                    <div style={{ fontWeight: 400, fontSize: 13, color: "#333" }}>{topHotels[0]?.description}</div>
-                <div style={{ fontWeight: 400, fontSize: 13, color: "#666", marginTop: 4 }}>Бронювань: {topHotels[0]?.bookingsCount}</div>
+                    <div style={{ fontWeight: 400, fontSize: 13, color: "#333" }}>{popularHotels[0]?.description}</div>
+                <div style={{ fontWeight: 400, fontSize: 13, color: "#666", marginTop: 4 }}>Бронювань: {popularHotels[0]?.bookingsCount}</div>
             </div>
         </div>
         </div>
 
           {/* Решта 4 — горизонтальні */}
-          {topHotels.slice(1).map((hotel, idx) => (
+          {displayHotels.slice(1).map((hotel, idx) => (
             <div
                 key={hotel.id}
                 style={{
@@ -191,7 +206,7 @@ const PopularDestinations = () => {
                 position: "relative",
                 cursor: "pointer"
                 }}
-                onClick={() => navigate(`/hotels/${topHotels[0]?.id}`)}
+                onClick={() => navigate(`/hotels/${hotel.id}`)}
             >
                 <div style={{ position: "relative", width: "100%", height: 270, borderRadius: 6, overflow: "hidden" }}>
                 <img

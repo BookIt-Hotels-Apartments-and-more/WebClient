@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useContext  } from "react";
 import { useLocation, Link, useNavigate  } from "react-router-dom";
 import { getAllEstablishments } from "../api/establishmentsApi";
 import { axiosInstance } from "../api/axios";
@@ -6,6 +6,8 @@ import BookingBannerForm from '../components/BookingBannerForm';
 import Breadcrumbs from '../components/Breadcrumbs';
 import HotelFilters from "../components/HotelFilters";
 import countriesList from "../utils/countriesList";
+import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
+import { addFavorite } from "../api/favoriteApi";
 
 export default function CountrySelect() {
   const location = useLocation();
@@ -22,24 +24,38 @@ export default function CountrySelect() {
     maxPrice: "",
     rating: "",
   });
+  const filtersList = ["Beach", "Nature", "City", "Mountains", "Relax"];
+  const [selectedFilter, setSelectedFilter] = useState("All");
+  const [selectedType, setSelectedType] = useState("All");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const [showAuthMsg, setShowAuthMsg] = useState(false);  
+  const currentCountry = filters.country || selectedCountry || "";
+
 
   useEffect(() => {
     getAllEstablishments().then(setHotels);
     axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
   }, []);
 
-  // Унікальні країни для дропдауну фільтра (на майбутнє)
-  // const countryOptions = useMemo(() => (
-  //   [...new Set(hotels.map(h => (h.address || "").split(",")[2]?.trim()).filter(Boolean))]
-  // ), [hotels]);
+  // функція додавання у фаворити
+  const handleAddFavorite = async (hotel) => {
+    if (!user || !user.id) {
+      setShowAuthMsg(true);
+      setTimeout(() => setShowAuthMsg(false), 2000);
+      return;
+    }
+    await addFavorite({ userId: user.id, apartmentId: hotel.id });
+  };
 
-  // Головний фільтр по всіх параметрах
+  let hotelsToShow = hotels;
+
   const filteredHotels = useMemo(() => {
     return hotels.filter(hotel => {
       // Фільтр по країні
-      const geo = hotel.Geolocation || {};
-      const country = (geo.Country || "").trim().toLowerCase();
+      const geo = hotel.geolocation || {};
+      const country = (geo.country || "").trim().toLowerCase();
       const matchesCountry = !filters.country || country === filters.country.toLowerCase();
+
 
       // Мін/макс ціна
       const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
@@ -47,17 +63,39 @@ export default function CountrySelect() {
       const price = prices.length > 0 ? Math.min(...prices) : null;
       const matchesMinPrice = !filters.minPrice || (price !== null && price >= Number(filters.minPrice));
       const matchesMaxPrice = !filters.maxPrice || (price !== null && price <= Number(filters.maxPrice));
+      
       // Рейтинг
       const matchesRating = !filters.rating || (hotel.rating && hotel.rating >= Number(filters.rating));
-      // Пошук (якщо ввели в BookingBannerForm)
+      
+      // Пошук
       const searchLower = search.trim().toLowerCase();
       const matchesSearch = !searchLower ||
         hotel.name.toLowerCase().includes(searchLower) ||
-        geo.City?.toLowerCase().includes(searchLower);
+        (geo.city || "").toLowerCase().includes(searchLower);
 
-      return matchesCountry && matchesMinPrice && matchesMaxPrice && matchesRating && matchesSearch;
+      // Фільтр по типу закладу
+      const matchesType =
+        selectedType === "All"
+          ? true
+          : hotel.type === Object.keys(ESTABLISHMENT_TYPE_LABELS).findIndex(label => label === selectedType);
+
+      return (
+        matchesCountry &&
+        matchesMinPrice &&
+        matchesMaxPrice &&
+        matchesRating &&
+        matchesSearch &&
+        matchesType
+      );
     });
-  }, [hotels, apartments, filters, search]);
+  }, [hotels, apartments, filters, search, selectedType]);
+
+
+  if (selectedFilter !== "All") {
+  hotelsToShow = hotelsToShow.filter(hotel =>
+    Array.isArray(hotel.types) && hotel.types.includes(selectedFilter)
+  );
+}
 
   return (
     <div>
@@ -72,45 +110,170 @@ export default function CountrySelect() {
           backgroundPosition: 'center',
           margin: '0 auto',
           marginTop: '-110px',
-          marginBlockEnd: '-80px',
+          marginBlockEnd: '-180px',
           zIndex: 1
         }}>
+          <span
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '80%',
+              transform: 'translate(-50%, -50%)',
+              fontFamily: "'Sora', Arial, sans-serif",
+              fontWeight: 700,
+              fontSize: 130,
+              lineHeight: 1.1,
+              color: "transparent",
+              WebkitTextStroke: "1.5px #fff",
+              textStroke: "1.5px #fff",
+              letterSpacing: "0px",
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {currentCountry}
+          </span>
       </div>
       <BookingBannerForm search={search} setSearch={setSearch} />
 
       <div className="container py-5" style={{ width: 2800}}>
         <div className="breadcrumbs"
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            maxWidth: 1400,
+             display: "flex",
+            flexDirection: window.innerWidth < 768 ? "column" : "row",
+            alignItems: window.innerWidth < 768 ? "flex-start" : "center",
+            padding: window.innerWidth < 768 ? "0 8px" : "0 24px",
+            marginTop: window.innerWidth < 768 ? "-30px" : "-50px",
+            gap: window.innerWidth < 768 ? 12 : 0,
+            maxWidth: 1300,
             margin: "0px auto 0 auto",
-            marginTop: '-50px',
-            marginBlockEnd: '30px',
-            padding: "0 24px"
+            marginBlockEnd: "30px",
+            flexWrap: "wrap"
           }}>
           <Breadcrumbs
             items={[
               { label: "Main page", to: "/" },
               { label: "Quick and easy planning >" },
-              { label: selectedCountry }
+              { label: currentCountry }
             ]}
           />
+
+          {/* блок з кнопками */}
+          <div style={{ margin: "10px 20px" }}>
+            {filtersList.map((f) => (
+              <button
+                key={f}
+                style={{
+                  margin: "0 3px",
+                  padding: "7px 18px",
+                  background: selectedFilter === f ? "#1b3966" : "#fff",
+                  color: selectedFilter === f ? "#fff" : "#1b3966",
+                  border: "1px solid #1b3966",
+                  borderRadius: "8px",
+                  fontWeight: 300,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  transition: "all 0.2s",
+                }}
+                onClick={() => setSelectedFilter(f)}
+              >
+                {f}
+              </button>
+            ))}
+            <button
+              style={{
+                margin: "0 8px",
+                padding: "7px 18px",
+                background: selectedFilter === "All" ? "#1b3966" : "#fff",
+                color: selectedFilter === "All" ? "#fff" : "#1b3966",
+                border: "1px solid #1b3966",
+                borderRadius: "8px",
+                fontWeight: 500,
+                cursor: "pointer",
+                fontSize: 16,
+              }}
+              onClick={() => setSelectedFilter("All")}
+            >
+              All
+            </button>
+          </div>
         </div>
 
-        <h2 className="fw-bold mb-3 d-flex align-items-center" style={{color: '#16396A'}}>
-          <img
-            src="/images/filter.png"
-            alt="Filters icon"
-            style={{ width: 40, height: 40, marginRight: 14 }}
-          />
-          Filters by
-        </h2>
+        
+        {/* Filters by + кнопки категорії готелю */}
+        <div className="d-flex align-items-center justify-content-between mb-3" style={{ width: "95%" }}>
+          <div className="d-none d-md-flex align-items-center">
+            <img
+              src="/images/filter.png"
+              alt="Filters icon"
+              style={{ width: 40, height: 40, marginRight: 14 }}
+            />
+            <span className="fw-bold" style={{ color: '#16396A', fontSize: 26 }}>
+              Filters by
+            </span>
+          </div>
+
+          <div className="filter-types-wrapper mb-3" style={{ overflowX: "auto" }}>
+            <div className="d-flex flex-nowrap gap-2">
+              <button
+                className="btn"
+                style={{
+                  background: selectedType === "All" ? "#FE7C2C" : "#fff",
+                  color: selectedType === "All" ? "#fff" : "#1b3966",
+                  border: "1px solid #1b3966",
+                  borderRadius: "8px",
+                  fontWeight: 500,
+                  fontSize: 14,
+                  whiteSpace: "nowrap",
+                  minWidth: 80
+                }}
+                onClick={() => setSelectedType("All")}
+              >
+                All
+              </button>
+              {Object.keys(ESTABLISHMENT_TYPE_LABELS).map((type) => (
+                <button
+                  key={type}
+                  className="btn"
+                  style={{
+                    background: selectedType === type ? "#FE7C2C" : "#fff",
+                    color: selectedType === type ? "#fff" : "#1b3966",
+                    border: "1px solid #1b3966",
+                    borderRadius: "8px",
+                    fontWeight: 500,
+                    fontSize: 12,
+                    transition: "all 0.2s",
+                    whiteSpace: "nowrap",
+                    minWidth: 80
+                  }}
+                  onClick={() => setSelectedType(type)}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
 
         <div className="row">
           {/* Фільтр зліва */}
-          <div className="col-12 col-md-3 mb-4">
+
+          {/* Mobile filter button */}
+          <div className="d-block d-md-none mb-3">
+            <button
+              className="btn btn-outline-primary"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#filtersOffcanvas"
+              aria-controls="filtersOffcanvas"
+              style={{ fontWeight: 600 }}
+            >
+              <i className="bi bi-funnel"></i> Filters
+            </button>
+          </div>
+          {/* Desktop фільтр */}
+          <div className="col-12 col-md-3 mb-4 d-none d-md-block">
             <HotelFilters
               filters={filters}
               setFilters={newFilters => {
@@ -123,8 +286,40 @@ export default function CountrySelect() {
               showCountry={true}
             />
           </div>
+          {/* Mobile offcanvas filters */}
+          <div
+            className="offcanvas offcanvas-start"
+            tabIndex="-1"
+            id="filtersOffcanvas"
+            aria-labelledby="filtersOffcanvasLabel"
+          >
+            <div className="offcanvas-header">
+              <h5 id="filtersOffcanvasLabel">Filters</h5>
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="offcanvas"
+                aria-label="Close"
+              ></button>
+            </div>
+            <div className="offcanvas-body">
+              <HotelFilters
+                filters={filters}
+                setFilters={newFilters => {
+                  setFilters(newFilters);
+                  if (newFilters.country !== filters.country) {
+                    navigate(`/country-select?country=${encodeURIComponent(newFilters.country)}`);
+                  }
+                }}
+                countryOptions={countryOptions}
+                showCountry={true}
+              />
+            </div>
+          </div>
+
+
           {/* Список готелів */}
-          <div className="col-12 col-md-9">
+          <div className="col-12 col-md-8" style={{ marginLeft: 50 }}>
             {filteredHotels.length > 0 ? (
               filteredHotels.map((hotel) => {
                 const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
@@ -135,84 +330,140 @@ export default function CountrySelect() {
                 }
                 return (
                   <div className="col-12 mb-4" key={hotel.id}>
-                    <div className="card flex-row h-100 shadow-sm" style={{ minHeight: 220, borderRadius: 12, overflow: 'hidden' }}>
-                      <div className="d-flex align-items-center" style={{
-                        minWidth: 220, minHeight: 220, maxHeight: 220, background: "#f8f9fa",
-                        position: "relative", overflow: "hidden"
-                      }}>
-                        <img
-                          src={hotel.photos?.[0]?.blobUrl || "/noimage.png"}
-                          alt={hotel.name}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            position: "absolute",
-                            top: 0,
-                            left: 0
-                          }}
-                        />
-                      </div>
-                      <div className="card-body d-flex flex-column justify-content-between py-3 px-4" style={{ flex: 1 }}>
-                        <div className="d-flex align-items-center justify-content-between mb-1">
-                          <span className="fw-bold" style={{ fontSize: 15, color: "#22614D" }}>{hotel.name}</span>
-                          <span className="badge me-2" style={{ fontSize: 13, color: "#BF9D78" }}>
-                            <img src="/images/reitingstar.png"
-                              alt="Star"
+                    <div
+                      className="hotel-card row g-0 align-items-stretch flex-md-row flex-column"
+                      style={{
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        boxShadow: "0 0 3px 2px #9ad8ef",
+                        background: "#fff",
+                        margin: "0 auto",
+                        maxWidth: 950,
+                        minHeight: 220,
+                        width: "100%"
+                      }}
+                    >
+                      {/* Фото готелю */}
+                      <div className="col-md-4 col-12 d-flex align-items-stretch" style={{padding: 0}}>
+                        <div style={{
+                          width: "100%",
+                          height: "100%",
+                          minHeight: 180,
+                          position: "relative",
+                          background: "#f8f9fa"
+                        }}>
+                          <img
+                            src={hotel.photos?.[0]?.blobUrl || "/noimage.png"}
+                            alt={hotel.name}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              borderRadius: 16,
+                              minHeight: 180,
+                              maxHeight: 250
+                            }}
+                          />
+                          <img
+                            src="/images/favorite.png"
+                            alt="Add to favorite"
+                            style={{
+                              position: "absolute",
+                              top: 14,
+                              right: 14,
+                              width: 32,
+                              height: 32,
+                              cursor: "pointer",
+                              background: "#fff",
+                              borderRadius: "50%",
+                              padding: 5,
+                              boxShadow: "0 0 5px #ccc",
+                              zIndex: 2
+                            }}
+                            onClick={() => handleAddFavorite(hotel)}
+                          />
+                          {showAuthMsg && (
+                            <div
                               style={{
-                                width: 13,
-                                height: 13,
-                                marginRight: 6,
-                                verticalAlign: "middle",
-                                objectFit: "contain"
+                                position: "absolute",
+                                top: 14,
+                                right: 60,
+                                background: "#fff",
+                                color: "#FE7C2C",
+                                border: "1px solid #FE7C2C",
+                                borderRadius: 8,
+                                padding: "4px 14px",
+                                fontSize: 13,
+                                zIndex: 3,
+                                minWidth: 170,
+                                textAlign: "center",
                               }}
-                            />
+                            >
+                              Only an authorized user can add to favorites.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {/* Контент готелю */}
+                      <div className="col-md-8 col-12 d-flex flex-column justify-content-between py-3 px-4" style={{background: "#fff"}}>
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                          <span className="fw-bold" style={{ fontSize: 17, color: "#22614D" }}>{hotel.name}</span>
+                          <span className="badge" style={{ fontSize: 13, color: "#FE7C2C" }}>
+                            <img src="/images/reitingstar-orange.png" alt="Star"
+                              style={{ width: 14, height: 14, marginRight: 6, verticalAlign: "middle", objectFit: "contain" }} />
                             {hotel.rating?.toFixed(1) ?? '9.5'}
                           </span>
                         </div>
                         <div className="d-flex align-items-center mb-1">
                           <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.address)}`}
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.geolocation?.address || "")}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="badge me-2"
-                            style={{ fontSize: 13, color: "#02457A", textDecoration: "none", background: "none", padding: 0, border: "none" }}
+                            style={{
+                              fontSize: 13,
+                              color: "#02457A",
+                              textDecoration: "none",
+                              display: "flex",
+                              alignItems: "center"
+                            }}
                           >
-                            <img
-                              src="/images/geoikon.png"
-                              alt="Geo-ikon"
-                              style={{
-                                width: 13,
-                                height: 13,
-                                marginRight: 6,
-                                verticalAlign: "middle",
-                                objectFit: "contain"
-                              }}
-                            />
+                            <img src="/images/geoikon.png" alt="Geo-ikon"
+                              style={{ width: 16, height: 16, marginRight: 6, objectFit: "contain" }} />
+                            <span className="fw-bold" style={{ fontSize: 11, color: "#02457A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {hotel.geolocation?.address?.split(",")?.filter((_, i) => [0, 1, 3, 6].includes(i))?.join(", ")}
+                            </span>
                           </a>
-                          <span className="fw-bold" style={{ fontSize: 12, color: "#02457A" }}>
-                            {hotel.Geolocation?.Address}
-                          </span>
                         </div>
-                        <div className="mb-2" style={{ fontSize: 12, minHeight: 46 }}>{hotel.description}</div>
-                        <div className="d-flex align-items-end justify-content-between">
-                          <span className="fw-bold" style={{ color: "#001B48", fontSize: 12 }}>
+                        <div className="d-flex align-items-end justify-content-between" style={{ gap: 10 }}>
+                          <div className="mb-2" style={{ fontSize: 12, minHeight: 46, maxWidth: 330, overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {hotel.description}
+                          </div>
+                          <span className="fw-bold" style={{ color: "#001B48", fontSize: 14 }}>
                             {priceText ? (
                               <>
-                                from <span style={{ fontWeight: 700, fontSize: 16 }}>{priceText} $</span>
+                                <span style={{ fontWeight: 700, fontSize: 18 }}>{priceText} $</span>
                                 <span style={{ fontWeight: 400, fontSize: 14, marginLeft: 3 }}>/ night</span>
                               </>
                             ) : (
                               "See prices"
                             )}
                           </span>
-                          <Link to={`/hotels/${hotel.id}`} className="btn fw-bold px-4 py-2" style={{ fontSize: 12, background: "#FE7C2C", color: "#000000", borderRadius: "10px" }}>
+                        </div>
+                        <div className="d-flex align-items-end justify-content-between" style={{ gap: 10 }}>
+                          {hotelApartments.some(a => a.features?.breakfast) ? (
+                            <span style={{ color: "#FE7C2C", fontWeight: 300, fontSize: 13 }}>Breakfast is included</span>
+                          ) : (
+                            <span style={{ color: "#FE7C2C", fontWeight: 300, fontSize: 13 }}>Breakfast is paid separately</span>
+                          )}
+                          <Link to={`/hotels/${hotel.id}`} className="btn fw-bold px-4 py-2"
+                            style={{ fontSize: 13, background: "#97CADB", color: "#001B48", borderRadius: "10px" }}>
                             More Details
                           </Link>
                         </div>
                       </div>
                     </div>
                   </div>
+
                 );
               })
             ) : (

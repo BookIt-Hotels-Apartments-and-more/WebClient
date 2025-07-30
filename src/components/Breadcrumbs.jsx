@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 export default function Breadcrumbs({ items }) {
   return (
-    <div style={{ fontSize: 20, color: "#a1a1a1", fontWeight: 400 }}>
+    <div style={{ fontSize: 18, color: "#a1a1a1", fontWeight: 400 }}>
       {items.map((item, idx) =>
         item.to ? (
           <span key={item.label}>

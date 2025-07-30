@@ -7,6 +7,8 @@ import { setUser } from "../store/slices/userSlice";
 import { axiosInstance } from "../api/axios"; 
 import { useDispatch, useSelector } from "react-redux";
 import 'leaflet/dist/leaflet.css';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 
 
@@ -55,7 +57,9 @@ const App = () => {
   return (
     <div className="main-content">
       <AppRouter />
+      <ToastContainer position="top-center" autoClose={10000 } />
     </div>
+    
   );
 };
 

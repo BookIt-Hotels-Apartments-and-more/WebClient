@@ -7,11 +7,11 @@ import { getAllReviews } from "../api/reviewApi";
 import BookingBannerForm from '../components/BookingBannerForm';
 import { addFavorite, removeFavorite, getUserFavorites } from "../api/favoriteApi";
 import {
-  ESTABLISHMENT_TYPE_LABELS,
   ESTABLISHMENT_FEATURE_LABELS,
   APARTMENT_FEATURE_LABELS,
   decodeFlags
 } from '../utils/enums';
+import { toast } from 'react-toastify';
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -33,8 +33,6 @@ const HotelDetails = () => {
   const [reviewsCount, setReviewsCount] = useState(0);
   const [activeTab, setActiveTab] = useState("about");
   const [previewIndexes, setPreviewIndexes] = useState({});
-
-
   const [reviewForm, setReviewForm] = useState({
     apartmentId: "",
     text: "",
@@ -131,7 +129,16 @@ const HotelDetails = () => {
     }
   };
 
-  const handleBooking = async (apartmentId) => {
+  const toInputDate = (dateStr) => {
+    if (!dateStr) return "";
+    // Якщо строка вже у форматі YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    const d = new Date(dateStr);
+    if (!isNaN(d)) return d.toISOString().slice(0, 10);
+    return "";
+  };
+
+  const handleBooking = (apartmentId) => {
     let user = null;
     try {
       user = JSON.parse(localStorage.getItem("user") || "null");
@@ -139,40 +146,25 @@ const HotelDetails = () => {
       user = null;
     }
 
-    // 1. Перевірка авторизації
+    // Перевірка авторизації
     if (!user || !user.id || !localStorage.getItem("token")) {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
-      alert("Щоб забронювати номер, увійдіть у свій обліковий запис!");
-      window.location.href = '/login';
+      toast.warn("To book a room, log in to your account!", { autoClose: 10000 });
       return;
     }
 
-
-    // 2. Дати бронювання з BookingBannerForm (localStorage)
+    // Дати з BookingBannerForm (localStorage)
     const form = JSON.parse(localStorage.getItem("bookingForm") || "{}");
-    if (!form.checkIn || !form.checkOut) {
-      alert("Будь ласка, виберіть дати для бронювання.");
-      return;
-    }
+    setBookingForm({
+      dateFrom: toInputDate(form.checkIn),
+      dateTo: toInputDate(form.checkOut)
+    });
 
-    // 3. Формуємо payload у потрібному форматі
-    const bookingData = {
-      dateFrom: form.checkIn.length === 10 ? form.checkIn + "T00:00:00" : form.checkIn, // "2025-07-09T00:00:00"
-      dateTo: form.checkOut.length === 10 ? form.checkOut + "T00:00:00" : form.checkOut,
-      customerId: user.id,
-      apartmentId,
-    };
-
-    try {
-      await createBooking(bookingData);
-      alert("Бронювання успішне! Деталі можна переглянути в кабінеті користувача.");
-      // Можна додати редірект у кабінет:
-      // window.location.href = '/cabinet';
-    } catch (e) {
-      alert("Помилка при створенні бронювання.");
-    }
+    setBookingApartmentId(apartmentId);
   };
+
+
 
 
 
@@ -272,23 +264,42 @@ const HotelDetails = () => {
           marginBlockEnd: '-100px',
           zIndex: 1
         }}>
+          <span
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '80%',
+              transform: 'translate(-50%, -50%)',
+              fontFamily: "'Sora', Arial, sans-serif",
+              fontWeight: 700,
+              fontSize: 130,
+              lineHeight: 1.1,
+              color: "transparent",
+              WebkitTextStroke: "1.5px #fff",
+              textStroke: "1.5px #fff",
+              letterSpacing: "0px",
+              whiteSpace: 'nowrap',
+            }}
+          >
+            TRAVEL WITH US 
+          </span>
       </div>
       <BookingBannerForm />
 
       <div className="container py-4">    
       {/* 1. БАНЕР ІНФО (загальне фото + назва + рейтинг + ціна) */}
       <div className="row mb-4">
-        <div className="col-md-8">
-          <div className="position-relative" style={{ overflow: "hidden", minHeight: 560, borderRadius: 12, boxShadow: "0 0 5px 3px #D6E7EE" }}>
+        <div className="col-12 col-md-8">
+          <div className="position-relative" style={{ width: "100%", height: "auto", overflow: "hidden", minHeight: 460, maxHeight: 560, borderRadius: 12, boxShadow: "0 0 5px 3px #D6E7EE" }}>
             {/* Велике фото готелю */}
             <img
               src={hotel.photos?.[photoIndex]?.blobUrl || "/noimage.png"}
               alt={hotel.name}
-              style={{ width: "100%", height: 560, objectFit: "cover", borderRadius: 12 }}
+              style={{ width: "100%", height: "auto", maxHeight: 560, minHeight: 460, objectFit: "cover", borderRadius: 12 }}
             />
 
             <div
-              className="position-absolute top-0 start-0 w-100 px-4 pt-3 d-flex flex-wrap gap-2"
+              className="position-absolute top-0 start-0 w-100 px-3 pt-3 d-flex flex-wrap gap-2"
               style={{ zIndex: 2 }}
             >
               {getFeatureBadges(hotel.features)}
@@ -372,12 +383,12 @@ const HotelDetails = () => {
         </div>
         
         {/* 2. ДОДАТКОВА ІНФОРМАЦІЯ: карта/рейтинг */}
-        <div className="col-md-4">
+        <div className="col-12 col-md-4 mt-4 mt-md-0">
 
           {/* Гугл карта з позначкою місця готеля*/}
-          <div className="card mb-3" style={{ borderRadius: 12, padding: 0, boxShadow: "0 0 5px 3px #D6E7EE"  }}>
+          <div className="card mb-3" style={{ borderRadius: 12, padding: 0, margin: '0 auto', boxShadow: "0 0 5px 3px #D6E7EE"  }}>
             <div className="card-body" style={{ padding: 0 }}>
-              <div style={{ width: "100%", height: 250, borderRadius: 12, overflow: "hidden", margin: 0 }}>
+              <div style={{ width: "100%", minHeight: 220, maxHeight:250, borderRadius: 12, overflow: "hidden", margin: 0 }}>
                 <iframe
                   width="100%"
                   height="250"
@@ -400,17 +411,19 @@ const HotelDetails = () => {
               boxShadow: "0 0 5px 3px #D6E7EE", 
               background: "#fff",
               padding: 28,
-              maxWidth: 450,
+              width: "100%",
+              minHeight: 220, 
+              maxHeight:300,
               margin: "0 auto"
             }}
           >
             {/* Top row: Star + rating + Excellent + reviews */}
             <div className="d-flex align-items-center justify-content-center mb-2" style={{ gap: 10 }}>
-              <img src="/images/reitingstar-orange.png" alt="star" style={{ width: 26, height: 26, marginRight: 6 }} />
-              <span style={{ color: "#FE7C2C", fontWeight: 700, fontSize: 26, marginRight: 6 }}>9.8</span>
-              <span style={{ fontWeight: 500, color: "#001B48" }}>Excellent rating</span>
+              <img src="/images/reitingstar-orange.png" alt="star" style={{ width: 24, height: 24, marginRight: 6 }} />
+              <span style={{ color: "#FE7C2C", fontWeight: 700, fontSize: 24, marginRight: 6 }}>9.8</span>
+              <span style={{ fontWeight: 300, color: "#001B48", fontSize: 12 }}>Excellent rating</span>
               <a href="#reviews"
-                style={{marginLeft: 10, color: "#0074e4", fontWeight: 500, fontSize: 16, textDecoration: "underline" }}>
+                style={{marginLeft: 10, color: "#0074e4", fontWeight: 300, fontSize: 12, textDecoration: "underline" }}>
                 {reviewsCount} reviews
               </a>
 
@@ -438,7 +451,7 @@ const HotelDetails = () => {
       <div className="row mb-4">
       <div className="col-md-6">
         {/* Вкладки */}
-        <div className="mb-3 d-flex gap-4" style={{ marginBottom: "40px" }}>
+        <div className="mb-3 d-flex gap-2 flex-wrap" style={{ marginBottom: "40px" }}>
           <button
             className={`btn ${activeTab === "about" ? "btn-primary" : "btn-light"}`}
             onClick={() => setActiveTab("about")}
@@ -470,32 +483,60 @@ const HotelDetails = () => {
         >
           {activeTab === "about" && (
             <>
-              <div className="mb-2" style={{ color: "#0275d8", fontWeight: 500 }}>
-                <i className="bi bi-geo-alt" /> {hotel.address}
+              <div className="mb-2" style={{ color: "#22614D", fontWeight: 500 }}>
+                <i className="bi bi-geo-alt" style={{color: "#22614D"}} />{" "}
+                {hotel.geolocation?.address
+                  ?.split(",")
+                  ?.filter((_, i) => [0, 1, 3, 6].includes(i)) // 0 - номер, 1 - вулиця, 3 - місто, 6 - країна
+                  ?.join(", ")}
               </div>
-              <div style={{ fontSize: 15 }}>{hotel.description}</div>
+              <div style={{ fontSize: 24 }}>{hotel.description}</div>
             </>
           )}
-          {activeTab === "services" && (
-            <ul style={{ fontSize: 15, marginBottom: 0 }}>
-              {decodeFlags(hotel.features, ESTABLISHMENT_FEATURE_LABELS)
-                .split(",")
-                .filter(Boolean)
-                .map((feat, i) => (
-                  <li key={i}>{feat.trim()}</li>
+          {activeTab === "services" && hotel.features && (
+            <ul style={{ fontSize: 24, marginBottom: 0, listStyleType: "disc", paddingLeft: 20 }}>
+              {Object.entries(hotel.features)
+                .filter(([key, value]) => value)
+                .map(([key], i) => (
+                  <li key={i}>
+                    {ESTABLISHMENT_FEATURE_LABELS[key] || key.charAt(0).toUpperCase() + key.slice(1)}
+                  </li>
                 ))}
             </ul>
           )}
+
           {activeTab === "terms" && (
             <div style={{ fontSize: 15 }}>
-              {hotel.terms || "No terms of accommodation provided."}
+              {apartments.length === 0 && <div className="text-muted">No apartments available.</div>}
+              {apartments.map((apt, i) => (
+                <div key={apt.id} className="mb-4 p-3" style={{ borderBottom: "1px solid #ccc" }}>
+                  <div style={{fontSize: 20}}>🛏 {apt.name}</div>
+                  <div><strong>Capacity:</strong> {apt.capacity} persons</div>
+                  <div><strong>Area:</strong> {apt.area ? `${apt.area} m²` : "N/A"}</div>
+                  <div><strong>Description:</strong> {apt.description}</div>
+                  <div><strong>Features:</strong>
+                    <ul style={{ marginTop: 6 }}>
+                      {Object.entries(apt.features || {})
+                        .filter(([_, v]) => v)
+                        .map(([k], j) => (
+                          <li key={j}>
+                            {APARTMENT_FEATURE_LABELS[k] || k.charAt(0).toUpperCase() + k.slice(1)}
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                  <div><strong>Price:</strong> {apt.price} $ / night</div>
+                </div>
+              ))}
             </div>
           )}
+
+
         </div>
       </div>
 
       {/* Rooms – картки номерів */}
-      <div className="col-md-6" style={{ fontSize: 15 }}>
+      <div className="col-md-6 mt-4 mt-md-0" style={{ fontSize: 15 }}>
         {apartments.length === 0 && <div className="text-muted">No rooms found</div>}
         {apartments.map((apt) => {
           const currentPreviewIdx = previewIndexes[apt.id] || 0;
@@ -505,7 +546,7 @@ const HotelDetails = () => {
           return (
             <React.Fragment key={apt.id}>
               <div className="card mb-4" style={{ borderRadius: 16, overflow: "hidden", padding: 0, boxShadow: "0 0 5px 3px #D6E7EE" }}>
-                <div className="d-flex flex-row" style={{ minHeight: 200 }}>
+                <div className="d-flex flex-row" style={{ minHeight: 230 }}>
                   <div style={{ width: 220, display: "flex", flexDirection: "column", alignItems: "center" }}>
                     {/* Головне фото */}
                     <img
@@ -516,11 +557,11 @@ const HotelDetails = () => {
                         height: 140,
                         objectFit: "cover",
                         borderRadius: 10,
-                        margin: "10px 0 6px 0",
+                        margin: "20px 0 10px 10px",
                       }}
                     />
                     {/* Мініатюри */}
-                    <div className="d-flex" style={{ gap: 5 }}>
+                    <div className="d-flex" style={{ gap: 2 }}>
                       {thumbnails.map((photo, idx) => {
                         const realIdx = apt.photos.findIndex(p => p.id === photo.id);
                         return (
@@ -530,7 +571,7 @@ const HotelDetails = () => {
                             alt=""
                             style={{
                               width: 65,
-                              height: 40,
+                              height: 50,
                               objectFit: "cover",
                               borderRadius: 6,
                               border: "1px solid #eee",
@@ -552,10 +593,10 @@ const HotelDetails = () => {
                   <div className="flex-grow-1 d-flex flex-column justify-content-between p-3">
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 18, color: "#001B48" }}>{apt.name}</div>
-                      <div className="text-muted" style={{ fontSize: 14, marginBottom: 4 }}>
+                      <div className="text-muted" style={{ fontSize: 12, marginBottom: 4 }}>
                         {apt.description}
                       </div>
-                      <div className="text-secondary mb-2" style={{ fontSize: 13 }}>
+                      <div className="text-secondary mb-2" style={{ fontSize: 13, color: "#001B48" }}>
                         {apt.capacity && <>apartments for {apt.capacity} persons</>}
                       </div>
                     </div>
@@ -577,24 +618,32 @@ const HotelDetails = () => {
               {/* --- Форма бронювання --- */}
               {bookingApartmentId === apt.id && (
                 <div className="card mb-4 px-4 py-3" style={{ borderLeft: "4px solid #02457A", borderRadius: 16, boxShadow: "0 0 4px 1px #eee" }}>
-                  <h5 className="fw-bold mb-3">Book this room</h5>
+                  <h5 className="fw-bold mb-3">
+                    Book this room <span style={{ fontWeight: 400, color: "#0c5799" }}>({apt.name})</span>
+                  </h5>
                   <form
                     onSubmit={async (e) => {
                       e.preventDefault();
                       setBookingLoading(true);
-                      try {
+                      try {                     
+                        if (!bookingForm.dateFrom || !bookingForm.dateTo) {
+                          toast.warn("Please select dates for booking.", { autoClose: 10000 });
+                          setBookingLoading(false);
+                          return;
+                        }
                         const bookingData = {
-                          dateFrom: bookingForm.dateFrom,
-                          dateTo: bookingForm.dateTo,
-                          apartmentId: apt.id,
-                          customerId: user.id
+                          dateFrom: bookingForm.dateFrom ? bookingForm.dateFrom + "T00:00:00" : "",
+                          dateTo: bookingForm.dateTo ? bookingForm.dateTo + "T00:00:00" : "",
+                          customerId: user.id,
+                          apartmentId: apt.id
                         };
-                        await axiosInstance.post("/api/bookings", bookingData);
+
+                        await createBooking(bookingData);
+                        toast.success("Booking successful! Details can be viewed in the user's account.", { autoClose: 10000 });
                         setBookingApartmentId(null);
                         setBookingForm({ dateFrom: "", dateTo: "" });
-                        alert("Booking successful!");
                       } catch (err) {
-                        alert("Error booking room.");
+                        toast.error("Error creating reservation.", { autoClose: 10000 });
                       } finally {
                         setBookingLoading(false);
                       }
@@ -623,6 +672,9 @@ const HotelDetails = () => {
                       </div>
                     </div>
                     <div className="d-flex justify-content-end gap-3">
+
+                      {/* !!!!!! Змінити коли зміниться booking */}
+
                       <button className="btn btn-success" disabled={bookingLoading}>Confirm booking</button>
                       <button
                         type="button"
@@ -636,6 +688,7 @@ const HotelDetails = () => {
                   </form>
                 </div>
               )}
+
             </React.Fragment>
           );
         })}

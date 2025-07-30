@@ -131,8 +131,8 @@ export default function HotelFilters({
       style={{
         background: "none",
         borderRadius: 24,
-        minWidth: 300,
-        maxWidth: 320,
+        minWidth: 180,
+        maxWidth: 300,
         marginBottom: 32
       }}
     >
@@ -193,7 +193,7 @@ export default function HotelFilters({
                   color: isOrange
                     ? "#FF6D1F"
                     : "#16396A",
-                  fontSize: 18,
+                  fontSize: 16,
                   marginBottom: 8,
                   letterSpacing: "0.02em",
                   transition: "color 0.2s",

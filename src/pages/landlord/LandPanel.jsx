@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { getAllEstablishments } from "../../api/establishmentsApi";
-import { fetchApartments } from "../../api/apartmentApi";
+import { getEstablishmentsByOwnerFiltered } from "../../api/establishmentsApi";
 import LandEstablishmentCard from "./LandEstablishmentCard";
 import { Link } from "react-router-dom";
+import { ESTABLISHMENT_TYPE_LABELS } from "../../utils/enums";
 
-// --- Можна винести у окремий файл, як у UserPanel ---
+// --- Прогрес-бар ---
 function ProgressBar({ activeStep }) {
   return (
     <div style={{
@@ -57,45 +57,37 @@ function ProgressBar({ activeStep }) {
 const LandPanel = () => {
   const user = useSelector((state) => state.user.user);
   const [establishments, setEstablishments] = useState([]);
-  const [showHotels, setShowHotels] = useState(false);
-
-  const [totalApartments, setTotalApartments] = useState(0);
-  const [totalBookings, setTotalBookings] = useState(0);
-
   const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState({
     username: user?.username || "",
     email: user?.email || "",
+    phonenumber: user?.phonenumber || "",
   });
+  const [selectedType, setSelectedType] = useState("");
 
+  // --- Основний useEffect для отримання готелів ---
   useEffect(() => {
     if (user?.id) {
-      Promise.all([getAllEstablishments(), fetchApartments()])
-        .then(([estData, aptData]) => {
-          const myEstablishments = estData.filter(e => e.owner && e.owner.email === user.email);
-          const myEstIds = myEstablishments.map(e => e.id);
-          const myApartments = aptData.filter(a => myEstIds.includes(a.establishment.id));
-          setEstablishments(myEstablishments);
-          setTotalApartments(myApartments.length);
-        })
+      const filter = {};
+      if (selectedType !== "") filter.type = selectedType;
+      getEstablishmentsByOwnerFiltered(user.id, filter)
+        .then(setEstablishments)
         .catch(console.error);
     }
-  }, [user]);
+  }, [user, selectedType]);
 
+  // --- Оновлення статистики (наприклад, після видалення) ---
   const reloadStats = () => {
     if (user?.id) {
-      Promise.all([getAllEstablishments(), fetchApartments()])
-        .then(([estData, aptData]) => {
-          const myEstablishments = estData.filter(e => e.owner && e.owner.email === user.email);
-          const myEstIds = myEstablishments.map(e => e.id);
-          const myApartments = aptData.filter(a => myEstIds.includes(a.establishment.id));
-          setEstablishments(myEstablishments);
-          setTotalApartments(myApartments.length);
-        })
+      const filter = {};
+      if (selectedType !== "") filter.type = selectedType;
+      getEstablishmentsByOwnerFiltered(user.id, filter)
+        .then(setEstablishments)
         .catch(console.error);
     }
   };
 
+  // --- Редагування юзера ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditedUser((prev) => ({ ...prev, [name]: value }));
@@ -110,6 +102,7 @@ const LandPanel = () => {
     setEditedUser({
       username: user?.username || "",
       email: user?.email || "",
+      phonenumber: user?.phonenumber || "",
     });
     setIsEditing(false);
   };
@@ -292,7 +285,6 @@ const LandPanel = () => {
                     />
                   </div>
 
-
                   {/* Buttons */}
                   <div className="d-flex gap-2" style={{ marginTop: 12 }}>
                     <button className="btn btn-sm" style={{ minWidth: 80, background: '#02457A', color: 'white' }} onClick={handleSave}>
@@ -306,25 +298,24 @@ const LandPanel = () => {
               ) : (
                 <>
                   <div style={{ fontSize: 16 }}>
-                        <span style={{ fontWeight: 400 }}>Full name:</span>{" "}
-                        <span style={{ fontWeight: 700 }}>{user?.username}</span>
-                      </div>
-                      <div style={{ fontSize: 16, marginBlockStart: 20 }}>
-                        <span style={{ fontWeight: 400 }}>Email:</span>{" "}
-                        <span style={{ fontWeight: 700 }}>{user?.email}</span>
-                      </div>
-                      <div style={{ fontSize: 16, marginBlockStart: 20 }}>
-                        <span style={{ fontWeight: 400 }}>Phone number:</span>{" "}
-                        <span style={{ fontWeight: 700 }}>{user?.phonenumber}</span>
-                      </div>
-                      
-                      <button
-                        className="btn btn-outline-primary btn-sm mt-4"
-                        style={{ borderRadius: 12, fontWeight: 600, minWidth: 80 }}
-                        onClick={() => setIsEditing(true)}
-                      >
-                        Edit
-                      </button>
+                    <span style={{ fontWeight: 400 }}>Full name:</span>{" "}
+                    <span style={{ fontWeight: 700 }}>{user?.username}</span>
+                  </div>
+                  <div style={{ fontSize: 16, marginBlockStart: 20 }}>
+                    <span style={{ fontWeight: 400 }}>Email:</span>{" "}
+                    <span style={{ fontWeight: 700 }}>{user?.email}</span>
+                  </div>
+                  <div style={{ fontSize: 16, marginBlockStart: 20 }}>
+                    <span style={{ fontWeight: 400 }}>Phone number:</span>{" "}
+                    <span style={{ fontWeight: 700 }}>{user?.phonenumber}</span>
+                  </div>
+                  <button
+                    className="btn btn-outline-primary btn-sm mt-4"
+                    style={{ borderRadius: 12, fontWeight: 600, minWidth: 80 }}
+                    onClick={() => setIsEditing(true)}
+                  >
+                    Edit
+                  </button>
                 </>
               )}
             </div>
@@ -339,42 +330,59 @@ const LandPanel = () => {
               <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 12 }}>General statistics</div>
               <div style={{ color: "#183E6B", fontWeight: 500 }}>
                 <span style={{ marginRight: 16 }}>🏨 Hotels: <b>{establishments.length}</b></span>
-                <span style={{ marginRight: 16 }}>🚪 Apartments: <b>{totalApartments}</b></span>
-                <span>📅 Reservations: <b>{totalBookings}</b></span>
+                {/* Apartments і Reservations поки не показуємо, додамо пізніше */}
               </div>
             </div>
 
             {/* Кнопки дій */}
-            <div style={{ display: "flex", gap: 16 }}>              
+            <div style={{ display: "flex", gap: 16 }}>
               <Link to="/add-hotel" className="btn btn-success">
                 ➕ Add a new hotel
               </Link>
             </div>
 
-            {/* Список готелів */}
-            {<div style={{
-                background: "#fcfcfc",
-                borderRadius: 18,
-                padding: 24,
-                boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.15)",
-                marginTop: 12
-              }}>
-                <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 10, color: "#183E6B" }}>
-                  Your hotels
+            {/* --- Фільтр по типу --- */}
+            <div>
+              <label htmlFor="typeSelect" style={{ fontWeight: 600, fontSize: 15, marginBottom: 5, display: "block", color: "#165188" }}>
+                Filter by type
+              </label>
+              <select
+                id="typeSelect"
+                value={selectedType}
+                onChange={e => setSelectedType(e.target.value)}
+                style={{ minWidth: 180, borderRadius: 10, border: "1px solid #9ad8ef", padding: 6, fontWeight: 500, fontSize: 16 }}
+              >
+                <option value="">All types</option>
+                {Object.entries(ESTABLISHMENT_TYPE_LABELS).map(([label, value]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* --- Список готелів --- */}
+            <div style={{
+              background: "#fcfcfc",
+              borderRadius: 18,
+              padding: 24,
+              boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.15)",
+              marginTop: 12
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 10, color: "#183E6B" }}>
+                Your hotels
+              </div>
+              {establishments.length === 0 ? (
+                <div className="text-muted">You don't have any hotels yet.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {establishments.map((est) => (
+                    <LandEstablishmentCard key={est.id} est={est} reloadStats={reloadStats} />
+                  ))}
                 </div>
-                {establishments.length === 0 ? (
-                  <div className="text-muted">You don't have any hotels yet.</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {establishments.map((est) => (
-                      <LandEstablishmentCard key={est.id} est={est} reloadStats={reloadStats} />
-                    ))}
-                  </div>
-                )}
-              </div>}
+              )}
+            </div>
           </div>
 
-          {/* ПРАВА КОЛОНКА (можливості сторінки, або можна буде додати допоміжну інформацію) */}
+          {/* ПРАВА КОЛОНКА */}
           <div className="col-12 col-md-4 d-flex flex-column gap-3">
             <div style={{
               background: "#fcfcfc",
