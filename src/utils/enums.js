@@ -31,6 +31,34 @@ export const APARTMENT_FEATURE_LABELS = {
   PetsAllowed: 7
 };
 
+export const PAYMENT_TYPE = {
+  Cash: 0,
+  Mono: 1,
+  BankTransfer: 2,
+};
+
+export const PAYMENT_STATUS = {
+  Pending: 0,
+  Completed: 1,
+  Failed: 2,
+  Cancelled: 3,
+};
+
+export const USER_ROLE = {
+  Admin: 0,
+  Landlord: 1,
+  Tenant: 2,
+};
+
+export const VIBE_TYPE = {
+  None: 0,
+  Beach: 1,
+  Nature: 2,
+  City: 3,
+  Relax: 4,
+  Mountains: 5,
+};
+
 export function decodeFlags(enumValue, LABELS) {
   const result = [];
   let flag = 1;

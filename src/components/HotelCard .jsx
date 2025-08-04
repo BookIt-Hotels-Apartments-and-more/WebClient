@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import { getEstablishmentTypeName } from "../utils/enums";
 
+
 const HotelCard = ({
   hotel,
   isFavorite,
-  addFavorite,
+  onToggleFavorite,
   minPrice,
   showLimitedOffer,
 }) => (
@@ -28,7 +29,7 @@ const HotelCard = ({
         border: "none", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2,
         boxShadow: "0 0 12px #eee", color: "#BF9D78"
       }}
-      onClick={addFavorite}
+      onClick={onToggleFavorite}
     >
       <img src="/images/favorite.png" alt="favorite" style={{ width: 38, filter: isFavorite ? "none" : "grayscale(1)" }} />
     </button>
@@ -70,7 +71,7 @@ const HotelCard = ({
           display: "flex", alignItems: "center"
         }}>
             <img src="/images/reitingstar-orange.png" alt="rating" style={{ marginRight: 5, width: 16 }} />
-          {hotel.rating?.toFixed(1) || "9.2"}          
+          {hotel.rating?.reviewCount || 0}        
         </div>
       </div>
       

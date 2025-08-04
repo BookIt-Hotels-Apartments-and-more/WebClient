@@ -5,6 +5,9 @@ import { axiosInstance } from "../api/axios";
 import BookingBannerForm from '../components/BookingBannerForm';
 import HotelFilters from "../components/HotelFilters";
 import countriesList from "../utils/countriesList";
+import { getUserFavorites, addFavorite } from "../api/favoriteApi";
+import { toast } from "react-toastify";
+
 
 export default function HotelsList() {
   const location = useLocation();
@@ -14,6 +17,8 @@ export default function HotelsList() {
   const [search, setSearch] = useState("");
   const [hotels, setHotels] = useState([]);
   const [apartments, setApartments] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+  const userId = JSON.parse(localStorage.getItem("user"))?.id;
   const countryOptions = countriesList.map(c => c.name);
   const [filters, setFilters] = useState({
     country: "",
@@ -22,11 +27,37 @@ export default function HotelsList() {
     rating: "",
   });
 
-  // Завантажуємо повний список готелів (на випадок коли переходять без state)
   useEffect(() => {
     getAllEstablishments().then(setHotels);
     axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
-  }, []);
+    if (userId) {
+      getUserFavorites(userId).then(setFavorites);
+    }
+  }, [userId]);
+
+  const handleAddFavorite = async (apartmentId) => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = localStorage.getItem("token");
+    if (!user?.id || !token) {
+      toast.info("To add a hotel to your favorites, log in!");
+      return;
+    }
+    try {
+      const freshFavorites = await getUserFavorites(user.id);
+      setFavorites(freshFavorites);
+      const existing = freshFavorites.find(f => f.apartment && f.apartment.id === apartmentId);
+      if (existing) {
+        toast.info("This hotel is already in your favorites.");
+        return;
+      }
+      await addFavorite({ userId: user.id, apartmentId });
+      toast.success("Added to favorites!");
+      const updated = await getUserFavorites(user.id);
+      setFavorites(updated);
+    } catch (e) {
+      toast.error("Error updating favorites.");
+    }
+  };
 
   // Вибираємо, з якими готелями працюємо — sourceHotels чи повний список
   const hotelsBase = useMemo(
@@ -112,6 +143,9 @@ export default function HotelsList() {
                 if (prices.length > 0) {
                   priceText = Math.min(...prices);
                 }
+                const apartmentId = hotelApartments[0]?.id;
+                const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
+
                 return (
                   <div className="col-12 mb-4" key={hotel.id}>
                     <div className="card flex-row h-100 shadow-sm" style={{ minHeight: 220, borderRadius: 12, overflow: 'hidden' }}>
@@ -131,6 +165,21 @@ export default function HotelsList() {
                             left: 0
                           }}
                         />
+                        <button
+                          style={{
+                            position: "absolute", right: 16, top: 16,
+                            background: "rgba(255,255,255,0.95)", borderRadius: "50%",
+                            border: "none", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2,
+                            boxShadow: "0 0 12px #eee", color: "#BF9D78"
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddFavorite(apartmentId);
+                          }}
+                        >
+                          <img src="/images/favorite.png" alt="favorite" style={{ width: 38, filter: isFavorite ? "none" : "grayscale(1)" }} />
+                        </button>
+
                       </div>
                       <div className="card-body d-flex flex-column justify-content-between py-3 px-4" style={{ flex: 1 }}>
                         <div className="d-flex align-items-center justify-content-between mb-1">

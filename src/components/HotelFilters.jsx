@@ -154,7 +154,7 @@ export default function HotelFilters({
                 background: "#F9FBFC"
               }}
             >
-              <option value="">Any</option>
+              <option value="">Choose a country</option>
               {countryOptions.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}

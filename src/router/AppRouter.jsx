@@ -23,6 +23,7 @@ import Countries from "../pages/Countries";
 import CountrySelect from "../pages/CountrySelect";
 import ScrollToTop from "../components/ScrollToTop";
 import HotelsList from "../components/HotelsList";
+import Apartments from "../pages/Apartments";
 
 
 
@@ -57,6 +58,7 @@ const AppRouter = () => {
           <Route path="/auth/success" element={<AuthSuccess />} />  
           <Route path="/google-auth/callback" element={<GoogleCallback />} /> 
           <Route path="/auth/error" element={<AuthError />} />
+          <Route path="/apartments" element={<Apartments />} />
         </Route>
       </Routes>
     </BrowserRouter>

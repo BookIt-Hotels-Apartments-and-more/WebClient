@@ -9,17 +9,19 @@ import { addFavorite, removeFavorite, getUserFavorites } from "../api/favoriteAp
 import {
   ESTABLISHMENT_FEATURE_LABELS,
   APARTMENT_FEATURE_LABELS,
-  decodeFlags
+  PAYMENT_TYPE 
 } from '../utils/enums';
 import { toast } from 'react-toastify';
+import { createUniversalPayment } from "../api/paymentApi";
+import { toggleApartmentFavorite } from "../utils/favoriteUtils";
 
 const HotelDetails = () => {
   const { id } = useParams();
   const [hotel, setHotel] = useState(null);
   const [apartments, setApartments] = useState([]);
+  const [search, setSearch] = useState("");
   const [reviews, setReviews] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [bookingApartment, setBookingApartment] = useState(null);
   const [bookingApartmentId, setBookingApartmentId] = useState(null);
   const [bookingForm, setBookingForm] = useState({
     dateFrom: "",
@@ -38,8 +40,7 @@ const HotelDetails = () => {
     text: "",
     rating: 5,
   });
-  const [submitting, setSubmitting] = useState(false);
-  
+  const [paymentType, setPaymentType] = useState("Cash");  
 
   useEffect(() => {
     axiosInstance.get(`/api/establishments/${id}`)
@@ -102,6 +103,17 @@ const HotelDetails = () => {
   });
 }, [hotel?.id]);
 
+useEffect(() => {
+  if (bookingApartmentId) {
+    // При кожному відкритті модалки підтягуй дати з BookingBannerForm
+    const form = JSON.parse(localStorage.getItem("bookingForm") || "{}");
+    setBookingForm({
+      dateFrom: form.checkIn ? toInputDate(form.checkIn) : "",
+      dateTo: form.checkOut ? toInputDate(form.checkOut) : ""
+    });
+  }
+}, [bookingApartmentId]);
+
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
@@ -131,14 +143,15 @@ const HotelDetails = () => {
 
   const toInputDate = (dateStr) => {
     if (!dateStr) return "";
-    // Якщо строка вже у форматі YYYY-MM-DD
+    // dateStr вже 'YYYY-MM-DD', просто повертаємо
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    // fallback на старі дані
     const d = new Date(dateStr);
     if (!isNaN(d)) return d.toISOString().slice(0, 10);
     return "";
   };
 
-  const handleBooking = (apartmentId) => {
+  const handleBooking = async (apartmentId) => {
     let user = null;
     try {
       user = JSON.parse(localStorage.getItem("user") || "null");
@@ -146,7 +159,6 @@ const HotelDetails = () => {
       user = null;
     }
 
-    // Перевірка авторизації
     if (!user || !user.id || !localStorage.getItem("token")) {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
@@ -154,47 +166,72 @@ const HotelDetails = () => {
       return;
     }
 
-    // Дати з BookingBannerForm (localStorage)
+    // Підтягуємо вибрані дати (з форми або localStorage)
     const form = JSON.parse(localStorage.getItem("bookingForm") || "{}");
-    setBookingForm({
-      dateFrom: toInputDate(form.checkIn),
-      dateTo: toInputDate(form.checkOut)
-    });
+    const dateFrom = bookingForm.dateFrom || form.checkIn || "";
+    const dateTo = bookingForm.dateTo || form.checkOut || "";
 
-    setBookingApartmentId(apartmentId);
-  };
-
-
-
-
-
-
-  const handleToggleFavorite = async (apartmentId) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        alert("You need to be logged in to reserve a room.");
-        return;
+    if (!dateFrom || !dateTo) {
+      toast.warn("Please select dates for booking.", { autoClose: 10000 });
+      return;
     }
-   
-    const favorite = favorites.find(f => f.apartmentId === apartmentId);
 
-    if (favorite) {
-      await removeFavorite(favorite.id); // тут використовуємо id з favorites
-      // оновити локальний стан після видалення
-      const updated = favorites.filter(f => f.apartmentId !== apartmentId);
-      setFavorites(updated);
-      setFavoriteApartments(updated.map(f => f.apartmentId));
-    } else {
+    setBookingLoading(true);
 
-      const payload = { userId: user.id, apartmentId };
-      console.log("favorite payload:", payload);
+    try {
+      // Визначаємо кількість ночей
+      const nights = Math.max(1, Math.ceil(
+        (new Date(dateTo) - new Date(dateFrom)) / (1000 * 60 * 60 * 24)
+      ));
 
-      await addFavorite(payload);
+      // Знаходимо apartment для ціни
+      const apt = apartments.find(a => a.id === apartmentId);
+      const price = apt?.price || 0;
+      const totalPrice = price * nights;
 
-      // після додавання краще підвантажити весь список ще раз
-      const updated = await getUserFavorites(user.id);
-      setFavorites(updated);
-      setFavoriteApartments(updated.map(f => f.apartmentId));
+      // 1. Створюємо бронювання
+      const bookingRes = await createBooking({
+        dateFrom: dateFrom.length === 10 ? dateFrom + "T00:00:00" : dateFrom,
+        dateTo: dateTo.length === 10 ? dateTo + "T00:00:00" : dateTo,
+        customerId: user.id,
+        apartmentId,
+        paymentType // "Cash" / "Mono" / "BankTransfer"
+      });
+
+      const bookingId = bookingRes.data?.id ?? bookingRes.id;
+
+      // 2. Створюємо payment
+      const payDto = {
+        type: PAYMENT_TYPE[paymentType], // Перетворюємо в int
+        amount: totalPrice,
+        bookingId
+      };
+
+      if (paymentType === "Mono") {
+        // MonoBank — universal endpoint, чекаємо invoiceUrl
+        setBookingLoading(true);
+        const payRes = await createUniversalPayment(payDto);
+        const invoiceUrl = payRes.data?.invoiceUrl || payRes.data?.url;
+        const paymentId = payRes.data?.id || payRes.data?.paymentId;
+        if (invoiceUrl) {
+          window.open(invoiceUrl, "_blank"); // відкриваємо інвойс у новій вкладці
+          setBookingApartmentId(null); // закриваємо модалку бронювання!
+          setBookingForm({ dateFrom: "", dateTo: "" });
+          toast.success("Payment created! Pay via MonoBank.", { autoClose: 10000 });
+        } else {
+          toast.warn("Mono invoice error! No URL received.", { autoClose: 10000 });
+        }
+      } else {
+        // Cash або BankTransfer — просто створили payment, інфо для юзера
+        await createUniversalPayment(payDto);
+        toast.success("Booking successful! Details in your profile.", { autoClose: 10000 });
+        setBookingApartmentId(null);
+        setBookingForm({ dateFrom: "", dateTo: "" });
+      }
+    } catch (err) {
+      toast.error("Booking/payment error!", { autoClose: 10000 });
+    } finally {
+      setBookingLoading(false);
     }
   };
 
@@ -248,43 +285,168 @@ const HotelDetails = () => {
   if (!hotel) return <div>Loading...</div>;
 
   return (
+
+
     
     <div>
       {/* Банер */}
-      <div className='baner'
+      <div
+        className="baner"
         style={{
-          width: '100%',
-          maxWidth: '1955px',
-          minHeight: '687px',
+          width: "100%",
+          maxWidth: "1955px",
+          minHeight: "587px",
           backgroundImage: "url('/images/homebaner.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          margin: '0 auto',
-          marginTop: '-110px',
-          marginBlockEnd: '-100px',
-          zIndex: 1
-        }}>
-          <span
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '80%',
-              transform: 'translate(-50%, -50%)',
-              fontFamily: "'Sora', Arial, sans-serif",
-              fontWeight: 700,
-              fontSize: 130,
-              lineHeight: 1.1,
-              color: "transparent",
-              WebkitTextStroke: "1.5px #fff",
-              textStroke: "1.5px #fff",
-              letterSpacing: "0px",
-              whiteSpace: 'nowrap',
-            }}
-          >
-            TRAVEL WITH US 
-          </span>
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          margin: "0 auto",
+          marginTop: "-110px",
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1,
+        }}
+      >
+        {/* Форма пошуку */}
+        <div style={{ zIndex: 2, marginTop: -100 }}>
+          <BookingBannerForm search={search} setSearch={setSearch} />
+        </div>
+
+        {/* Текст TRAVEL WITH US */}
+        <span
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: 56,
+            transform: "translateX(-50%)",
+            fontFamily: "'Sora', Arial, sans-serif",
+            fontWeight: 700,
+            fontSize: 130,
+            lineHeight: 1,
+            color: "transparent",
+            WebkitTextStroke: "2px #fff",
+            textStroke: "2px #fff",
+            letterSpacing: "0",
+            whiteSpace: "nowrap",
+            zIndex: 3,
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          TRAVEL WITH US
+        </span>
       </div>
-      <BookingBannerForm />
+
+      {/* Модалка для бронювання */}
+      {bookingApartmentId && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(36, 67, 96, 0.29)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "20 20 15px 13px #D6E7EE"
+          }}
+          onClick={() => setBookingApartmentId(null)}
+        >
+          <div
+            className="card px-4 py-3"
+            style={{
+              minWidth: 370,
+              maxWidth: 460,
+              width: "90vw",
+              borderRadius: 20,
+              boxShadow: "0 0 24px 3px #03467244",
+              position: "relative",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setBookingApartmentId(null)}
+              style={{
+                position: "absolute",
+                right: 14,
+                top: 10,
+                border: "none",
+                background: "transparent",
+                fontSize: 26,
+                color: "#bbb",
+                cursor: "pointer",
+                zIndex: 10,
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h5 className="fw-bold mb-3">
+              Book this room{" "}
+              <span style={{ fontWeight: 400, color: "#0c5799" }}>
+                ({apartments.find(a => a.id === bookingApartmentId)?.name || ""})
+              </span>
+            </h5>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                handleBooking(bookingApartmentId, bookingForm, paymentType);
+              }}
+            >
+              <div className="row mb-2">
+                <div className="col">
+                  <label className="form-label">Date from</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={bookingForm.dateFrom}
+                    onChange={e => setBookingForm(f => ({ ...f, dateFrom: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="col">
+                  <label className="form-label">Date to</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={bookingForm.dateTo}
+                    onChange={e => setBookingForm(f => ({ ...f, dateTo: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Payment method:</label>
+                <select
+                  className="form-select"
+                  value={paymentType}
+                  onChange={e => setPaymentType(e.target.value)}
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Mono">Mono</option>
+                  <option value="BankTransfer">Bank Transfer</option>
+                </select>
+              </div>
+              <div className="d-flex justify-content-end gap-3">
+                <button className="btn btn-success" disabled={bookingLoading}>Confirm booking</button>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setBookingApartmentId(null)}
+                  disabled={bookingLoading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="container py-4">    
       {/* 1. БАНЕР ІНФО (загальне фото + назва + рейтинг + ціна) */}
@@ -311,7 +473,7 @@ const HotelDetails = () => {
               <div className="d-flex align-items-center mb-2">
                 <span className="badge me-2" style={{ fontSize: 17, background: "#fff", color: "#BF9D78" }}>
                   <img src="/images/reitingstar.png" alt="Star" style={{ width: 16, height: 16, marginRight: 7 }} />
-                  {hotel.rating?.toFixed(1) ?? "9.5"}
+                  {hotel.rating?.generalRating?.toFixed(1) ?? "—"}
                 </span>            
               </div>
               <h2 className="text-white mb-1" style={{ fontWeight: 700 }}>{hotel.name}</h2>
@@ -420,26 +582,29 @@ const HotelDetails = () => {
             {/* Top row: Star + rating + Excellent + reviews */}
             <div className="d-flex align-items-center justify-content-center mb-2" style={{ gap: 10 }}>
               <img src="/images/reitingstar-orange.png" alt="star" style={{ width: 24, height: 24, marginRight: 6 }} />
-              <span style={{ color: "#FE7C2C", fontWeight: 700, fontSize: 24, marginRight: 6 }}>9.8</span>
-              <span style={{ fontWeight: 300, color: "#001B48", fontSize: 12 }}>Excellent rating</span>
+              <span style={{ color: "#FE7C2C", fontWeight: 700, fontSize: 24, marginRight: 6 }}>
+                {hotel.rating?.generalRating?.toFixed(1) ?? "—"}
+              </span>
+              <span style={{ fontWeight: 300, color: "#001B48", fontSize: 12 }}>
+                {hotel.rating?.generalRating >= 9 ? "Excellent rating" : hotel.rating?.generalRating >= 8 ? "Very good" : "No rating"}
+              </span>
               <a href="#reviews"
                 style={{marginLeft: 10, color: "#0074e4", fontWeight: 300, fontSize: 12, textDecoration: "underline" }}>
-                {reviewsCount} reviews
+                {hotel.rating?.reviewCount ?? 0} reviews
               </a>
-
             </div>
 
             {/* Список категорій */}
             <div className="row" style={{ marginTop: 14 }}>
               <div className="col-6" style={{ padding: "0 12px" }}>
-                <RatingCategory label="Staff" value={9.5} />
-                <RatingCategory label="Purity" value={9.6} />
-                <RatingCategory label="Price/quality ratio" value={8.3} />
+                <RatingCategory label="Staff" value={hotel.rating?.staffRating ?? 0} />
+                <RatingCategory label="Purity" value={hotel.rating?.purityRating ?? 0} />
+                <RatingCategory label="Price/quality ratio" value={hotel.rating?.priceQualityRating ?? 0} />
               </div>
               <div className="col-6" style={{ padding: "0 12px" }}>
-                <RatingCategory label="Comfort" value={9.7} />
-                <RatingCategory label="Facilities" value={9.6} />
-                <RatingCategory label="Location" value={9.7} />
+                <RatingCategory label="Comfort" value={hotel.rating?.comfortRating ?? 0} />
+                <RatingCategory label="Facilities" value={hotel.rating?.facilitiesRating ?? 0} />
+                <RatingCategory label="Location" value={hotel.rating?.locationRating ?? 0} />
               </div>
             </div>
           </div>
@@ -547,7 +712,7 @@ const HotelDetails = () => {
             <React.Fragment key={apt.id}>
               <div className="card mb-4" style={{ borderRadius: 16, overflow: "hidden", padding: 0, boxShadow: "0 0 5px 3px #D6E7EE" }}>
                 <div className="d-flex flex-row" style={{ minHeight: 230 }}>
-                  <div style={{ width: 220, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <div style={{ width: 220, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
                     {/* Головне фото */}
                     <img
                       src={mainPhoto?.blobUrl || "/noimage.png"}
@@ -560,6 +725,37 @@ const HotelDetails = () => {
                         margin: "20px 0 10px 10px",
                       }}
                     />
+                    {/* favorite поверх фото */}
+                    <button
+                      style={{
+                        position: "absolute",
+                        top: 30,
+                        right: 20,
+                        background: "rgba(255,255,255,1)", borderRadius: "50%",
+                        border: "none", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center",
+                        boxShadow: "0 0 12px #eee", color: "#BF9D78", zIndex: 5
+                      }}
+                      onClick={() => toggleApartmentFavorite({
+                        user,
+                        favorites,
+                        setFavorites,
+                        apartmentId: apt.id,
+                        setFavoriteApartments,
+                      })}
+                      title={favorites.find(f => f.apartment && f.apartment.id === apt.id)
+                        ? "Remove from favorites"
+                        : "Add to favorites"
+                      }
+                    >
+                      <img
+                        src="/images/favorite.png"
+                        alt="favorite"
+                        style={{
+                          width: 28,
+                          filter: favorites.find(f => f.apartment && f.apartment.id === apt.id) ? "none" : "grayscale(1)"
+                        }}
+                      />
+                    </button>
                     {/* Мініатюри */}
                     <div className="d-flex" style={{ gap: 2 }}>
                       {thumbnails.map((photo, idx) => {
@@ -589,10 +785,24 @@ const HotelDetails = () => {
                       })}
                     </div>
                   </div>
+
                   {/* Права частина: інфа про номер */}
                   <div className="flex-grow-1 d-flex flex-column justify-content-between p-3">
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 18, color: "#001B48" }}>{apt.name}</div>
+                      <div className="d-flex justify-content-between align-items-center" style={{ marginBottom: 6 }}>
+                        <div style={{ fontWeight: 700, fontSize: 18, color: "#001B48" }}>
+                          {apt.name}
+                        </div>
+                        
+                        <span style={{ fontWeight: 500, fontSize: 15, color: "#BF9D78", display: "flex", alignItems: "center" }}>
+                          <img src="/images/reitingstar.png" alt="Star" style={{ width: 14, height: 14, marginRight: 3 }} />
+                          {apt.rating?.generalRating !== undefined && apt.rating?.generalRating !== null
+                            ? apt.rating.generalRating.toFixed(1)
+                            : "—"}
+                          {" "}
+                          ({apt.rating?.reviewCount || 0})
+                        </span>
+                      </div>
                       <div className="text-muted" style={{ fontSize: 12, marginBottom: 4 }}>
                         {apt.description}
                       </div>
@@ -604,91 +814,21 @@ const HotelDetails = () => {
                       <div style={{ fontWeight: 700, fontSize: 18, color: "#02457A" }}>
                         {apt.price} <span style={{ fontWeight: 400, fontSize: 14 }}>$ / night</span>
                       </div>
+                      
                       <button
                         className="btn btn-primary btn-sm"
                         style={{ borderRadius: 8, fontWeight: 600, fontSize: 14, padding: "6px 22px" }}
-                        onClick={() => handleBooking(apt.id)}
+                        onClick={() => {
+                          setBookingApartmentId(apt.id);
+                          //setBookingForm({ dateFrom: "", dateTo: "" }); // очищаємо форму                          
+                        }}
                       >
                         Book now
                       </button>
                     </div>
                   </div>
                 </div>
-              </div>
-              {/* --- Форма бронювання --- */}
-              {bookingApartmentId === apt.id && (
-                <div className="card mb-4 px-4 py-3" style={{ borderLeft: "4px solid #02457A", borderRadius: 16, boxShadow: "0 0 4px 1px #eee" }}>
-                  <h5 className="fw-bold mb-3">
-                    Book this room <span style={{ fontWeight: 400, color: "#0c5799" }}>({apt.name})</span>
-                  </h5>
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      setBookingLoading(true);
-                      try {                     
-                        if (!bookingForm.dateFrom || !bookingForm.dateTo) {
-                          toast.warn("Please select dates for booking.", { autoClose: 10000 });
-                          setBookingLoading(false);
-                          return;
-                        }
-                        const bookingData = {
-                          dateFrom: bookingForm.dateFrom ? bookingForm.dateFrom + "T00:00:00" : "",
-                          dateTo: bookingForm.dateTo ? bookingForm.dateTo + "T00:00:00" : "",
-                          customerId: user.id,
-                          apartmentId: apt.id
-                        };
-
-                        await createBooking(bookingData);
-                        toast.success("Booking successful! Details can be viewed in the user's account.", { autoClose: 10000 });
-                        setBookingApartmentId(null);
-                        setBookingForm({ dateFrom: "", dateTo: "" });
-                      } catch (err) {
-                        toast.error("Error creating reservation.", { autoClose: 10000 });
-                      } finally {
-                        setBookingLoading(false);
-                      }
-                    }}
-                  >
-                    <div className="row mb-2">
-                      <div className="col">
-                        <label className="form-label">Date from</label>
-                        <input
-                          type="date"
-                          className="form-control"
-                          value={bookingForm.dateFrom}
-                          onChange={e => setBookingForm(f => ({ ...f, dateFrom: e.target.value }))}
-                          required
-                        />
-                      </div>
-                      <div className="col">
-                        <label className="form-label">Date to</label>
-                        <input
-                          type="date"
-                          className="form-control"
-                          value={bookingForm.dateTo}
-                          onChange={e => setBookingForm(f => ({ ...f, dateTo: e.target.value }))}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="d-flex justify-content-end gap-3">
-
-                      {/* !!!!!! Змінити коли зміниться booking */}
-
-                      <button className="btn btn-success" disabled={bookingLoading}>Confirm booking</button>
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary"
-                        onClick={() => setBookingApartmentId(null)}
-                        disabled={bookingLoading}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
+              </div>        
             </React.Fragment>
           );
         })}

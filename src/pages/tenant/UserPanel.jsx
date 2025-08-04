@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { getAllBookings } from "../../api/bookingApi";
-import { getUserFavorites, removeFavorite } from "../../api/favoriteApi";
+import { getAllBookings, deleteBooking, updateBooking } from "../../api/bookingApi";
+import { getUserFavorites, removeFavorite  } from "../../api/favoriteApi";
 import { getApartmentById } from "../../api/apartmentApi";
+import { toast } from 'react-toastify';
 
 const UserPanel = () => {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -17,13 +18,16 @@ const UserPanel = () => {
     email: user?.email || "",
     phonenumber: user?.phonenumber,
     photoBase64: "",
-    photoPreview: user?.photoUrl || "", // якщо є
+    photoPreview: user?.photoUrl || "",
+  });
+  const [editModal, setEditModal] = useState({
+    show: false,
+    booking: null,
+    dateFrom: "",
+    dateTo: ""
   });
 
-
-  // --- Додаткові дані для розділів (можна буде замінити на API)
   const [activeStep] = useState(2); // 1-2-3; поки статично
-  const [tab, setTab] = useState("bookings");
 
   useEffect(() => {
     setLoading(true);
@@ -50,7 +54,6 @@ const UserPanel = () => {
       }
     };
     fetchData();
-    // eslint-disable-next-line
   }, []);
 
   const loadApartments = async (ids) => {
@@ -79,10 +82,9 @@ const UserPanel = () => {
       // Додати потім інше для збереження профілю (ім’я, email і т.д.)
       setIsEditing(false);
     } catch (err) {
-      alert('Error saving profile!');
+      toast.error("Error saving profile!", { autoClose: 4000 });
     }
   };
-
 
   const handleCancel = () => {
     setEditedUser({
@@ -96,6 +98,7 @@ const UserPanel = () => {
   const handleDeleteFavorite = async (favoriteId) => {
     await removeFavorite(favoriteId);
     setFavorites(favorites.filter((f) => f.id !== favoriteId));
+    toast.success("Removed from favorites", { autoClose: 4000 });
   };
 
   const handlePhotoChange = (e) => {
@@ -112,12 +115,77 @@ const UserPanel = () => {
     reader.readAsDataURL(file);
   };
 
+  function getTotalPrice(booking) {
+    if (!booking || !booking.dateFrom || !booking.dateTo) return "----";
+    const price =
+      booking.apartment?.price ||
+      apartmentMap[booking.apartmentId]?.price ||
+      0;
+    if (!price) return "----";
+    const from = new Date(booking.dateFrom);
+    const to = new Date(booking.dateTo);
+    const nights = Math.max(
+      1,
+      Math.ceil((to - from) / (1000 * 60 * 60 * 24))
+    );
+    return price * nights;
+  }
+
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm("Are you sure you want to cancel this reservation?")) return;
+    try {
+      await deleteBooking(bookingId);
+      setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+      toast.success("Booking cancelled successfully!", { autoClose: 4000 });
+    } catch (err) {
+      toast.error("Unable to cancel reservation!", { autoClose: 4000 });
+    }
+  };
+
+  const openEditModal = (booking) => {
+    setEditModal({
+      show: true,
+      booking,
+      dateFrom: booking.dateFrom?.slice(0, 10), // формат YYYY-MM-DD
+      dateTo: booking.dateTo?.slice(0, 10)
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditModal({ show: false, booking: null, dateFrom: "", dateTo: "" });
+  };
+
+  const handleEditBooking = async () => {
+    if (!editModal.booking) return;
+    try {
+      await updateBooking(editModal.booking.id, {
+        dateFrom: editModal.dateFrom,
+        dateTo: editModal.dateTo,
+        customerId: user.id,
+        apartmentId: editModal.booking.apartmentId || editModal.booking.apartment?.id,
+        additionalRequests: editModal.booking.additionalRequests || ""
+      });
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === editModal.booking.id
+            ? { ...b, dateFrom: editModal.dateFrom, dateTo: editModal.dateTo }
+            : b
+        )
+      );
+      toast.success("Booking updated!", { autoClose: 4000 });
+      closeEditModal();
+    } catch (err) {
+      toast.error("Unable to update reservation!", { autoClose: 4000 });
+    }
+  };
+
+
 
   // --- Розбивка бронювань
   const myBookings = bookings.filter(
     (b) => b.customer?.email && user && b.customer.email === user.email
   );
-  const upcoming = myBookings.filter((b) => new Date(b.dateFrom) > new Date());
+  const upcoming = myBookings.filter((b) => new Date(b.dateTo) > new Date());
   const history = myBookings.filter((b) => new Date(b.dateTo) < new Date());
 
   const formatDate = (dateStr) => {
@@ -418,7 +486,7 @@ const UserPanel = () => {
             </div>
 
 
-            {/* --- Блок "Favorites" в новому стилі --- */}
+            {/* --- Блок "Favorites" --- */}
               <div
                 style={{
                   background: "#fcfcfc",
@@ -490,96 +558,177 @@ const UserPanel = () => {
           
 
           {/* ПРАВА КОЛОНКА !!!!!!!! */}
-<div className="col-12 col-md-6 d-flex flex-column gap-3">
-  {upcoming.length === 0 ? (
-    <div style={{
-      background: "#fcfcfc",
-      borderRadius: 18,
-      padding: 24,
-      minHeight: 120,
-      boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)",
-      marginBottom: 18,
-    }}>
-      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your upcoming hotels</div>
-      <div className="text-muted">Here will be shown your next hotel</div>
-    </div>
-  ) : (
-    upcoming.map((booking, idx) => {
-      const apt = booking.apartment;
-      const hotel = apt?.establishment;
-      return (
-        <div key={booking.id} style={{ marginBottom: 32 }}>
-          {/* --- Hotel info --- */}
-          <div style={{
-            background: "#fcfcfc",
-            borderRadius: 18,
-            padding: 24,
-            minHeight: 120,
-            boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)",
-            marginBottom: 14,
-          }}>
-            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your upcoming hotels</div>
-            <div style={{ fontWeight: 800 }}>{hotel?.name || "Hotel"}</div>
-            <span style={{ fontWeight: 400 }}>Hotel</span>{" "}
-            <div style={{ color: "#567" }}>{hotel?.address}</div>
-            <div>{"★".repeat(hotel?.stars || 4)}</div>
-            <div className="mt-2 text-muted" style={{ fontSize: 13 }}>{apt?.name}</div>
-          </div>
+          <div className="col-12 col-md-6 d-flex flex-column gap-3">
+            {upcoming.length === 0 ? (
+              <div style={{
+                background: "#fcfcfc",
+                borderRadius: 18,
+                padding: 24,
+                minHeight: 120,
+                boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)",
+                marginBottom: 18,
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your upcoming hotels</div>
+                <div className="text-muted">Here will be shown your next hotel</div>
+              </div>
+            ) : (
+              // БЛОК З МАЙБУТЬНІМИ БРОНЮВАННЯМИ
+              upcoming.map((booking, idx) => {
+                const apt = booking.apartment;
+                const hotel = apt?.establishment;
+                return (
+                  <div key={booking.id} style={{ marginBottom: 32 }}>
+                    
+                    <div style={{
+                      background: "#fcfcfc",
+                      borderRadius: 18,
+                      padding: 24,
+                      minHeight: 120,
+                      boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)",
+                      marginBottom: 14,
+                    }}>
+                      {/* --- Hotel info --- */}
+                      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your upcoming hotels</div>
+                      <div style={{ fontWeight: 800 }}>{hotel?.name || "Hotel"}</div>
+                      <span style={{ fontWeight: 400 }}>Hotel</span>{" "}
+                      <div style={{ color: "#567" }}>{hotel?.address}</div>
+                      <div>{"★".repeat(hotel?.stars || 4)}</div>
+                      <div className="mt-2 text-muted" style={{ fontSize: 13 }}>{apt?.name}</div>
+                      <hr></hr>
+                      {/* --- Booking details --- */}
+                      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your booking details</div>
+                      <div>Check-in: <b>{formatDate(booking.dateFrom)}</b></div>
+                      <div>Check-out: <b>{formatDate(booking.dateTo)}</b></div>
+                      <div>Guests: {booking.guestsCount || 2}</div>
+                      {/* --- Payment details --- */}
+                      <div>Status: <span style={{ color: booking.isCheckedIn ? "#29b56f" : "#f9a825", fontWeight: 600 }}>
+                        {booking.isCheckedIn ? "Checked in" : "Awaiting check-in"}
+                      </span></div>
+                      <hr></hr>
+                      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your payment details</div>
+                      <div>
+                        <span>Total price:</span>{" "}
+                        <b>
+                          {getTotalPrice(booking)} {booking.currency || "EUR"}
+                        </b>
+                      </div>
+                      <div>
+                        Status:{" "}
+                        <span style={{ color: "#29b56f", fontWeight: 600 }}>
+                          {booking.isPaid ? "Paid" : "Not paid"}
+                        </span>
+                      </div>
+                    </div>
+                  
+                    <button
+                      className="btn btn-outline-primary btn-sm mt-2 me-2"
+                      style={{ borderRadius: 10, minWidth: 120, fontWeight: 600 }}
+                      onClick={() => openEditModal(booking)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-outline-danger btn-sm mt-2"
+                      style={{ borderRadius: 10, minWidth: 120, fontWeight: 600 }}
+                      onClick={() => handleCancelBooking(booking.id)}
+                    >
+                      Cancel booking
+                    </button>
 
-          {/* --- Booking details --- */}
-          <div style={{
-            background: "#fcfcfc",
-            borderRadius: 18,
-            padding: 24,
-            minHeight: 120,
-            boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)",
-            marginBottom: 14,
-          }}>
-            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your booking details</div>
-            <div>Check-in: <b>{formatDate(booking.dateFrom)}</b></div>
-            <div>Check-out: <b>{formatDate(booking.dateTo)}</b></div>
-            <div>Guests: {booking.guestsCount || 2}</div>
-            <div>Status: <span style={{ color: booking.isCheckedIn ? "#29b56f" : "#f9a825", fontWeight: 600 }}>
-              {booking.isCheckedIn ? "Checked in" : "Awaiting check-in"}
-            </span></div>
-          </div>
-
-          {/* --- Payment details --- */}
-          <div style={{
-            background: "#fcfcfc",
-            borderRadius: 18,
-            padding: 24,
-            minHeight: 120,
-            boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)",
-          }}>
-            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your payment details</div>
-            <div>
-              <span>Total price:</span>{" "}
-              <b>
-                {booking.price || "----"} {booking.currency || "UAH"}
-              </b>
+                    {/* --- HR between bookings --- */}
+                    {idx < upcoming.length - 1 && <hr style={{ margin: "20px 0", borderTop: "2px solid #dde2e7" }} />}
+                  </div>                  
+                )                
+              })
+            )}
+            {/* Історія бронювань */}
+          <div style={{background: "#fcfcfc", borderRadius: 18, padding: 24, minHeight: 120, boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)" }}>
+            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>
+              Booking history
             </div>
-            <div>
-              Status:{" "}
-              <span style={{ color: "#29b56f", fontWeight: 600 }}>
-                {booking.isPaid ? "Paid" : "Not paid"}
-              </span>
+            {history.length === 0 && (
+              <div style={{ color: "#aaa" }}>No past bookings found.</div>
+            )}
+            {history.map((b, idx) => (
+              <div key={b.id} className="mb-2" style={{ borderBottom: "1px solid #eee", paddingBottom: 10 }}>
+                <div style={{ fontWeight: 600 }}>{b.apartment?.establishment?.name || "Hotel"}</div>
+                <div>{b.apartment?.name}</div>
+                <div>
+                  {new Date(b.dateFrom).toLocaleDateString()} &ndash; {new Date(b.dateTo).toLocaleDateString()}
+                </div>
+                <div>Status: <span style={{ color: "#aaa" }}>Completed</span></div>
+              </div>
+            ))}
+          </div>
+          </div>
+          
+        </div>
+        {editModal.show && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.38)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          onClick={closeEditModal}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 18,
+              padding: 32,
+              minWidth: 320,
+              boxShadow: "0 8px 36px 0 rgba(31, 38, 135, 0.19)",
+              position: "relative"
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3>Edit Booking Dates</h3>
+            <label style={{ marginTop: 16 }}>Check-in date:</label>
+            <input
+              type="date"
+              value={editModal.dateFrom}
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={e => setEditModal(em => ({ ...em, dateFrom: e.target.value }))}
+              className="form-control mb-2"
+            />
+            <label>Check-out date:</label>
+            <input
+              type="date"
+              value={editModal.dateTo}
+              min={editModal.dateFrom || new Date().toISOString().slice(0, 10)}
+              onChange={e => setEditModal(em => ({ ...em, dateTo: e.target.value }))}
+              className="form-control mb-3"
+            />
+            <div className="d-flex gap-2 mt-3">
+              <button className="btn btn-primary" onClick={handleEditBooking}>
+                Save
+              </button>
+              <button className="btn btn-secondary" onClick={closeEditModal}>
+                Cancel
+              </button>
             </div>
           </div>
-
-          {/* --- HR between bookings --- */}
-          {idx < upcoming.length - 1 && <hr style={{ margin: "32px 0", borderTop: "2px solid #dde2e7" }} />}
         </div>
-      )
-    })
-  )}
-</div>
-
-        </div>
+      )}
       </div>
+      
     </div>
+    
   );
 };
+
+
+
+
+
 
 // --- ПРОГРЕС-БАР (3 кроки)
 function ProgressBar({ activeStep }) {

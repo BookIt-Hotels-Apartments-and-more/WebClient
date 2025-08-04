@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Link } from "react-router-dom";
 import { getAllEstablishments } from "../api/establishmentsApi";
 import { axiosInstance } from "../api/axios";
 import "react-datepicker/dist/react-datepicker.css";
@@ -147,23 +146,31 @@ const Home = () => {
       {/* Банер */}
       <div className='baner'
         style={{
-          width: '100%',
-          maxWidth: '1955px',
-          minHeight: '687px',
+          width: "100%",
+          maxWidth: "1955px",
+          minHeight: "587px",
           backgroundImage: "url('/images/mainbaner.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          margin: '0 auto',
-          marginTop: '-110px',
-          marginBlockEnd: '-110px',
-          zIndex: 1
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          margin: "0 auto",
+          marginTop: "-110px",
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1,
         }}>
+          <div style={{ zIndex: 2, marginTop: -150 }}>
+            <BookingBannerForm search={search} setSearch={setSearch} />
+          </div>
+          
       </div>
-      <BookingBannerForm search={search} setSearch={setSearch} />
+      
 
       <QuickPlanning />
-      <PopularDestinations />
-      <TopTrendingHotels />
+      <PopularDestinations search={search} />
+      <TopTrendingHotels search={search} />
       <BestToursAndDeals />
       <WhyChooseUs />
       <AppBanner />

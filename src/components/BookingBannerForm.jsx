@@ -27,8 +27,8 @@ const BookingBannerForm = ({ search, setSearch }) => {
     localStorage.setItem(
       "bookingForm",
       JSON.stringify({
-        checkIn: checkIn ? checkIn.toISOString() : null,
-        checkOut: checkOut ? checkOut.toISOString() : null,
+        checkIn: checkIn ? checkIn.toLocaleDateString('en-CA') : null,
+        checkOut: checkOut ? checkOut.toLocaleDateString('en-CA') : null,
         people,
         search: searchLocal,
       })
@@ -55,7 +55,6 @@ const BookingBannerForm = ({ search, setSearch }) => {
         minWidth: 200,
         margin: "0 auto",
         position: "relative",
-        top: -350,
         zIndex: 10,
         display: "flex",
         flexDirection: "column",
@@ -74,9 +73,20 @@ const BookingBannerForm = ({ search, setSearch }) => {
           marginBottom: 6,
         }}
       >
+        <>
+          <style>
+            {`
+              .search-input:focus {
+                box-shadow: 0 0 0 0.5px #97cadb !important;
+                border-color: #97cadb !important;
+                outline: none !important;
+              }
+            `}
+          </style>          
+        </>
         <input
           type="text"
-          className="form-control"
+          className="form-control search-input"
           placeholder="Enter directly, or name..."
           style={{
             maxWidth: '100%',

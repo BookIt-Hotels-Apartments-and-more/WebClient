@@ -2,7 +2,11 @@ import React, { useEffect, useState, useMemo } from "react";
 import { getAllEstablishments } from "../api/establishmentsApi";
 import { getAllBookings } from "../api/bookingApi";
 import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { getUserFavorites, addFavorite, removeFavorite } from "../api/favoriteApi";
+import { axiosInstance } from "../api/axios";
+import { toggleHotelFavorite } from "../utils/favoriteUtils";
+
+
 
 
 
@@ -19,40 +23,71 @@ const cardStyles = {
   justifyContent: "flex-end"
 };
 
-const PopularDestinations = () => {
+const PopularDestinations = ({ search = "" }) => {
   const [hotels, setHotels] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [apartments, setApartments] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+  const userId = JSON.parse(localStorage.getItem("user"))?.id;
+
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all([getAllEstablishments(), getAllBookings()])
-      .then(([hotelsData, bookingsData]) => {
-        setHotels(hotelsData);
-        setBookings(bookingsData);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      setLoading(true);
+      Promise.all([
+        getAllEstablishments(),
+        getAllBookings(),
+        axiosInstance.get("/api/apartments"),
+        userId ? getUserFavorites(userId) : Promise.resolve([]),
+      ])
+        .then(([hotelsData, bookingsData, apartmentsData, favoritesData]) => {
+          setHotels(hotelsData);
+          setBookings(bookingsData);
+          setApartments(apartmentsData.data);
+          setFavorites(favoritesData);
+        })
+        .finally(() => setLoading(false));
+    }, [userId]);
 
-  const popularHotels = useMemo(() => {
-  if (!hotels.length) return [];
+  
+  const searchLower = (search || "").trim().toLowerCase();
 
-  const bookingsCount = {};
-  bookings.forEach(b => {
-    const estId = b.apartment?.establishment?.id || b.establishment?.id;
-    if (estId) bookingsCount[estId] = (bookingsCount[estId] || 0) + 1;
+  const filteredHotels = hotels.filter(hotel => {
+    const country = (hotel.geolocation?.country || "").toLowerCase();
+    const city = (hotel.geolocation?.city || "").toLowerCase();
+    return (
+      hotel.name.toLowerCase().includes(searchLower) ||
+      country.includes(searchLower) ||
+      city.includes(searchLower)
+    );
   });
 
-  const hotelsWithCount = hotels.map(hotel => ({
-    ...hotel,
-    bookingsCount: bookingsCount[hotel.id] || 0,
-  }));
+  // Визначаємо, який масив показувати:
+  const hotelsToShow =
+    searchLower && filteredHotels.length === 0
+      ? hotels // якщо пошук і нічого не знайдено — fallback на повний список
+      : filteredHotels;
 
-  hotelsWithCount.sort((a, b) => b.bookingsCount - a.bookingsCount);
+  const popularHotels = useMemo(() => {
+    if (!hotelsToShow.length) return [];
 
-  return hotelsWithCount; // ← ПОВНИЙ СПИСОК!
-}, [hotels, bookings]);
+    const bookingsCount = {};
+    bookings.forEach(b => {
+      const estId = b.apartment?.establishment?.id || b.establishment?.id;
+      if (estId) bookingsCount[estId] = (bookingsCount[estId] || 0) + 1;
+    });
+
+    const hotelsWithCount = hotelsToShow.map(hotel => ({
+      ...hotel,
+      bookingsCount: bookingsCount[hotel.id] || 0,
+    }));
+
+    hotelsWithCount.sort((a, b) => b.bookingsCount - a.bookingsCount);
+
+    return hotelsWithCount;
+  }, [hotelsToShow, bookings]);
+
 
 const displayHotels = popularHotels.slice(0, 5);
 
@@ -76,6 +111,12 @@ const displayHotels = popularHotels.slice(0, 5);
       </section>
     );
   }
+  
+  const firstHotel = popularHotels[0];
+  const firstHotelApartmentId = apartments.find(a => a.establishment?.id === firstHotel?.id)?.id;
+  const isFavoriteFirst = !!favorites.find(f => f.apartment && f.apartment.id === firstHotelApartmentId);
+
+
 
   return (
     <section className="my-5">
@@ -92,7 +133,7 @@ const displayHotels = popularHotels.slice(0, 5);
             onClick={() => navigate("/hotels", {
               state: {
                 source: "PopularDestinations",
-                hotels: popularHotels, // ← передаєш усі!
+                hotels: popularHotels, // ← передаєм усі!
                 title: "Popular Destinations"
               }
             })}
@@ -148,8 +189,31 @@ const displayHotels = popularHotels.slice(0, 5);
                         objectFit: "cover",
                         display: "block",
                         aspectRatio: "4/5", 
-                        }}
+                        }}                        
                     />
+                    {/* Копка favorite */}
+                    <button
+                      style={{
+                        position: "absolute", right: 20, top: 16,
+                        background: "rgba(255,255,255,0.95)", borderRadius: "50%",
+                        border: "none", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2,
+                        boxShadow: "0 0 12px #eee", color: "#BF9D78"
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const user = JSON.parse(localStorage.getItem("user"));
+                        toggleHotelFavorite({
+                          user,
+                          favorites,
+                          setFavorites,
+                          hotel: popularHotels[0],
+                          apartments,
+                        });
+                      }}
+                    >
+                      <img src="/images/favorite.png" alt="favorite" style={{ width: 38, filter: isFavoriteFirst ? "none" : "grayscale(1)" }} />
+                    </button>
+
                 {/* Блок з текстом поверх фото */}
                     <div style={{
                     position: "absolute",
@@ -192,35 +256,61 @@ const displayHotels = popularHotels.slice(0, 5);
         </div>
 
           {/* Решта 4 — горизонтальні */}
-          {displayHotels.slice(1).map((hotel, idx) => (
-            <div
+          {displayHotels.slice(1).map((hotel, idx) => {
+            const hotelApartmentId = apartments.find(a => a.establishment?.id === hotel.id)?.id;
+            const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === hotelApartmentId);
+            return (
+              <div
                 key={hotel.id}
                 style={{
-                ...cardStyles,
-                minHeight: 175,
-                gridColumn: idx % 2 === 0 ? 2 : 3,
-                gridRow: idx < 2 ? 1 : 2,
-                padding: 0,
-                background: "none",
-                boxShadow: "none",
-                position: "relative",
-                cursor: "pointer"
+                  ...cardStyles,
+                  minHeight: 175,
+                  gridColumn: idx % 2 === 0 ? 2 : 3,
+                  gridRow: idx < 2 ? 1 : 2,
+                  padding: 0,
+                  background: "none",
+                  boxShadow: "none",
+                  position: "relative",
+                  cursor: "pointer"
                 }}
                 onClick={() => navigate(`/hotels/${hotel.id}`)}
-            >
+              >
                 <div style={{ position: "relative", width: "100%", height: 270, borderRadius: 6, overflow: "hidden" }}>
-                <img
+                  <img
                     src={hotel.photos?.[0]?.blobUrl || "/noimage.png"}
                     alt={hotel.name}
                     style={{
-                    width: "100%",
-                    height: 270,
-                    objectFit: "cover",
-                    display: "block",
+                      width: "100%",
+                      height: 270,
+                      objectFit: "cover",
+                      display: "block",
                     }}
-                />
-                {/* Текст поверх фото */}
-                <div style={{
+                  />
+                  {/* Кнопка favorite */}
+                  <button
+                    style={{
+                      position: "absolute", right: 20, top: 16,
+                      background: "rgba(255,255,255,0.95)", borderRadius: "50%",
+                      border: "none", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2,
+                      boxShadow: "0 0 12px #eee", color: "#BF9D78"
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const user = JSON.parse(localStorage.getItem("user"));
+                      toggleHotelFavorite({
+                        user,
+                        favorites,
+                        setFavorites,
+                        hotel,
+                        apartments,
+                      });
+                    }}
+                  >
+                    <img src="/images/favorite.png" alt="favorite" style={{ width: 38, filter: isFavorite ? "none" : "grayscale(1)" }} />
+                  </button>
+
+                  {/* Текст поверх фото */}
+                  <div style={{
                     position: "absolute",
                     left: 0,
                     right: 0,
@@ -231,10 +321,10 @@ const displayHotels = popularHotels.slice(0, 5);
                     padding: "14px 18px 10px 14px",
                     boxShadow: "0 4px 12px 0 rgba(40,46,72,0.14)",
                     minHeight: 60,
-                }}>
+                  }}>
                     <div className="d-flex align-items-center justify-content-between mb-1">
-                    <span style={{ fontWeight: 700, fontSize: 16, color: "#2C5C4E" }}>{hotel.name}</span>
-                    <span style={{
+                      <span style={{ fontWeight: 700, fontSize: 16, color: "#2C5C4E" }}>{hotel.name}</span>
+                      <span style={{
                         backdropFilter: "blur(4px)",
                         borderRadius: 10,
                         fontWeight: 700,
@@ -245,18 +335,20 @@ const displayHotels = popularHotels.slice(0, 5);
                         marginLeft: 8,
                         display: "flex",
                         alignItems: "center"
-                    }}>                        
+                      }}>
                         <img src="/images/reitingstar-orange.png" alt="" style={{ width: 14, height: 14, marginRight: 5, verticalAlign: "middle" }} />
                         {hotel.rating?.toFixed(1) ?? "—"}
-                    </span>
+                      </span>
                     </div>
-                    
+
                     <div style={{ fontWeight: 400, fontSize: 12, color: "#444" }}>{hotel.description}</div>
                     <div style={{ fontWeight: 400, fontSize: 12, color: "#888", marginTop: 2 }}>Бронювань: {hotel.bookingsCount}</div>
+                  </div>
                 </div>
-                </div>
-            </div>
-            ))}
+              </div>
+            );
+          })}
+
 
         </div>
       </div>

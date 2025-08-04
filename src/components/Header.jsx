@@ -1,6 +1,4 @@
-import { useEffect } from "react";
 import { Link } from 'react-router-dom';
-import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { FaUserCircle } from "react-icons/fa"; 
 import { useDispatch } from "react-redux";
@@ -34,7 +32,7 @@ return (
 
         <div className="d-flex align-items-center gap-4">    
           <Link to="/" className="btn main-btn">Main</Link>        
-          <Link to="/admin-auth" className="btn main-btn">Apartments</Link> 
+          <Link to="/apartments" className="btn main-btn">Apartments</Link> 
           <Link to="/countries" className="btn main-btn">Countries</Link>           
           <Link to="/aboutus" className="btn main-btn">About Us</Link>
         </div>              

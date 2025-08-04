@@ -7,7 +7,9 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import HotelFilters from "../components/HotelFilters";
 import countriesList from "../utils/countriesList";
 import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
-import { addFavorite } from "../api/favoriteApi";
+import { getUserFavorites  } from "../api/favoriteApi";
+import { toggleHotelFavorite } from "../utils/favoriteUtils";
+
 
 export default function CountrySelect() {
   const location = useLocation();
@@ -30,23 +32,18 @@ export default function CountrySelect() {
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const [showAuthMsg, setShowAuthMsg] = useState(false);  
   const currentCountry = filters.country || selectedCountry || "";
+  const [favorites, setFavorites] = useState([]);
+
 
 
   useEffect(() => {
     getAllEstablishments().then(setHotels);
     axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
-  }, []);
-
-  // функція додавання у фаворити
-  const handleAddFavorite = async (hotel) => {
-    if (!user || !user.id) {
-      setShowAuthMsg(true);
-      setTimeout(() => setShowAuthMsg(false), 2000);
-      return;
-    }
-    await addFavorite({ userId: user.id, apartmentId: hotel.id });
-  };
-
+    if (user?.id) {
+    getUserFavorites(user.id).then(setFavorites);
+  }
+  }, [user?.id]);
+  
   let hotelsToShow = hotels;
 
   const filteredHotels = useMemo(() => {
@@ -100,40 +97,54 @@ export default function CountrySelect() {
   return (
     <div>
       {/* Банер */}
-      <div className='baner'
+      <div
+        className="baner"
         style={{
-          width: '100%',
-          maxWidth: '1955px',
-          minHeight: '687px',
+          width: "100%",
+          maxWidth: "1955px",
+          minHeight: "587px",
           backgroundImage: "url('/images/homebaner.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          margin: '0 auto',
-          marginTop: '-110px',
-          marginBlockEnd: '-180px',
-          zIndex: 1
-        }}>
-          <span
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '80%',
-              transform: 'translate(-50%, -50%)',
-              fontFamily: "'Sora', Arial, sans-serif",
-              fontWeight: 700,
-              fontSize: 130,
-              lineHeight: 1.1,
-              color: "transparent",
-              WebkitTextStroke: "1.5px #fff",
-              textStroke: "1.5px #fff",
-              letterSpacing: "0px",
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {currentCountry}
-          </span>
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          margin: "0 auto",
+          marginTop: "-110px",
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1,
+        }}
+      >
+        {/* Форма пошуку */}
+        <div style={{ zIndex: 2, marginTop: -100 }}>
+          <BookingBannerForm search={search} setSearch={setSearch} />
+        </div>
+
+        {/* Текст TRAVEL WITH US */}
+        <span
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: 56,
+            transform: "translateX(-50%)",
+            fontFamily: "'Sora', Arial, sans-serif",
+            fontWeight: 700,
+            fontSize: 130,
+            lineHeight: 1,
+            color: "transparent",
+            WebkitTextStroke: "2px #fff",
+            textStroke: "2px #fff",
+            letterSpacing: "0",
+            whiteSpace: "nowrap",
+            zIndex: 3,
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          {currentCountry}
+        </span>
       </div>
-      <BookingBannerForm search={search} setSearch={setSearch} />
 
       <div className="container py-5" style={{ width: 2800}}>
         <div className="breadcrumbs"
@@ -323,6 +334,8 @@ export default function CountrySelect() {
             {filteredHotels.length > 0 ? (
               filteredHotels.map((hotel) => {
                 const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
+                const apartmentId = hotelApartments[0]?.id;
+                const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
                 const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
                 let priceText = null;
                 if (prices.length > 0) {
@@ -378,10 +391,20 @@ export default function CountrySelect() {
                               borderRadius: "50%",
                               padding: 5,
                               boxShadow: "0 0 5px #ccc",
-                              zIndex: 2
+                              zIndex: 2,
+                              filter: isFavorite ? "none" : "grayscale(1)",
                             }}
-                            onClick={() => handleAddFavorite(hotel)}
+                            onClick={() => {
+                              toggleHotelFavorite({
+                                user,
+                                favorites,
+                                setFavorites,
+                                hotel,
+                                apartments,
+                              });
+                            }}
                           />
+
                           {showAuthMsg && (
                             <div
                               style={{
@@ -408,10 +431,10 @@ export default function CountrySelect() {
                       <div className="col-md-8 col-12 d-flex flex-column justify-content-between py-3 px-4" style={{background: "#fff"}}>
                         <div className="d-flex align-items-center justify-content-between mb-1">
                           <span className="fw-bold" style={{ fontSize: 17, color: "#22614D" }}>{hotel.name}</span>
-                          <span className="badge" style={{ fontSize: 13, color: "#FE7C2C" }}>
+                          <span className="badge" style={{ fontSize: 14, color: "#FE7C2C" }}>
                             <img src="/images/reitingstar-orange.png" alt="Star"
                               style={{ width: 14, height: 14, marginRight: 6, verticalAlign: "middle", objectFit: "contain" }} />
-                            {hotel.rating?.toFixed(1) ?? '9.5'}
+                            {hotel.rating?.reviewCount || 0}
                           </span>
                         </div>
                         <div className="d-flex align-items-center mb-1">

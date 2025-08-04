@@ -4,7 +4,10 @@ import { getAllBookings } from "../api/bookingApi";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../api/axios";
 import HotelCard from "../components/HotelCard ";
-import { getUserFavorites, addFavorite } from "../api/favoriteApi";
+import { getUserFavorites, addFavorite, removeFavorite  } from "../api/favoriteApi";
+import { toast } from 'react-toastify';
+import { toggleHotelFavorite } from "../utils/favoriteUtils";
+
 
 const cardStyles = {
   borderRadius: 18,
@@ -19,7 +22,7 @@ const cardStyles = {
   justifyContent: "flex-end"
 };
 
-const TopTrendingHotels = () => {
+const TopTrendingHotels = ({ search = "" }) => {
   const [hotels, setHotels] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,17 +31,6 @@ const TopTrendingHotels = () => {
   const [apartments, setApartments] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const userId = JSON.parse(localStorage.getItem("user"))?.id;
-
-
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([getAllEstablishments(), getAllBookings()])
-      .then(([hotelsData, bookingsData]) => {
-        setHotels(hotelsData);
-        setBookings(bookingsData);
-      })
-      .finally(() => setLoading(false));
-  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -96,8 +88,24 @@ const TopTrendingHotels = () => {
   return hotelsWithCount; // <-- Всі топові, без slice!
 }, [hotels, bookings, selectedCountry]);
 
-// Для рендера на Home:
-const displayTopHotels = topHotels.slice(0, 3);
+const searchLower = (search || "").trim().toLowerCase();
+const filteredTopHotels = topHotels.filter(hotel => {
+  const country = (hotel.geolocation?.country || "").toLowerCase();
+  const city = (hotel.geolocation?.city || "").toLowerCase();
+  return (
+    hotel.name.toLowerCase().includes(searchLower) ||
+    country.includes(searchLower) ||
+    city.includes(searchLower)
+  );
+});
+
+const hotelsToShow =
+  searchLower && filteredTopHotels.length === 0
+    ? topHotels
+    : filteredTopHotels;
+
+const displayTopHotels = hotelsToShow.slice(0, 3);
+
 
   if (loading) {
     return (
@@ -119,23 +127,6 @@ const displayTopHotels = topHotels.slice(0, 3);
     );
   }
 
-  const handleAddFavorite = async (apartmentId) => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    const token = localStorage.getItem("token");
-    if (!user?.id || !token) {
-        alert("To add a hotel to your favorites, log in to your account!");
-        return;
-    }
-    try {
-        await addFavorite({ userId: user.id, apartmentId });
-        const updated = await getUserFavorites(user.id);
-        setFavorites(updated);
-    } catch (e) {
-        alert("Error adding to favorites.");
-    }
-    };
-
-
   return (
     <section className="my-5">
       <div style={{ maxWidth: 1200, margin: "0 auto", marginTop: 80 }}>
@@ -151,7 +142,7 @@ const displayTopHotels = topHotels.slice(0, 3);
               onClick={() => navigate("/hotels", {
                 state: {
                   source: "TopTrendingHotels",
-                  hotels: topHotels, // <-- Передаєм ВСІ на HotelList
+                  hotels: topHotels,
                   title: "Top Trending Hotels"
                 }
               })}
@@ -191,7 +182,7 @@ const displayTopHotels = topHotels.slice(0, 3);
             }}
             >
             {displayTopHotels.map((hotel) => {
-                // Визначаємо apartmentId для фаворитів (візьми перший apartment готелю)
+                // Визначаємо apartmentId для фаворитів
                 const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
                 const apartmentId = hotelApartments[0]?.id;
                 const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
@@ -200,16 +191,25 @@ const displayTopHotels = topHotels.slice(0, 3);
                 minPrice = Math.min(...prices);
                 }
                 // Перевірка, чи є вже у favorites
-                const isFavorite = !!favorites.find(f => f.apartmentId === apartmentId);
+                const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
 
                 return (
                 <HotelCard
-                    key={hotel.id}
-                    hotel={hotel}
-                    minPrice={minPrice}
-                    isFavorite={isFavorite}
-                    addFavorite={() => handleAddFavorite(apartmentId)}
-                    showLimitedOffer={true}
+                  key={hotel.id}
+                  hotel={hotel}
+                  minPrice={minPrice}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={() => {
+                    const user = JSON.parse(localStorage.getItem("user"));
+                    toggleHotelFavorite({
+                      user,
+                      favorites,
+                      setFavorites,
+                      hotel,
+                      apartments,
+                    });
+                  }}
+                  showLimitedOffer={true}
                 />
                 );
             })}
