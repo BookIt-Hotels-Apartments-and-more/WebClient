@@ -4,10 +4,11 @@ import { axiosInstance } from "../api/axios";
 import BookingBannerForm from '../components/BookingBannerForm';
 import HotelFilters from "../components/HotelFilters";
 import Breadcrumbs from '../components/Breadcrumbs';
-import { addFavorite, getUserFavorites  } from "../api/favoriteApi";
+import { getUserFavorites  } from "../api/favoriteApi";
 import countriesList from "../utils/countriesList";
 import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
 import { toggleApartmentFavorite } from "../utils/favoriteUtils";
+import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 
 
 
@@ -29,49 +30,64 @@ export default function Apartments() {
   const countryOptions = countriesList.map(c => c.name);
   const [favorites, setFavorites] = useState([]);
   const [favoriteApartments, setFavoriteApartments] = useState([]);
+  const [establishments, setEstablishments] = useState([]);
+  const FACILITIES = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
 
-
-  
-  // Load all apartments
   useEffect(() => {
     axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
+    axiosInstance.get("/api/establishments").then(res => setEstablishments(res.data));
     if (user?.id) {
     getUserFavorites(user.id).then(setFavorites);
   }
   }, [user?.id]);
+
+  // фільтрація по отелю
+  const filteredEstablishments = useMemo(() => {
+    return establishments.filter(est => {
+      const geo = est.geolocation || {};
+      const country = (geo.country || "").trim().toLowerCase();
+
+      const matchesCountry = !filters.country || country === filters.country.toLowerCase();
+      const isAllOrApartment = selectedType === "All" || selectedType === "Apartment";
+      const matchesType = isAllOrApartment || est.type === ESTABLISHMENT_TYPE_LABELS[selectedType];
+
+      const hasAllFacilities = FACILITIES.every(fac => {
+        if (!filters[fac]) return true;
+        const key = fac.charAt(0).toLowerCase() + fac.slice(1);
+        return est.features && est.features[key];
+      });
+
+      return matchesCountry && matchesType && hasAllFacilities;
+    });
+  }, [establishments, filters, selectedType]);
+
   
-  // Фільтрація (максимально схоже до CountrySelect)
+  const allowedHotelIds = useMemo(
+    () => new Set(filteredEstablishments.map(est => est.id)),
+    [filteredEstablishments]
+  );
+
+  // фільтрація по номерам
   const filteredApartments = useMemo(() => {
     return apartments.filter(apt => {
-      const geo = apt.establishment?.geolocation || {};
-      const country = (geo.country || "").trim().toLowerCase();
-      const city = (geo.city || "").trim().toLowerCase();
-      const matchesCountry = !filters.country || country === filters.country.toLowerCase();
+      if (!allowedHotelIds.has(apt.establishment?.id)) return false;
+
       const price = typeof apt.price === "number" ? apt.price : null;
       const matchesMinPrice = !filters.minPrice || (price !== null && price >= Number(filters.minPrice));
       const matchesMaxPrice = !filters.maxPrice || (price !== null && price <= Number(filters.maxPrice));
       const matchesRating = !filters.rating || (apt.rating && apt.rating >= Number(filters.rating));
-      // Пошук по назві, місту, країні
       const searchLower = search.trim().toLowerCase();
+      const geo = apt.establishment?.geolocation || {};
       const matchesSearch = !searchLower ||
         apt.name?.toLowerCase().includes(searchLower) ||
         (geo.city || "").toLowerCase().includes(searchLower) ||
         (geo.country || "").toLowerCase().includes(searchLower) ||
         (apt.establishment?.name || "").toLowerCase().includes(searchLower);
-      // Фільтр по типу
-      const matchesType =
-        selectedType === "All" || apt.type === selectedType;
 
-      return (
-        matchesCountry &&
-        matchesMinPrice &&
-        matchesMaxPrice &&
-        matchesRating &&
-        matchesSearch &&
-        matchesType
-      );
+      return matchesMinPrice && matchesMaxPrice && matchesRating && matchesSearch;
     });
-  }, [apartments, filters, search, selectedType]);
+  }, [apartments, allowedHotelIds, filters, search]);
+
   
 
   return (
@@ -205,10 +221,7 @@ export default function Apartments() {
                     <HotelFilters
                     filters={filters}
                     setFilters={newFilters => {
-                        setFilters(newFilters);
-                        if (newFilters.country !== filters.country) {
-                        navigate(`/country-select?country=${encodeURIComponent(newFilters.country)}`);
-                        }
+                        setFilters(newFilters);                        
                     }}
                     countryOptions={countryOptions}
                     showCountry={true}

@@ -9,6 +9,7 @@ import countriesList from "../utils/countriesList";
 import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
 import { getUserFavorites  } from "../api/favoriteApi";
 import { toggleHotelFavorite } from "../utils/favoriteUtils";
+import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 
 
 export default function CountrySelect() {
@@ -33,6 +34,7 @@ export default function CountrySelect() {
   const [showAuthMsg, setShowAuthMsg] = useState(false);  
   const currentCountry = filters.country || selectedCountry || "";
   const [favorites, setFavorites] = useState([]);
+  const FACILITIES = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
 
 
 
@@ -75,6 +77,12 @@ export default function CountrySelect() {
         selectedType === "All"
           ? true
           : hotel.type === Object.keys(ESTABLISHMENT_TYPE_LABELS).findIndex(label => label === selectedType);
+      
+      const hasAllFacilities = FACILITIES.every(fac => {
+        if (!filters[fac]) return true;
+        const key = fac.charAt(0).toLowerCase() + fac.slice(1);
+        return hotel.features && hotel.features[key];
+      });
 
       return (
         matchesCountry &&
@@ -82,7 +90,8 @@ export default function CountrySelect() {
         matchesMaxPrice &&
         matchesRating &&
         matchesSearch &&
-        matchesType
+        matchesType &&
+        hasAllFacilities 
       );
     });
   }, [hotels, apartments, filters, search, selectedType]);

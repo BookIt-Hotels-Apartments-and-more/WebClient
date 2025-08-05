@@ -22,7 +22,7 @@ import EditApartment from "../pages/landlord/EditApartment";
 import Countries from "../pages/Countries";
 import CountrySelect from "../pages/CountrySelect";
 import ScrollToTop from "../components/ScrollToTop";
-import HotelsList from "../components/HotelsList";
+import HotelsList from "../pages/HotelsList";
 import Apartments from "../pages/Apartments";
 
 

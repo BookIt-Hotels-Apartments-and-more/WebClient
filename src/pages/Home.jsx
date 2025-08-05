@@ -163,8 +163,7 @@ const Home = () => {
         }}>
           <div style={{ zIndex: 2, marginTop: -150 }}>
             <BookingBannerForm search={search} setSearch={setSearch} />
-          </div>
-          
+          </div>          
       </div>
       
 

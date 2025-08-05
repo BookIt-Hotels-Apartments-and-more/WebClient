@@ -7,6 +7,7 @@ import HotelFilters from "../components/HotelFilters";
 import countriesList from "../utils/countriesList";
 import { getUserFavorites, addFavorite } from "../api/favoriteApi";
 import { toast } from "react-toastify";
+import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 
 
 export default function HotelsList() {
@@ -20,6 +21,7 @@ export default function HotelsList() {
   const [favorites, setFavorites] = useState([]);
   const userId = JSON.parse(localStorage.getItem("user"))?.id;
   const countryOptions = countriesList.map(c => c.name);
+  const FACILITIES = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
   const [filters, setFilters] = useState({
     country: "",
     minPrice: "",
@@ -69,8 +71,8 @@ export default function HotelsList() {
   const filteredHotels = useMemo(() => {
     return hotelsBase.filter(hotel => {
       // Фільтр по країні
-      const geo = hotel.Geolocation || {};
-      const country = (geo.Country || "").trim().toLowerCase();
+      const geo = hotel.geolocation || {};
+      const country = (geo.country || "").trim().toLowerCase();
       const matchesCountry = !filters.country || country === filters.country.toLowerCase();
 
       // Мін/макс ціна
@@ -87,7 +89,13 @@ export default function HotelsList() {
         hotel.name.toLowerCase().includes(searchLower) ||
         geo.City?.toLowerCase().includes(searchLower);
 
-      return matchesCountry && matchesMinPrice && matchesMaxPrice && matchesRating && matchesSearch;
+      const hasAllFacilities = FACILITIES.every(fac => {
+        if (!filters[fac]) return true;
+        const key = fac.charAt(0).toLowerCase() + fac.slice(1);
+        return hotel.features && hotel.features[key];
+      });
+
+      return matchesCountry && matchesMinPrice && matchesMaxPrice && matchesRating && matchesSearch && hasAllFacilities;
     });
   }, [hotelsBase, apartments, filters, search]);
 
@@ -96,19 +104,25 @@ export default function HotelsList() {
       {/* Банер */}
       <div className='baner'
         style={{
-          width: '100%',
-          maxWidth: '1955px',
-          minHeight: '687px',
+          width: "100%",
+          maxWidth: "1955px",
+          minHeight: "587px",
           backgroundImage: "url('/images/mainbaner.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          margin: '0 auto',
-          marginTop: '-110px',
-          marginBlockEnd: '-110px',
-          zIndex: 1
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          margin: "0 auto",
+          marginTop: "-110px",
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1,
         }}>
+          <div style={{ zIndex: 2, marginTop: -150 }}>
+            <BookingBannerForm search={search} setSearch={setSearch} />
+          </div>          
       </div>
-      <BookingBannerForm search={search} setSearch={setSearch} />
 
       <div className="container py-5" style={{ width: 1800, maxWidth: "95vw" }}>
         <h2 className="fw-bold mb-3" style={{color: '#16396A'}}>
@@ -148,7 +162,7 @@ export default function HotelsList() {
 
                 return (
                   <div className="col-12 mb-4" key={hotel.id}>
-                    <div className="card flex-row h-100 shadow-sm" style={{ minHeight: 220, borderRadius: 12, overflow: 'hidden' }}>
+                    <div className="card flex-row h-100 " style={{ minHeight: 220, borderRadius: 12, overflow: 'hidden', boxShadow: "0 0 3px 2px #9ad8ef" }}>
                       <div className="d-flex align-items-center" style={{
                         minWidth: 220, minHeight: 220, maxHeight: 220, background: "#f8f9fa",
                         position: "relative", overflow: "hidden"
@@ -195,12 +209,12 @@ export default function HotelsList() {
                                 objectFit: "contain"
                               }}
                             />
-                            {hotel.rating?.toFixed(1) ?? '9.5'}
+                            {hotel.rating?.reviewCount || 0}
                           </span>
                         </div>
                         <div className="d-flex align-items-center mb-1">
                           <span className="fw-bold" style={{ fontSize: 12, color: "#02457A" }}>
-                            {hotel.Geolocation?.Address}
+                            {hotel.geolocation?.address}
                           </span>
                         </div>
                         <div className="mb-2" style={{ fontSize: 12, minHeight: 46 }}>{hotel.description}</div>

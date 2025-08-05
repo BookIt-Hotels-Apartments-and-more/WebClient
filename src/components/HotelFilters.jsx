@@ -1,4 +1,4 @@
-import React from "react";
+import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 
 const BUDGETS = [
   { label: "$0 - $200", min: 0, max: 200, color: "#FFB486" },
@@ -13,18 +13,7 @@ const BUDGETS = [
 
 const RATINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-const FACILITIES = [
-  { key: "parking", label: "Parking" },
-  { key: "charging", label: "Charging electric vehicles" },
-  { key: "restaurant", label: "Restaurant" },
-  { key: "beach", label: "Beach", highlight: true },
-  { key: "swimmingPool", label: "Swimming pool", highlight: true },
-  { key: "airportTransfer", label: "Transfer from/to the airport" },
-  { key: "fitness", label: "Fitness center" },
-  { key: "foodDelivery", label: "Food delivery to the room", highlight: true },
-  { key: "allInclusive", label: "All inclusive" },
-  { key: "nonSmoking", label: "Non-smoking rooms" },
-];
+const FACILITIES = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
 
 const ACTIVITIES = [
   { key: "sauna", label: "Sauna", highlight: true },
@@ -266,15 +255,15 @@ export default function HotelFilters({
         </div>
         <div className="d-flex flex-column gap-2" style={{ marginTop: 10, marginLeft: 20 }}>
           {FACILITIES.map(fac => {
-            const isChecked = filters[fac.key] || false;
+            const isChecked = filters[fac] || false;
             return (
               <label
-                key={fac.key}
+                key={fac}
                 className="d-flex align-items-center"
                 style={{
                   cursor: "pointer",
                   color: isChecked ? "#FF6D1F" : "#16396A",
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: 400,
                   marginBottom: 4,
                   transition: "color 0.2s",
@@ -283,12 +272,12 @@ export default function HotelFilters({
                 onClick={() =>
                   setFilters(fltrs => ({
                     ...fltrs,
-                    [fac.key]: !isChecked
+                    [fac]: !isChecked
                   }))
                 }
               >
                 <CustomCheckbox checked={isChecked} />
-                {fac.label}
+                {fac}
               </label>
             );
           })}
