@@ -15,11 +15,6 @@ export const createReview = async (reviewData) => {
   return res.data;
 };
 
-export const updateReview = async (id, reviewData) => {
-  const res = await axiosInstance.put(`/api/reviews/${id}`, reviewData);
-  return res.data;
-};
-
 export const deleteReview = async (id) => {
   const res = await axiosInstance.delete(`/api/reviews/${id}`);
   return res.data;

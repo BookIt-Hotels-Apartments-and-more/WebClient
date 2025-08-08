@@ -11,7 +11,7 @@ import TopTrendingHotels from '../components/TopTrendingHotels';
 import BestToursAndDeals from '../components/BestToursAndDeals';
 import WhyChooseUs from '../components/WhyChooseUs';
 import AppBanner from '../components/AppBanner';
-import AddComment from '../components/AddComment';
+import { toast } from 'react-toastify';
 
 
 const Home = () => {
@@ -173,7 +173,39 @@ const Home = () => {
       <BestToursAndDeals />
       <WhyChooseUs />
       <AppBanner />
-      <AddComment />
+
+      <div
+        style={{
+          maxWidth: 1500,
+          margin: "0 auto",
+          marginTop: 80,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: 300,
+          cursor: "pointer",
+        }}
+        onClick={() =>
+          toast.info(
+            "You can add your review about the booking or apartment in your personal account.",
+            { autoClose: 4000 }
+          )
+        }
+        title="Go to your account to leave a review"
+      >
+        <img
+          src="/images/addcomment.png"
+          alt=""
+          style={{
+            maxWidth: "1000px",
+            width: "100%",
+            height: "auto",
+            display: "block",
+            pointerEvents: "none"
+          }}
+        />
+      </div>
+  
 
     </div>
     

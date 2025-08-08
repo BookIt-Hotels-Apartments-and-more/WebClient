@@ -14,6 +14,8 @@ export default function HotelsList() {
   const location = useLocation();
   const sourceHotels = location.state?.hotels || null;
   const hotelsTitle = location.state?.title || "All Hotels";
+  const params = new URLSearchParams(location.search);
+  const selectedType = params.get("type");
 
   const [search, setSearch] = useState("");
   const [hotels, setHotels] = useState([]);
@@ -61,6 +63,14 @@ export default function HotelsList() {
     }
   };
 
+  const matchingCountries = useMemo(() => {
+    if (!selectedType) return null;
+    return countriesList
+      .filter(c => c.types.includes(selectedType))
+      .map(c => c.name.toLowerCase());
+  }, [selectedType]);
+
+
   // Вибираємо, з якими готелями працюємо — sourceHotels чи повний список
   const hotelsBase = useMemo(
     () => sourceHotels || hotels,
@@ -74,6 +84,9 @@ export default function HotelsList() {
       const geo = hotel.geolocation || {};
       const country = (geo.country || "").trim().toLowerCase();
       const matchesCountry = !filters.country || country === filters.country.toLowerCase();
+
+      // Фільтр для QuickPlanning
+      const matchesType = !matchingCountries || matchingCountries.includes(country);
 
       // Мін/макс ціна
       const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
@@ -95,9 +108,9 @@ export default function HotelsList() {
         return hotel.features && hotel.features[key];
       });
 
-      return matchesCountry && matchesMinPrice && matchesMaxPrice && matchesRating && matchesSearch && hasAllFacilities;
+      return matchesCountry && matchesType && matchesMinPrice && matchesMaxPrice && matchesRating && matchesSearch && hasAllFacilities;
     });
-  }, [hotelsBase, apartments, filters, search]);
+  }, [hotelsBase, apartments, filters, search, matchingCountries]);
 
   return (
     <div>

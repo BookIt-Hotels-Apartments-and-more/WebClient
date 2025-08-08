@@ -14,6 +14,9 @@ import {
 import { toast } from 'react-toastify';
 import { createUniversalPayment } from "../api/paymentApi";
 import { toggleApartmentFavorite } from "../utils/favoriteUtils";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -40,7 +43,11 @@ const HotelDetails = () => {
     text: "",
     rating: 5,
   });
-  const [paymentType, setPaymentType] = useState("Cash");  
+  const [paymentType, setPaymentType] = useState("Cash");
+  const [unavailableDates, setUnavailableDates] = useState([]);
+  const disabledDates = unavailableDates.map(d => new Date(d));
+
+
 
   useEffect(() => {
     axiosInstance.get(`/api/establishments/${id}`)
@@ -105,7 +112,25 @@ const HotelDetails = () => {
 
 useEffect(() => {
   if (bookingApartmentId) {
-    // При кожному відкритті модалки підтягуй дати з BookingBannerForm
+    // 1. Підтягуємо дати з форми (як і було)
+    const form = JSON.parse(localStorage.getItem("bookingForm") || "{}");
+    setBookingForm({
+      dateFrom: form.checkIn ? toInputDate(form.checkIn) : "",
+      dateTo: form.checkOut ? toInputDate(form.checkOut) : ""
+    });
+
+    // 2. Підтягуємо зайняті дати для цього apartment
+    axiosInstance.get(`/api/bookings/apartment/${bookingApartmentId}/availability`)
+      .then(res => {
+        setUnavailableDates(res.data.unavailableDates || []);
+      })
+      .catch(() => setUnavailableDates([]));
+  }
+}, [bookingApartmentId]);
+
+
+useEffect(() => {
+  if (bookingApartmentId) {
     const form = JSON.parse(localStorage.getItem("bookingForm") || "{}");
     setBookingForm({
       dateFrom: form.checkIn ? toInputDate(form.checkIn) : "",
@@ -151,6 +176,20 @@ useEffect(() => {
     return "";
   };
 
+  const isDateUnavailable = (from, to) => {
+    const check = (d) => unavailableDates.some(u => 
+      (new Date(u)).toISOString().slice(0, 10) === (new Date(d)).toISOString().slice(0, 10)
+    );
+    let cur = new Date(from);
+    let end = new Date(to);
+    while (cur < end) {
+      if (check(cur)) return true;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return false;
+  };
+
+
   const handleBooking = async (apartmentId) => {
     let user = null;
     try {
@@ -175,6 +214,13 @@ useEffect(() => {
       toast.warn("Please select dates for booking.", { autoClose: 10000 });
       return;
     }
+
+    if (isDateUnavailable(dateFrom, dateTo)) {
+      toast.error("These dates are already booked for this room. Please select other dates.", { autoClose: 12000 });
+      setBookingLoading(false);
+      return;
+    }
+
 
     setBookingLoading(true);
 
@@ -202,38 +248,43 @@ useEffect(() => {
 
       // 2. Створюємо payment
       const payDto = {
-        type: PAYMENT_TYPE[paymentType], // Перетворюємо в int
+        type: PAYMENT_TYPE[paymentType],
         amount: totalPrice,
         bookingId
       };
 
       if (paymentType === "Mono") {
-        // MonoBank — universal endpoint, чекаємо invoiceUrl
         setBookingLoading(true);
         const payRes = await createUniversalPayment(payDto);
         const invoiceUrl = payRes.data?.invoiceUrl || payRes.data?.url;
         const paymentId = payRes.data?.id || payRes.data?.paymentId;
         if (invoiceUrl) {
-          window.open(invoiceUrl, "_blank"); // відкриваємо інвойс у новій вкладці
-          setBookingApartmentId(null); // закриваємо модалку бронювання!
+          window.open(invoiceUrl, "_blank");
+          setBookingApartmentId(null);
           setBookingForm({ dateFrom: "", dateTo: "" });
           toast.success("Payment created! Pay via MonoBank.", { autoClose: 10000 });
         } else {
           toast.warn("Mono invoice error! No URL received.", { autoClose: 10000 });
         }
       } else {
-        // Cash або BankTransfer — просто створили payment, інфо для юзера
         await createUniversalPayment(payDto);
         toast.success("Booking successful! Details in your profile.", { autoClose: 10000 });
         setBookingApartmentId(null);
         setBookingForm({ dateFrom: "", dateTo: "" });
       }
     } catch (err) {
-      toast.error("Booking/payment error!", { autoClose: 10000 });
-    } finally {
-      setBookingLoading(false);
+      if (err?.response?.status === 409) {
+        const msg = err?.response?.data?.message ||
+          "Unable to create a reservation for these dates. There is already a reservation for this room during this period.";
+        toast.error(msg, { autoClose: 12000 });
+      } else {
+        toast.error("Booking/payment error!", { autoClose: 10000 });
+      }
     }
-  };
+    finally {
+        setBookingLoading(false);
+      }
+    };
 
   const RatingCategory = ({ label, value }) => (
     <div className="mb-3">
@@ -401,22 +452,26 @@ useEffect(() => {
               <div className="row mb-2">
                 <div className="col">
                   <label className="form-label">Date from</label>
-                  <input
-                    type="date"
+                  <DatePicker
+                    selected={bookingForm.dateFrom ? new Date(bookingForm.dateFrom) : null}
+                    onChange={date => setBookingForm(f => ({ ...f, dateFrom: date ? date.toISOString().slice(0,10) : "" }))}
+                    excludeDates={disabledDates}
+                    minDate={new Date()}
+                    placeholderText="Select start date"
+                    dateFormat="yyyy-MM-dd"
                     className="form-control"
-                    value={bookingForm.dateFrom}
-                    onChange={e => setBookingForm(f => ({ ...f, dateFrom: e.target.value }))}
-                    required
                   />
                 </div>
                 <div className="col">
                   <label className="form-label">Date to</label>
-                  <input
-                    type="date"
+                  <DatePicker
+                    selected={bookingForm.dateTo ? new Date(bookingForm.dateTo) : null}
+                    onChange={date => setBookingForm(f => ({ ...f, dateTo: date ? date.toISOString().slice(0,10) : "" }))}
+                    excludeDates={disabledDates}
+                    minDate={bookingForm.dateFrom ? new Date(bookingForm.dateFrom) : new Date()}
+                    placeholderText="Select end date"
+                    dateFormat="yyyy-MM-dd"
                     className="form-control"
-                    value={bookingForm.dateTo}
-                    onChange={e => setBookingForm(f => ({ ...f, dateTo: e.target.value }))}
-                    required
                   />
                 </div>
               </div>

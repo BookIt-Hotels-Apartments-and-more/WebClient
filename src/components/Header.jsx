@@ -54,8 +54,27 @@ return (
               }}
             >
               <Link to="/userpanel" style={{ color: "#02457A" }}>
-                <FaUserCircle size={24} style={{ cursor: "pointer" }} />
+                {user?.photos?.length > 0 && user.photos[0]?.blobUrl ? (
+                  <img
+                    src={user.photos[0].blobUrl}
+                    alt="User avatar"
+                    width={60}
+                    height={60}
+                    style={{
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "2px solid #e0eaf6",
+                      background: "#f3f3f3",
+                      boxShadow: "0 2px 5px 0 rgba(2,69,122,0.08)",
+                      cursor: "pointer"
+                    }}
+                  />
+                ) : (
+                  <FaUserCircle size={36} style={{ cursor: "pointer" }} />
+                )}
               </Link>
+
+
               <span>Hello, {user?.username}</span>
               <button className="btn btn-outline-danger btn-sm" onClick={handleLogout}>
                 Logout

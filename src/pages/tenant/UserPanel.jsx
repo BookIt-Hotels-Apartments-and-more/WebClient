@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getAllBookings, deleteBooking, updateBooking } from "../../api/bookingApi";
 import { getUserFavorites, removeFavorite  } from "../../api/favoriteApi";
 import { getApartmentById } from "../../api/apartmentApi";
 import { toast } from 'react-toastify';
+import { uploadUserPhoto } from "../../api/userApi";
+import AddComment from "../../components/AddComment";
+
 
 const UserPanel = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   if (!user) return null;
 
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [favorites, setFavorites] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [apartmentMap, setApartmentMap] = useState({});
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [editedUser, setEditedUser] = useState({
     username: user?.username || "",
     email: user?.email || "",
@@ -26,7 +31,7 @@ const UserPanel = () => {
     dateFrom: "",
     dateTo: ""
   });
-
+  const [addReviewModal, setAddReviewModal] = useState({ show: false, booking: null });
   const [activeStep] = useState(2); // 1-2-3; поки статично
 
   useEffect(() => {
@@ -108,7 +113,7 @@ const UserPanel = () => {
     reader.onload = (ev) => {
       setEditedUser(prev => ({
         ...prev,
-        photoBase64: ev.target.result.split(',')[1],
+        photoBase64: ev.target.result,
         photoPreview: ev.target.result
       }));
     };
@@ -193,8 +198,8 @@ const UserPanel = () => {
     return new Date(dateStr).toLocaleDateString();
   };
 
-  // --- Дані для правої колонки (заглушки або витягати з booking)
-  const upcomingBooking = upcoming[0] || null; // наступне бронювання, якщо є
+  // --- Дані для правої колонки
+  const upcomingBooking = upcoming[0] || null;
   const apt = upcomingBooking?.apartment || null;
   const hotel = apt?.establishment || null;
 
@@ -361,8 +366,26 @@ const UserPanel = () => {
                             height={90}
                             style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee" }}
                           />
+                          <button
+                            className="btn btn-primary btn-sm mt-2"
+                            style={{ borderRadius: 10, fontWeight: 600, minWidth: 110, marginLeft: 12 }}
+                            disabled={!editedUser.photoBase64}
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              try {
+                                await uploadUserPhoto(editedUser.photoBase64);
+                                toast.success("Profile photo updated!", { autoClose: 3000 });
+                              } catch (err) {
+                                console.error("Failed to upload photo", err);
+                                toast.error("Failed to upload photo", { autoClose: 4000 });
+                              }
+                            }}
+                          >
+                            Save photo
+                          </button>
                         </div>
                       )}
+
                     </div>
 
                     <div style={{ fontSize: 13, color: "#6E7C87", fontWeight: 400, marginTop: 2 }}>
@@ -519,12 +542,34 @@ const UserPanel = () => {
                             background: "#f3f8fe",
                             border: "1px solid #e1ecfa",
                             marginBottom: 2,
+                            cursor: "pointer",
                           }}
+                          onClick={() => hotel?.id && navigate(`/hotels/${hotel.id}`)}
                         >
                           <div>
-                            <div style={{ fontWeight: 600, color: "#02457A", fontSize: 17 }}>
-                              🏨 {hotel?.name || "Hotel " + (hotel?.id || "?")}
+                            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                              {apt?.photos?.[0]?.blobUrl ? (
+                                <img
+                                  src={apt.photos[0].blobUrl}
+                                  alt={apt.name}
+                                  style={{
+                                    width: 120,
+                                    height: 100,
+                                    objectFit: "cover",
+                                    borderRadius: 12,
+                                    marginRight: 10,
+                                    border: "1.5px solid #eee",
+                                    background: "#f3f3f3",
+                                  }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: 34, marginRight: 10 }}>🏨</span>
+                              )}
+                              <span style={{ fontWeight: 600, color: "#02457A", fontSize: 24 }}>
+                                {hotel?.name || "Hotel " + (hotel?.id || "?")}
+                              </span>
                             </div>
+
                             {apt?.id && (
                               <div style={{ color: "#555", fontSize: 15 }}>
                                 Room: <span style={{ fontWeight: 500 }}>{apt.name}</span>
@@ -542,7 +587,10 @@ const UserPanel = () => {
                               borderRadius: 10,
                               marginLeft: 10,
                             }}
-                            onClick={() => handleDeleteFavorite(f.id)}
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleDeleteFavorite(f.id);
+                            }}
                           >
                             Delete
                           </button>
@@ -572,13 +620,14 @@ const UserPanel = () => {
                 <div className="text-muted">Here will be shown your next hotel</div>
               </div>
             ) : (
-              // БЛОК З МАЙБУТЬНІМИ БРОНЮВАННЯМИ
+              // БЛОК З МАЙБУТНІМИ БРОНЮВАННЯМИ
               upcoming.map((booking, idx) => {
                 const apt = booking.apartment;
                 const hotel = apt?.establishment;
+                const now = new Date();
+                const canAddReview = new Date(booking.dateFrom) <= now;
                 return (
-                  <div key={booking.id} style={{ marginBottom: 32 }}>
-                    
+                  <div key={booking.id} style={{ marginBottom: 32 }}>                    
                     <div style={{
                       background: "#fcfcfc",
                       borderRadius: 18,
@@ -634,6 +683,15 @@ const UserPanel = () => {
                     >
                       Cancel booking
                     </button>
+                    {canAddReview && (
+                      <button
+                        className="btn btn-success btn-sm mt-2 ms-2"
+                        style={{ borderRadius: 10, minWidth: 120, fontWeight: 600 }}
+                        onClick={() => setAddReviewModal({ show: true, booking })}
+                      >
+                        Add Review
+                      </button>
+                    )}
 
                     {/* --- HR between bookings --- */}
                     {idx < upcoming.length - 1 && <hr style={{ margin: "20px 0", borderTop: "2px solid #dde2e7" }} />}
@@ -642,27 +700,38 @@ const UserPanel = () => {
               })
             )}
             {/* Історія бронювань */}
-          <div style={{background: "#fcfcfc", borderRadius: 18, padding: 24, minHeight: 120, boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)" }}>
-            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>
-              Booking history
-            </div>
-            {history.length === 0 && (
-              <div style={{ color: "#aaa" }}>No past bookings found.</div>
-            )}
-            {history.map((b, idx) => (
-              <div key={b.id} className="mb-2" style={{ borderBottom: "1px solid #eee", paddingBottom: 10 }}>
-                <div style={{ fontWeight: 600 }}>{b.apartment?.establishment?.name || "Hotel"}</div>
-                <div>{b.apartment?.name}</div>
-                <div>
-                  {new Date(b.dateFrom).toLocaleDateString()} &ndash; {new Date(b.dateTo).toLocaleDateString()}
-                </div>
-                <div>Status: <span style={{ color: "#aaa" }}>Completed</span></div>
+            <div style={{background: "#fcfcfc", borderRadius: 18, padding: 24, minHeight: 120, boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)" }}>
+              <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>
+                Booking history
               </div>
-            ))}
-          </div>
+              <hr></hr>
+              {history.length === 0 && (
+                <div style={{ color: "#aaa" }}>No past bookings found.</div>
+              )}
+              {history.map((b, idx) => (
+                <div key={b.id} className="mb-2" style={{ borderBottom: "1px solid #eee", paddingBottom: 10 }}>
+                  <div style={{ fontWeight: 600 }}>{b.apartment?.establishment?.name || "Hotel"}</div>
+                  <div>{b.apartment?.name}</div>
+                  <div>
+                    {new Date(b.dateFrom).toLocaleDateString()} &ndash; {new Date(b.dateTo).toLocaleDateString()}
+                  </div>
+                  {/* Потім переробити на отримання статусу з бека */}
+                  <div>Status: <span style={{ color: "#aaa" }}>Completed</span></div>
+                  <button
+                    className="btn btn-success btn-sm mt-2"
+                    style={{ borderRadius: 10, minWidth: 110, fontWeight: 600 }}
+                    onClick={() => setAddReviewModal({ show: true, booking: b })}
+                  >
+                    Add Review
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
           
         </div>
+
+        {/* модалка редагування бронювання (додати перевірку дат бронювання!!!!!!!!!!) */}
         {editModal.show && (
         <div
           style={{
@@ -719,6 +788,50 @@ const UserPanel = () => {
         </div>
       )}
       </div>
+      {/* модалка додавання відгуків */}
+      {addReviewModal.show && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.38)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          onClick={() => setAddReviewModal({ show: false, booking: null })}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 18,
+              padding: 32,
+              minWidth: 420,
+              boxShadow: "0 8px 36px 0 rgba(31, 38, 135, 0.19)",
+              position: "relative"
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <AddComment
+              bookingId={addReviewModal.booking?.id}
+              apartmentId={addReviewModal.booking?.apartmentId || addReviewModal.booking?.apartment?.id}
+              onClose={() => setAddReviewModal({ show: false, booking: null })}
+            />
+            <button
+              className="btn btn-secondary btn-sm mt-3"
+              style={{ borderRadius: 10, minWidth: 100 }}
+              onClick={() => setAddReviewModal({ show: false, booking: null })}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       
     </div>
     

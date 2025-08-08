@@ -79,7 +79,7 @@ const countriesList = [
   {
     name: "Ukraine",
     img: "/images/ukraine.png",
-    types: ["Relax", "Mountains", "Nature", "City"],
+    types: ["Mountains", "Nature", "City"],
   },
   {
     name: "UAE",

@@ -1,4 +1,5 @@
 import React from "react";
+import { toast } from 'react-toastify';
 
 const AppBanner = () => {
     return (
@@ -12,10 +13,17 @@ const AppBanner = () => {
       justifyContent: "center",
       alignItems: "center",
       minHeight: 300,
+      cursor: "pointer",
     }}
+    onClick={() =>
+              toast.info(
+                "The software is still under development. You will be able to download it a little later)",
+                { autoClose: 4000 }
+              )
+            }
   >
     <img
-      src="/images/appstore.png"
+      src="/images/appstore2.png"
       alt=""
       style={{
         maxWidth: "1000px",

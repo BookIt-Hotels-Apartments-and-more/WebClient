@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loginUser, getCurrentUser, forgotPassword } from "../api/authApi";
+import { getUserById } from "../api/userApi";
 import { useDispatch } from "react-redux";
 import { setUser } from "../store/slices/userSlice";
 import { axiosInstance } from "../api/axios";
@@ -17,23 +18,24 @@ const Login = () => {
   const location = useLocation();
   const loginSource = location.state?.source || sessionStorage.getItem('loginSource') || null;
 
-  const handleEmailLogin = () => {
-  if (!email.includes("@")) {
-    alert("Please enter a valid email address");
-    return;
-  }
+  const handleEmailLogin = async () => {
+    if (!email.includes("@")) {
+      alert("Please enter a valid email address");
+      return;
+    }
 
-  loginUser({ email, password })
-    .then((data) => {
+    try {
+      const data = await loginUser({ email, password });
       localStorage.setItem("token", data.token);
       axiosInstance.defaults.headers["Authorization"] = `Bearer ${data.token}`;
-      return getCurrentUser();
-    })
-    .then((user) => {
-      localStorage.setItem("user", JSON.stringify(user));
-      dispatch(setUser(user));
 
-      // Нова логіка через whoAreYou:
+      const user = await getCurrentUser();
+
+      const fullUser = await getUserById(user.id);
+
+      localStorage.setItem("user", JSON.stringify(fullUser));
+      dispatch(setUser(fullUser));
+
       const whoAreYou = localStorage.getItem("whoareyou");
 
       if (loginSource === "partner") {
@@ -49,11 +51,10 @@ const Login = () => {
       } else {
         navigate("/");
       }
-    })
-    .catch((err) => {
+    } catch (err) {
       alert(err.message || "Invalid email or password");
-    });
-};
+    }
+  };
 
 
   const handleForgotPassword = async () => {
@@ -72,7 +73,6 @@ const Login = () => {
       setShowForgot(false);
     }
   };
-
 
 
   return (

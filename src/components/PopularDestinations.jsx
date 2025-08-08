@@ -167,7 +167,7 @@ const displayHotels = popularHotels.slice(0, 5);
                     boxShadow: "none",
                     cursor: "pointer"
                 }}
-                onClick={() => navigate(`/hotels/${hotel.id}`)}
+                onClick={() => navigate(`/hotels/${popularHotels[0]?.id}`)}
                 >
                 <div style={{
                     position: "relative",
@@ -178,7 +178,8 @@ const displayHotels = popularHotels.slice(0, 5);
                     overflow: "hidden",
                     display: "flex",
                     flexDirection: "column"
-                    }}>
+                    }}
+                    >
                     <img
                         src={popularHotels[0]?.photos?.[0]?.blobUrl || "/noimage.png"}
                         alt={popularHotels[0]?.name}
@@ -245,14 +246,17 @@ const displayHotels = popularHotels.slice(0, 5);
                         }}>
                         
                         <img src="/images/reitingstar-orange.png" alt="" style={{ width: 16, height: 16, marginRight: 5, verticalAlign: "middle" }} />
-                        {displayHotels[0]?.rating?.toFixed(1) ?? "—"}
+                        {typeof displayHotels[0]?.rating?.generalRating === "number"
+                          ? hotel.rating.generalRating.toFixed(1)
+                          : "—"}
+
                         </span>
                     </div>
                     
                     <div style={{ fontWeight: 400, fontSize: 13, color: "#333" }}>{popularHotels[0]?.description}</div>
                 <div style={{ fontWeight: 400, fontSize: 13, color: "#666", marginTop: 4 }}>Бронювань: {popularHotels[0]?.bookingsCount}</div>
             </div>
-        </div>
+          </div>
         </div>
 
           {/* Решта 4 — горизонтальні */}
@@ -337,7 +341,9 @@ const displayHotels = popularHotels.slice(0, 5);
                         alignItems: "center"
                       }}>
                         <img src="/images/reitingstar-orange.png" alt="" style={{ width: 14, height: 14, marginRight: 5, verticalAlign: "middle" }} />
-                        {hotel.rating?.toFixed(1) ?? "—"}
+                        {typeof hotel.rating?.generalRating === "number"
+                          ? hotel.rating.generalRating.toFixed(1)
+                          : "—"}
                       </span>
                     </div>
 

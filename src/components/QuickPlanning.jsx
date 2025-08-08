@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 
 const categories = [
   { name: "Beach", img: "/images/beach.png" },
@@ -13,6 +15,11 @@ const OVERLAP = 64;
 
 const QuickPlanning = () => {
   const [hoveredIdx, setHoveredIdx] = useState(null);
+  const navigate = useNavigate();
+
+  const handleCategoryClick = (category) => {
+    navigate(`/hotels?type=${encodeURIComponent(category)}`);
+  };
 
   return (
     <section className="my-5" style={{maxWidth: 1200, margin: "0 auto"}}>
@@ -64,6 +71,7 @@ const QuickPlanning = () => {
                 onMouseLeave={() => setHoveredIdx(null)}
                 onFocus={() => setHoveredIdx(idx)}
                 onBlur={() => setHoveredIdx(null)}
+                onClick={() => handleCategoryClick(cat.name)}
               >
                 <img
                   src={cat.img}

@@ -1,21 +1,39 @@
 import { useState } from "react";
+import { createReview } from "../api/reviewApi";
+import { toast } from 'react-toastify';
 
-const criteria = ["Location", "Amenities", "Services", "Price", "Rooms"];
+const criteria = [
+  { key: "Staff", label: "Staff" },
+  { key: "Purity", label: "Purity" },
+  { key: "PriceQuality", label: "Price/Quality" },
+  { key: "Comfort", label: "Comfort" },
+  { key: "Facilities", label: "Facilities" },
+  { key: "Location", label: "Location" },
+  { key: "CustomerStay", label: "Overall stay" }
+];
 
-const AddComment = () => {
+const AddComment = (props) => {
+  if (!props.bookingId || !props.apartmentId) {
+    return <div>Invalid review context. Try to reload the page.</div>;
+  }
+
   const [ratings, setRatings] = useState({
+    Staff: 0,
+    Purity: 0,
+    PriceQuality: 0,
+    Comfort: 0,
+    Facilities: 0,
     Location: 0,
-    Amenities: 0,
-    Services: 0,
-    Price: 0,
-    Rooms: 0
+    CustomerStay: 0
   });
+
   const [form, setForm] = useState({
     name: "",
     email: "",
     comment: "",
     save: false
   });
+  const [newPhotos, setNewPhotos] = useState([]);
 
   const handleRating = (crit, val) => setRatings(r => ({ ...r, [crit]: val }));
 
@@ -27,10 +45,50 @@ const AddComment = () => {
     }));
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Thanks for your comment!");
+    const review = {
+      text: form.comment,
+      staffRating: ratings.Staff,
+      purityRating: ratings.Purity,
+      priceQualityRating: ratings.PriceQuality,
+      comfortRating: ratings.Comfort,
+      facilitiesRating: ratings.Facilities,
+      locationRating: ratings.Location,
+      customerStayRating: ratings.CustomerStay,
+      bookingId: props.bookingId,
+      customerId: props.customerId,
+      apartmentId: props.apartmentId,
+      existingPhotosIds: [],
+      newPhotosBase64: newPhotos.map(p => p.base64)
+    };
+    try {
+      await createReview(review);
+      toast.success("Thank you for your review!", { autoClose: 4000 });
+      props.onClose && props.onClose();
+    } catch (err) {
+      toast.success("Failed to submit review", { autoClose: 4000 });
+    }
   };
+
+  const handlePhotoChange = async (e) => {
+    const files = Array.from(e.target.files);
+    const updated = [];
+    for (const file of files) {
+      const base64 = await toBase64(file);
+      updated.push({ file, base64 });
+    }
+    setNewPhotos(updated);
+  };
+
+  const toBase64 = file =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
 
   return (
     <section
@@ -73,14 +131,14 @@ const AddComment = () => {
           <form onSubmit={handleSubmit}>
             <div className="d-flex mb-3" style={{ gap: 12, flexWrap: "wrap" }}>
               {criteria.map(crit => (
-                <div key={crit} style={{ minWidth: 80 }}>
-                  <div style={{ fontSize: 10 }}>{crit}</div>
+                <div key={crit.key} style={{ minWidth: 80 }}>
+                  <div style={{ fontSize: 10 }}>{crit.label}</div>
                   {[1, 2, 3, 4, 5].map(val => (
                     <span
                       key={val}
-                      onClick={() => handleRating(crit, val)}
+                      onClick={() => handleRating(crit.key, val)}
                       style={{
-                        color: ratings[crit] >= val ? "#F7B801" : "#ccc",
+                        color: ratings[crit.key] >= val ? "#F7B801" : "#ccc",
                         cursor: "pointer",
                         fontSize: 18,
                         transition: "color .12s"
@@ -89,32 +147,7 @@ const AddComment = () => {
                   ))}
                 </div>
               ))}
-            </div>
-            <div className="row mb-3">
-              <div className="col">
-                <input
-                  className="form-control mb-2"
-                  style={{fontSize: 12}}
-                  placeholder="Name"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="col">
-                <input
-                  className="form-control mb-2"
-                  style={{fontSize: 12}}
-                  placeholder="Email address"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  type="email"
-                  required
-                />
-              </div>
-            </div>
+            </div>            
             <textarea
               className="form-control mb-3"
               style={{fontSize: 12}}
@@ -125,18 +158,36 @@ const AddComment = () => {
               onChange={handleChange}
               required
             />
-            <div className="mb-3 form-check" style={{ marginBottom: 22 }}>
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="save"
-                name="save"
-                checked={form.save}
-                onChange={handleChange}
-              />
-              <label className="form-check-label" htmlFor="save" style={{ fontSize: 9 }}>
-                Save my name, email in this browser for the next time.
+
+            {/* --- Фото upload --- */}
+            <div className="mb-3">
+              <label style={{ fontSize: 12, fontWeight: 600 }}>
+                Add photo(s) to your review (optional)
               </label>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                className="form-control"
+                style={{ fontSize: 11 }}
+                onChange={handlePhotoChange}
+              />
+              {/* Preview selected images */}
+              <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                {newPhotos.map((p, idx) => (
+                  <img
+                    key={idx}
+                    src={p.base64}
+                    alt={`preview-${idx}`}
+                    style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 10, border: "1px solid #ddd" }}
+                  />
+                ))}
+              </div>
+            </div>
+
+
+            <div className="mb-3 form-check" style={{ marginBottom: 22 }}>
+             
               <button
               type="submit"
               className="btn"
