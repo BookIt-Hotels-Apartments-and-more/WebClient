@@ -30,3 +30,16 @@ export const deleteBooking = async (id) => {
   return res.data;
 };
 
+export const getApartmentAvailability = async (apartmentId) => {
+  const res = await axiosInstance.get(`/api/bookings/apartment/${apartmentId}/availability`);
+  return res.data;
+};
+
+export const checkApartmentAvailability = async (apartmentId, dateFrom, dateTo) => {
+  const res = await axiosInstance.get(`/api/bookings/apartment/${apartmentId}/check-availability`, {
+    params: { dateFrom, dateTo }
+  });
+  return res.data;
+};
+
+

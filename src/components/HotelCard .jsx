@@ -71,7 +71,9 @@ const HotelCard = ({
           display: "flex", alignItems: "center"
         }}>
             <img src="/images/reitingstar-orange.png" alt="rating" style={{ marginRight: 5, width: 16 }} />
-          {hotel.rating?.reviewCount || 0}        
+          {typeof hotel.rating?.generalRating === "number"
+            ? hotel.rating.generalRating.toFixed(1)
+            : "—"}        
         </div>
       </div>
       

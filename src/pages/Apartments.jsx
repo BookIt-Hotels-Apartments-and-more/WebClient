@@ -264,7 +264,7 @@ export default function Apartments() {
             <div className="row">
                 {filteredApartments.length > 0 ? (
                 filteredApartments.map(apt => {
-                    // Оголошуємо isFavorite тут!
+                  
                     const isFavorite = favorites?.some(f => f.apartment && f.apartment.id === apt.id);
 
                     return (

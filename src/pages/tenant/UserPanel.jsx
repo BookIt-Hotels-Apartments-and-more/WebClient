@@ -6,6 +6,10 @@ import { getApartmentById } from "../../api/apartmentApi";
 import { toast } from 'react-toastify';
 import { uploadUserPhoto } from "../../api/userApi";
 import AddComment from "../../components/AddComment";
+import { decodeFlagsUser, ESTABLISHMENT_TYPE_LABELS, 
+  ESTABLISHMENT_FEATURE_LABELS,  
+  getEstablishmentTypeName, 
+  APARTMENT_FEATURE_LABELS } from "../../utils/enums";
 
 
 const UserPanel = () => {
@@ -33,6 +37,7 @@ const UserPanel = () => {
   });
   const [addReviewModal, setAddReviewModal] = useState({ show: false, booking: null });
   const [activeStep] = useState(2); // 1-2-3; поки статично
+  const FACILITIES = Object.keys(ESTABLISHMENT_TYPE_LABELS);
 
   useEffect(() => {
     setLoading(true);
@@ -163,15 +168,19 @@ const UserPanel = () => {
   const handleEditBooking = async () => {
     if (!editModal.booking) return;
     try {
+      const fmt = (d) => (d && d.length === 10 ? `${d}T00:00:00` : d);
+
       await updateBooking(editModal.booking.id, {
-        dateFrom: editModal.dateFrom,
-        dateTo: editModal.dateTo,
+        dateFrom: fmt(editModal.dateFrom),
+        dateTo: fmt(editModal.dateTo),
         customerId: user.id,
         apartmentId: editModal.booking.apartmentId || editModal.booking.apartment?.id,
-        additionalRequests: editModal.booking.additionalRequests || ""
+        additionalRequests: editModal.booking.additionalRequests || "",
+        paymentType: editModal.booking.paymentType ?? undefined
       });
-      setBookings((prev) =>
-        prev.map((b) =>
+
+      setBookings(prev =>
+        prev.map(b =>
           b.id === editModal.booking.id
             ? { ...b, dateFrom: editModal.dateFrom, dateTo: editModal.dateTo }
             : b
@@ -180,10 +189,20 @@ const UserPanel = () => {
       toast.success("Booking updated!", { autoClose: 4000 });
       closeEditModal();
     } catch (err) {
+      console.error(err?.response || err);
       toast.error("Unable to update reservation!", { autoClose: 4000 });
     }
   };
 
+
+  const getNights = (fromStr, toStr) => {
+    if (!fromStr || !toStr) return 0;
+    const from = new Date(fromStr);
+    const to   = new Date(toStr);
+    const diffMs = to - from;
+    const nights = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return Math.max(1, nights); // мінімум 1 ніч
+  };
 
 
   // --- Розбивка бронювань
@@ -636,62 +655,252 @@ const UserPanel = () => {
                       boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)",
                       marginBottom: 14,
                     }}>
-                      {/* --- Hotel info --- */}
-                      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your upcoming hotels</div>
-                      <div style={{ fontWeight: 800 }}>{hotel?.name || "Hotel"}</div>
-                      <span style={{ fontWeight: 400 }}>Hotel</span>{" "}
-                      <div style={{ color: "#567" }}>{hotel?.address}</div>
-                      <div>{"★".repeat(hotel?.stars || 4)}</div>
-                      <div className="mt-2 text-muted" style={{ fontSize: 13 }}>{apt?.name}</div>
+                      {/* --- Hotel info --- */}                      
+                      <div 
+                        style={{ 
+                          display: "flex", 
+                          justifyContent: "space-between", 
+                          alignItems: "center", 
+                          fontSize: 24, 
+                          fontWeight: 800,
+                          color: "#001B48"
+                        }}
+                      >
+                        <span>{hotel?.name || "Hotel"}</span>
+                        <span style={{ fontSize: 16, color: "#FE7C2C" }}>
+                          <img src="/images/reitingstar-orange.png"
+                              alt="Star"
+                              style={{
+                                width: 16,
+                                height: 16,
+                                marginRight: 4,
+                                verticalAlign: "middle",
+                                objectFit: "contain"
+                              }}
+                            />
+                          {typeof apt?.rating?.generalRating === "number"
+                            ? apt.rating.generalRating.toFixed(1)
+                            : "—"}
+                        </span>
+                      </div>
+
+                      <span style={{ fontWeight: 200, fontSize: 13, color: "#001B48" }}>
+                        {getEstablishmentTypeName(hotel?.type)}
+                      </span>{" "}
+                      <div style={{ color: "#22614D" }}>
+                        <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.geolocation?.address || "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: 13,
+                              color: "#02457A",
+                              textDecoration: "none",
+                              display: "flex",
+                              alignItems: "center"
+                            }}
+                          >
+                            <img src="/images/geoikon.png" alt="Geo-ikon"
+                              style={{ width: 16, height: 16, marginRight: 6, objectFit: "contain" }} />
+                        
+                          <span className="fw-bold" style={{ fontSize: 14, color: "#22614D" }}>                        
+                              {hotel.geolocation?.address
+                                ?.split(",")
+                                ?.filter((_, i) => [0, 1, 3, 6].includes(i))
+                                ?.join(", ")}
+                            </span>
+                        </a>
+                      </div>                      
+
+                      <div className="mt-2" style={{ fontSize: 14, color: "#001B48" }}>
+                        Great location - {typeof apt?.rating?.generalRating === "number"
+                          ? apt.rating.generalRating.toFixed(1)
+                          : "—"}
+                      </div>
+
+                      <div className="mt-2" style={{ fontSize: 14 }}>
+                        <span style={{ fontSize: 16, color: "#FE7C2C" }}>
+                          <img src="/images/reitingstar-orange.png"
+                              alt="Star"
+                              style={{
+                                width: 16,
+                                height: 16,
+                                marginRight: 4,
+                                verticalAlign: "middle",
+                                objectFit: "contain"
+                              }}
+                            />
+                          {typeof apt?.rating?.generalRating === "number"
+                            ? apt.rating.generalRating.toFixed(1)
+                            : "—"} 
+                        </span>
+                        <span style={{marginLeft: 6, marginRight: 6, color: "#001B48"}}>
+                          Rating excellent /                            
+                        </span>
+                        <span style={{ color: "#737373" }}>
+                          {typeof hotel?.rating?.reviewCount === "number"
+                            ? hotel.rating.reviewCount
+                            : "-"} reviews
+                        </span>
+                      </div>
+                      {/* Вивід зручностей готеля з іконками */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "15px", marginTop: 20, marginBlockEnd: 20 }}>
+                        {(() => {
+                          let featureNames = [];
+                          if (typeof hotel?.features === "number") {
+                            featureNames = decodeFlagsUser(hotel.features, ESTABLISHMENT_FEATURE_LABELS);
+                          } else if (hotel?.features && typeof hotel.features === "object") {
+                            featureNames = Object.keys(ESTABLISHMENT_FEATURE_LABELS).filter(k =>
+                              hotel.features[k.charAt(0).toLowerCase() + k.slice(1)]
+                            );
+                          }
+
+                          return featureNames.map((featureName, index) => (
+                            <div key={index} style={{ display: "flex", alignItems: "center", fontSize: 12, color: "#001B48" }}>
+                              <img
+                                src={`/images/features/${featureName}.png`}
+                                alt={featureName}
+                                style={{ width: 20, height: 20, marginRight: 6 }}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                              {featureName.replace(/([A-Z])/g, " $1").trim()}
+                            </div>
+                          ));
+                        })()}
+                      </div>
+
+                      
+                      <div className="mt-2 text-muted" style={{ fontSize: 13}}>Your apartment: {apt?.name}</div>
+                      {/* Вивід зручностей апартамента з іконками */}
+                      {apt?.features && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "6px 0 8px" }}>
+                          {(() => {
+                            let names = [];
+                            if (typeof apt.features === "number") {
+                              // якщо бек дає бітмаску
+                              names = decodeFlagsUser(apt.features, APARTMENT_FEATURE_LABELS);
+                            } else if (typeof apt.features === "object") {
+                              // якщо бек дає об'єкт булів { freeWifi: true, ... }
+                              names = Object.keys(APARTMENT_FEATURE_LABELS).filter(k =>
+                                apt.features[k.charAt(0).toLowerCase() + k.slice(1)]
+                              );
+                            }
+
+                            return names.map((name) => (
+                              <div
+                                key={name}
+                                className="d-inline-flex align-items-center px-2 py-1"
+                                style={{ fontSize: 12, color: "#001B48" }}
+                              >
+                                <img
+                                  src={`/images/apartment-features/${name}.png`}
+                                  alt={name}
+                                  style={{ width: 16, height: 16, marginRight: 6 }}
+                                  onError={(e) => {
+                                    // fallback: пробуємо /images/features/<name>.png; якщо і його нема — ховаємо іконку
+                                    const fallback = `/images/features/${name}.png`;
+                                    if (!e.currentTarget.dataset.tried) {
+                                      e.currentTarget.dataset.tried = "1";
+                                      e.currentTarget.src = fallback;
+                                    } else {
+                                      e.currentTarget.style.display = "none";
+                                    }
+                                  }}
+                                />
+                                {name.replace(/([A-Z])/g, " $1").trim()}
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      )}
+
+
+
+
                       <hr></hr>
                       {/* --- Booking details --- */}
-                      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your booking details</div>
-                      <div>Check-in: <b>{formatDate(booking.dateFrom)}</b></div>
-                      <div>Check-out: <b>{formatDate(booking.dateTo)}</b></div>
-                      <div>Guests: {booking.guestsCount || 2}</div>
+                      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 16, color: "#001B48" }}>Your booking details</div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: 16 }}>
+                        {/* Check-in */}
+                        <div>
+                          <div style={{ color: "#0F3E0F", fontWeight: 800, marginBottom: 8 }}>Check-in</div>
+                          <div style={{color: "#001B48"}}>{formatDate(booking.dateFrom)}</div>
+                          <div style={{color: "#001B48"}}>Check-in Time: {booking.dateFrom.slice(11, 16)}</div>
+                        </div>
+
+                        {/* Check-out */}
+                        <div>
+                          <div style={{ color: "#0F3E0F", fontWeight: 800, marginBottom: 8 }}>Check-out</div>
+                          <div style={{color: "#001B48"}}>{formatDate(booking.dateTo)}</div>
+                          <div style={{color: "#001B48"}}>Check-out Time: {booking.dateTo.slice(11, 16)}</div>
+                        </div>
+
+                        <div>
+                          <div style={{ color: "#0F3E0F", fontWeight: 600, marginBottom: 8 }}>Total length of stay:</div>
+                          <div style={{ color: "#0F3E0F", fontWeight: 600, marginBottom: 8 }}>You have selected:</div>
+                          
+                        </div>
+
+                        <div>
+                          <div style={{color: "#001B48"}}>{getNights(booking.dateFrom, booking.dateTo)} {getNights(booking.dateFrom, booking.dateTo) === 1 ? "night" : "nights"}</div>
+                          <div style={{color: "#001B48"}}>1 room for {apt?.capacity} adults</div>
+                        </div>
+                      </div>           
+
                       {/* --- Payment details --- */}
-                      <div>Status: <span style={{ color: booking.isCheckedIn ? "#29b56f" : "#f9a825", fontWeight: 600 }}>
+                      <div style={{color: "#001B48"}}>Status: <span style={{ color: booking.isCheckedIn ? "#29b56f" : "#f9a825", fontWeight: 600 }}>
                         {booking.isCheckedIn ? "Checked in" : "Awaiting check-in"}
                       </span></div>
                       <hr></hr>
-                      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Your payment details</div>
+                      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8, color: "#001B48" }}>Your payment details</div>
                       <div>
-                        <span>Total price:</span>{" "}
-                        <b>
+                        <span style={{color: "#001B48"}}>Total price:</span>{" "}
+                        <b style={{color: "#0F3E0F"}}>
                           {getTotalPrice(booking)} {booking.currency || "EUR"}
                         </b>
                       </div>
-                      <div>
+                      <div style={{color: "#001B48"}}>
                         Status:{" "}
                         <span style={{ color: "#29b56f", fontWeight: 600 }}>
                           {booking.isPaid ? "Paid" : "Not paid"}
                         </span>
                       </div>
-                    </div>
-                  
-                    <button
-                      className="btn btn-outline-primary btn-sm mt-2 me-2"
-                      style={{ borderRadius: 10, minWidth: 120, fontWeight: 600 }}
-                      onClick={() => openEditModal(booking)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-outline-danger btn-sm mt-2"
-                      style={{ borderRadius: 10, minWidth: 120, fontWeight: 600 }}
-                      onClick={() => handleCancelBooking(booking.id)}
-                    >
-                      Cancel booking
-                    </button>
-                    {canAddReview && (
-                      <button
-                        className="btn btn-success btn-sm mt-2 ms-2"
-                        style={{ borderRadius: 10, minWidth: 120, fontWeight: 600 }}
-                        onClick={() => setAddReviewModal({ show: true, booking })}
+                      <hr></hr>
+
+                      <div
+                        className="d-flex justify-content-center align-items-center gap-2 flex-wrap"
+                        style={{ marginBottom: 16 }}
                       >
-                        Add Review
-                      </button>
-                    )}
+                        <button
+                          className="btn btn-outline-primary btn-sm"
+                          style={{ borderRadius: 10, minWidth: 110, fontWeight: 600 }}
+                          onClick={() => openEditModal(booking)}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          className="btn btn-outline-danger btn-sm"
+                          style={{ borderRadius: 10, minWidth: 110, fontWeight: 600 }}
+                          onClick={() => handleCancelBooking(booking.id)}
+                        >
+                          Cancel booking
+                        </button>
+
+                        {canAddReview && (
+                          <button
+                            className="btn btn-success btn-sm"
+                            style={{ borderRadius: 10, minWidth: 110, fontWeight: 600 }}
+                            onClick={() => setAddReviewModal({ show: true, booking })}
+                          >
+                            Add Review
+                          </button>
+                        )}
+                      </div>
+                   
+                    </div>                 
+                    
 
                     {/* --- HR between bookings --- */}
                     {idx < upcoming.length - 1 && <hr style={{ margin: "20px 0", borderTop: "2px solid #dde2e7" }} />}
@@ -699,9 +908,10 @@ const UserPanel = () => {
                 )                
               })
             )}
+
             {/* Історія бронювань */}
             <div style={{background: "#fcfcfc", borderRadius: 18, padding: 24, minHeight: 120, boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)" }}>
-              <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>
+              <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 10, marginTop: 30, color: "#001B48" }}>
                 Booking history
               </div>
               <hr></hr>
@@ -710,13 +920,13 @@ const UserPanel = () => {
               )}
               {history.map((b, idx) => (
                 <div key={b.id} className="mb-2" style={{ borderBottom: "1px solid #eee", paddingBottom: 10 }}>
-                  <div style={{ fontWeight: 600 }}>{b.apartment?.establishment?.name || "Hotel"}</div>
-                  <div>{b.apartment?.name}</div>
-                  <div>
+                  <div style={{ fontWeight: 600, color: "#001B48", fontSize: 20 }}>{b.apartment?.establishment?.name || "Hotel"}</div>
+                  <div style={{ fontWeight: 300, color: "#001B48", fontSize: 14 }}>{b.apartment?.name}</div>
+                  <div style={{ fontWeight: 500, color: "#001B48", fontSize: 16 }}>
                     {new Date(b.dateFrom).toLocaleDateString()} &ndash; {new Date(b.dateTo).toLocaleDateString()}
                   </div>
                   {/* Потім переробити на отримання статусу з бека */}
-                  <div>Status: <span style={{ color: "#aaa" }}>Completed</span></div>
+                  <div style={{ fontWeight: 300, color: "#001B48", fontSize: 16 }}>Status: <span style={{ color: "#aaa" }}>Completed</span></div>
                   <button
                     className="btn btn-success btn-sm mt-2"
                     style={{ borderRadius: 10, minWidth: 110, fontWeight: 600 }}

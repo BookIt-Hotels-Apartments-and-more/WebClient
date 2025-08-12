@@ -1,15 +1,14 @@
 import { useParams } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../api/axios";
-import { createBooking } from "../api/bookingApi";
-import { createReview } from "../api/reviewApi";
+import { createBooking, getApartmentAvailability, checkApartmentAvailability } from "../api/bookingApi";
 import { getAllReviews } from "../api/reviewApi";
 import BookingBannerForm from '../components/BookingBannerForm';
-import { addFavorite, removeFavorite, getUserFavorites } from "../api/favoriteApi";
+import { getUserFavorites } from "../api/favoriteApi";
 import {
   ESTABLISHMENT_FEATURE_LABELS,
   APARTMENT_FEATURE_LABELS,
-  PAYMENT_TYPE 
+  PAYMENT_TYPE, decodeFlagsUser 
 } from '../utils/enums';
 import { toast } from 'react-toastify';
 import { createUniversalPayment } from "../api/paymentApi";
@@ -22,8 +21,7 @@ const HotelDetails = () => {
   const { id } = useParams();
   const [hotel, setHotel] = useState(null);
   const [apartments, setApartments] = useState([]);
-  const [search, setSearch] = useState("");
-  const [reviews, setReviews] = useState([]);
+  const [search, setSearch] = useState("");  
   const [bookings, setBookings] = useState([]);
   const [bookingApartmentId, setBookingApartmentId] = useState(null);
   const [bookingForm, setBookingForm] = useState({
@@ -35,7 +33,6 @@ const HotelDetails = () => {
   const [favoriteApartments, setFavoriteApartments] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [reviewsCount, setReviewsCount] = useState(0);
   const [activeTab, setActiveTab] = useState("about");
   const [previewIndexes, setPreviewIndexes] = useState({});
   const [reviewForm, setReviewForm] = useState({
@@ -46,8 +43,9 @@ const HotelDetails = () => {
   const [paymentType, setPaymentType] = useState("Cash");
   const [unavailableDates, setUnavailableDates] = useState([]);
   const disabledDates = unavailableDates.map(d => new Date(d));
-
-
+  const [reviews, setReviews] = useState([]);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [modalReviews, setModalReviews] = useState([]);
 
   useEffect(() => {
     axiosInstance.get(`/api/establishments/${id}`)
@@ -60,13 +58,6 @@ const HotelDetails = () => {
         setApartments(filtered);
       })
       .catch(() => setApartments([]));
-
-    axiosInstance.get("/api/reviews")
-      .then((res) => {
-        const filtered = res.data.filter((r) => r.apartment?.establishment?.id == id);
-        setReviews(filtered);
-      })
-      .catch(() => setReviews([]));
   }, [id]);
 
   useEffect(() => {
@@ -97,73 +88,43 @@ const HotelDetails = () => {
 }, [id]);
 
   useEffect(() => {
-  if (!hotel?.id) return;
-  getAllReviews().then((allReviews) => {
-    const hotelReviews = allReviews.filter(
-      r =>
-        r.booking &&
-        r.booking.apartment &&
-        r.booking.apartment.establishment &&
-        r.booking.apartment.establishment.id === hotel.id
-    );
-    setReviewsCount(hotelReviews.length);
-  });
-}, [hotel?.id]);
+    const fetchReviews = async () => {
+      try {
+        const all = await getAllReviews();
+        const hotelApartmentIds = (apartments || []).map(a => a.id);
+        const filtered = all.filter(r =>
+          hotelApartmentIds.includes(r.booking?.apartment?.id)
+        );
+        setReviews(filtered);
+      } catch (e) {
+        console.error("Error loading reviews:", e);
+        setReviews([]);
+      }
+    };
+    if (apartments.length) fetchReviews();
+  }, [apartments]);
 
-useEffect(() => {
-  if (bookingApartmentId) {
-    // 1. Підтягуємо дати з форми (як і було)
+
+  useEffect(() => {
+    if (!bookingApartmentId) return;
+
     const form = JSON.parse(localStorage.getItem("bookingForm") || "{}");
     setBookingForm({
       dateFrom: form.checkIn ? toInputDate(form.checkIn) : "",
-      dateTo: form.checkOut ? toInputDate(form.checkOut) : ""
+      dateTo:   form.checkOut ? toInputDate(form.checkOut) : ""
     });
 
-    // 2. Підтягуємо зайняті дати для цього apartment
-    axiosInstance.get(`/api/bookings/apartment/${bookingApartmentId}/availability`)
-      .then(res => {
-        setUnavailableDates(res.data.unavailableDates || []);
-      })
+    getApartmentAvailability(bookingApartmentId)
+      .then(data => setUnavailableDates(data?.unavailableDates || []))
       .catch(() => setUnavailableDates([]));
-  }
-}, [bookingApartmentId]);
+  }, [bookingApartmentId]);
 
 
-useEffect(() => {
-  if (bookingApartmentId) {
-    const form = JSON.parse(localStorage.getItem("bookingForm") || "{}");
-    setBookingForm({
-      dateFrom: form.checkIn ? toInputDate(form.checkIn) : "",
-      dateTo: form.checkOut ? toInputDate(form.checkOut) : ""
-    });
-  }
-}, [bookingApartmentId]);
 
-
-  const handleSubmitReview = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const reviewData = {
-        text: reviewForm.text,
-        rating: reviewForm.rating,
-        apartmentId: parseInt(reviewForm.apartmentId),
-      };
-      await createReview(reviewData);
-      setShowReviewForm(false);
-      setReviewForm({ apartmentId: "", text: "", rating: 5 });
-
-      // Оновити список відгуків
-      axiosInstance.get("/api/reviews")
-        .then((res) => {
-          const filtered = res.data.filter((r) => r.apartment?.establishment?.id == id);
-          setReviews(filtered);
-        });
-    } catch (error) {
-      alert("Error submitting review!");
-    } finally {
-      setSubmitting(false);
-    }
+  const openApartmentReviews = (apartmentId) => {
+    const list = reviews.filter(r => r.booking?.apartment?.id === apartmentId);
+    setModalReviews(list);
+    setShowReviewsModal(true);
   };
 
   const toInputDate = (dateStr) => {
@@ -189,64 +150,72 @@ useEffect(() => {
     return false;
   };
 
-
   const handleBooking = async (apartmentId) => {
-    let user = null;
+    // 1) Перевіряємо авторизацію
+    let currentUser = null;
     try {
-      user = JSON.parse(localStorage.getItem("user") || "null");
+      currentUser = JSON.parse(localStorage.getItem("user") || "null");
     } catch {
-      user = null;
+      currentUser = null;
     }
 
-    if (!user || !user.id || !localStorage.getItem("token")) {
+    if (!currentUser?.id || !localStorage.getItem("token")) {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       toast.warn("To book a room, log in to your account!", { autoClose: 10000 });
       return;
     }
 
-    // Підтягуємо вибрані дати (з форми або localStorage)
-    const form = JSON.parse(localStorage.getItem("bookingForm") || "{}");
-    const dateFrom = bookingForm.dateFrom || form.checkIn || "";
-    const dateTo = bookingForm.dateTo || form.checkOut || "";
+    // 2) Беремо дати з форми або з localStorage (якщо прийшли з головного банера)
+    const stored = JSON.parse(localStorage.getItem("bookingForm") || "{}");
+    const rawFrom = bookingForm.dateFrom || stored.checkIn || "";
+    const rawTo   = bookingForm.dateTo   || stored.checkOut || "";
 
-    if (!dateFrom || !dateTo) {
+    const df = rawFrom.slice(0, 10); // YYYY-MM-DD
+    const dt = rawTo.slice(0, 10);
+
+    if (!df || !dt) {
       toast.warn("Please select dates for booking.", { autoClose: 10000 });
       return;
     }
-
-    if (isDateUnavailable(dateFrom, dateTo)) {
-      toast.error("These dates are already booked for this room. Please select other dates.", { autoClose: 12000 });
-      setBookingLoading(false);
+    if (new Date(dt) <= new Date(df)) {
+      toast.warn("Check-out must be after check-in.", { autoClose: 8000 });
       return;
     }
 
+    // 3) Швидка клієнтська перевірка по вже завантажених недоступних датах
+    if (isDateUnavailable(df, dt)) {
+      toast.error("These dates are already booked for this room. Please select other dates.", { autoClose: 12000 });
+      return;
+    }
 
     setBookingLoading(true);
 
     try {
-      // Визначаємо кількість ночей
-      const nights = Math.max(1, Math.ceil(
-        (new Date(dateTo) - new Date(dateFrom)) / (1000 * 60 * 60 * 24)
-      ));
+      // Нормалізуємо у ISO date-time (бек очікує $date-time)
+      const isoFrom = `${df}T00:00:00`;
+      const isoTo   = `${dt}T00:00:00`;
 
-      // Знаходимо apartment для ціни
+      // 4) ОБОВ'ЯЗКОВА серверна перевірка: чи вільний номер на вибрані дати
+      await checkApartmentAvailability(apartmentId, isoFrom, isoTo); // 200 — ок; 409 — конфлікт
+
+      // 5) Рахуємо кількість ночей та суму
+      const nights = Math.max(1, Math.ceil((new Date(isoTo) - new Date(isoFrom)) / (1000 * 60 * 60 * 24)));
       const apt = apartments.find(a => a.id === apartmentId);
       const price = apt?.price || 0;
       const totalPrice = price * nights;
 
-      // 1. Створюємо бронювання
-      const bookingRes = await createBooking({
-        dateFrom: dateFrom.length === 10 ? dateFrom + "T00:00:00" : dateFrom,
-        dateTo: dateTo.length === 10 ? dateTo + "T00:00:00" : dateTo,
-        customerId: user.id,
+      // 6) Створюємо бронювання
+      const created = await createBooking({
+        dateFrom: isoFrom,
+        dateTo: isoTo,
+        customerId: currentUser.id,
         apartmentId,
-        paymentType // "Cash" / "Mono" / "BankTransfer"
+        paymentType // "Cash" | "Mono" | "BankTransfer"
       });
+      const bookingId = created?.id ?? created?.data?.id;
 
-      const bookingId = bookingRes.data?.id ?? bookingRes.id;
-
-      // 2. Створюємо payment
+      // 7) Створюємо платіж
       const payDto = {
         type: PAYMENT_TYPE[paymentType],
         amount: totalPrice,
@@ -254,14 +223,11 @@ useEffect(() => {
       };
 
       if (paymentType === "Mono") {
-        setBookingLoading(true);
         const payRes = await createUniversalPayment(payDto);
-        const invoiceUrl = payRes.data?.invoiceUrl || payRes.data?.url;
-        const paymentId = payRes.data?.id || payRes.data?.paymentId;
+        const invoiceUrl = payRes?.data?.invoiceUrl || payRes?.data?.url;
+
         if (invoiceUrl) {
           window.open(invoiceUrl, "_blank");
-          setBookingApartmentId(null);
-          setBookingForm({ dateFrom: "", dateTo: "" });
           toast.success("Payment created! Pay via MonoBank.", { autoClose: 10000 });
         } else {
           toast.warn("Mono invoice error! No URL received.", { autoClose: 10000 });
@@ -269,26 +235,29 @@ useEffect(() => {
       } else {
         await createUniversalPayment(payDto);
         toast.success("Booking successful! Details in your profile.", { autoClose: 10000 });
-        setBookingApartmentId(null);
-        setBookingForm({ dateFrom: "", dateTo: "" });
       }
+
+      // 8) Чистимо форму та закриваємо модалку
+      setBookingApartmentId(null);
+      setBookingForm({ dateFrom: "", dateTo: "" });
+
     } catch (err) {
       if (err?.response?.status === 409) {
-        const msg = err?.response?.data?.message ||
-          "Unable to create a reservation for these dates. There is already a reservation for this room during this period.";
+        // Бек повертає зрозуміле повідомлення + може додати conflictingBookings
+        const msg = err?.response?.data?.message || "This room is not available for the selected dates.";
         toast.error(msg, { autoClose: 12000 });
       } else {
         toast.error("Booking/payment error!", { autoClose: 10000 });
       }
+    } finally {
+      setBookingLoading(false);
     }
-    finally {
-        setBookingLoading(false);
-      }
-    };
+  };
+
 
   const RatingCategory = ({ label, value }) => (
     <div className="mb-3">
-      <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: 15, fontWeight: 500 }}>
+      <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: 12, fontWeight: 500 }}>
         <span>{label}</span>
         <span style={{ color: "#001B48", fontWeight: 600 }}>{value.toFixed(1)}</span>
       </div>
@@ -297,7 +266,7 @@ useEffect(() => {
           style={{
             height: 8,
             borderRadius: 4,
-            width: `${Math.round((value / 10) * 100)}%`,
+            width: `${Math.round((value / 5) * 100)}%`,
             background: "#22614D",
             transition: "width .3s"
           }}
@@ -305,33 +274,6 @@ useEffect(() => {
       </div>
     </div>
   );
-
-  function getFeatureBadges(features) {
-  if (!features) return null;
-  return Object.keys(features)
-    .filter(key => features[key])
-    .map((key, i) =>
-      <span
-        key={i}
-        style={{
-          background: "#D6E7EE", 
-          color: "#001B48",
-          fontWeight: 500,
-          fontSize: 15,
-          borderRadius: 16,
-          padding: "4px 16px",
-          boxShadow: "0 1px 4px #e2e8f0",
-          marginRight: 8,
-          marginBottom: 4,
-          display: "inline-block"
-        }}
-      >
-        {key.charAt(0).toUpperCase() + key.slice(1)}
-      </span>
-    );
-}
-
-
 
   if (!hotel) return <div>Loading...</div>;
 
@@ -512,23 +454,59 @@ useEffect(() => {
             <img
               src={hotel.photos?.[photoIndex]?.blobUrl || "/noimage.png"}
               alt={hotel.name}
-              style={{ width: "100%", height: "auto", maxHeight: 560, minHeight: 460, objectFit: "cover", borderRadius: 12 }}
+              style={{ width: "100%", height: "auto", maxHeight: 600, minHeight: 520, objectFit: "cover", borderRadius: 12 }}
             />
 
+            {/* Вивід Services з іконками */}
             <div
               className="position-absolute top-0 start-0 w-100 px-3 pt-3 d-flex flex-wrap gap-2"
               style={{ zIndex: 2 }}
             >
-              {getFeatureBadges(hotel.features)}
-            </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                {(() => {
+                  let featureNames = [];
+                  if (typeof hotel?.features === "number") {
+                    featureNames = decodeFlagsUser(hotel.features, ESTABLISHMENT_FEATURE_LABELS);
+                  } else if (hotel?.features && typeof hotel.features === "object") {
+                    featureNames = Object.keys(ESTABLISHMENT_FEATURE_LABELS).filter(k =>
+                      hotel.features[k.charAt(0).toLowerCase() + k.slice(1)]
+                    );
+                  }
 
+                  return featureNames.map((featureName, index) => (
+                    <div key={index} 
+                    style={{ 
+                      background: "#D6E7EE", 
+                      color: "#001B48",
+                      fontWeight: 500,
+                      fontSize: 15,
+                      borderRadius: 16,
+                      padding: "4px 16px",
+                      boxShadow: "0 1px 4px #e2e8f0",
+                      marginRight: 8,
+                      marginBottom: 4,
+                      display: "inline-block"  }}>
+                      <img
+                        src={`/images/features/${featureName}.png`}
+                        alt={featureName}
+                        style={{ width: 18, height: 18, marginRight: 5 }}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      {featureName.replace(/([A-Z])/g, " $1").trim()}
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
 
             {/* Назва, рейтинг та ціна поверх фото */}
             <div className="position-absolute bottom-0 start-0 w-100 p-4" style={{ background: "rgba(0,0,0,0.05)" }}>
               <div className="d-flex align-items-center mb-2">
                 <span className="badge me-2" style={{ fontSize: 17, background: "#fff", color: "#BF9D78" }}>
                   <img src="/images/reitingstar.png" alt="Star" style={{ width: 16, height: 16, marginRight: 7 }} />
-                  {hotel.rating?.generalRating?.toFixed(1) ?? "—"}
+                  {typeof hotel?.rating?.generalRating === "number"
+                          ? hotel.rating.generalRating.toFixed(1)
+                          : "—"}
                 </span>            
               </div>
               <h2 className="text-white mb-1" style={{ fontWeight: 700 }}>{hotel.name}</h2>
@@ -630,33 +608,55 @@ useEffect(() => {
               padding: 28,
               width: "100%",
               minHeight: 220, 
-              maxHeight:300,
+              maxHeight:250,
               margin: "0 auto"
             }}
           >
-            {/* Top row: Star + rating + Excellent + reviews */}
+            {/* Star + rating + Excellent + reviews */}
             <div className="d-flex align-items-center justify-content-center mb-2" style={{ gap: 10 }}>
               <img src="/images/reitingstar-orange.png" alt="star" style={{ width: 24, height: 24, marginRight: 6 }} />
               <span style={{ color: "#FE7C2C", fontWeight: 700, fontSize: 24, marginRight: 6 }}>
-                {hotel.rating?.generalRating?.toFixed(1) ?? "—"}
+                {typeof hotel.rating?.generalRating === "number"
+                  ? hotel.rating.generalRating.toFixed(1)
+                  : "—"}
               </span>
               <span style={{ fontWeight: 300, color: "#001B48", fontSize: 12 }}>
-                {hotel.rating?.generalRating >= 9 ? "Excellent rating" : hotel.rating?.generalRating >= 8 ? "Very good" : "No rating"}
+                {typeof hotel.rating?.generalRating === "number"
+                  ? hotel.rating.generalRating >= 4.5
+                    ? "Excellent rating"
+                    : hotel.rating.generalRating >= 4
+                    ? "Very good"
+                    : "No rating"
+                  : "No rating"}
               </span>
-              <a href="#reviews"
-                style={{marginLeft: 10, color: "#0074e4", fontWeight: 300, fontSize: 12, textDecoration: "underline" }}>
+              <a
+                href="#reviews"
+                style={{
+                  marginLeft: 10,
+                  color: "#0074e4",
+                  fontWeight: 300,
+                  fontSize: 12,
+                  textDecoration: "underline"
+                }}
+                onClick={e => {
+                  e.preventDefault();
+                  setModalReviews(reviews);
+                  setShowReviewsModal(true);
+                }}
+              >
                 {hotel.rating?.reviewCount ?? 0} reviews
               </a>
             </div>
 
+
             {/* Список категорій */}
-            <div className="row" style={{ marginTop: 14 }}>
-              <div className="col-6" style={{ padding: "0 12px" }}>
+            <div className="row">
+              <div className="col-6" style={{ padding: "20px 12px" }}>
                 <RatingCategory label="Staff" value={hotel.rating?.staffRating ?? 0} />
                 <RatingCategory label="Purity" value={hotel.rating?.purityRating ?? 0} />
                 <RatingCategory label="Price/quality ratio" value={hotel.rating?.priceQualityRating ?? 0} />
               </div>
-              <div className="col-6" style={{ padding: "0 12px" }}>
+              <div className="col-6" style={{ padding: "20px 12px" }}>
                 <RatingCategory label="Comfort" value={hotel.rating?.comfortRating ?? 0} />
                 <RatingCategory label="Facilities" value={hotel.rating?.facilitiesRating ?? 0} />
                 <RatingCategory label="Location" value={hotel.rating?.locationRating ?? 0} />
@@ -667,234 +667,383 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* 3. ОПИС */}
+      
       <div className="row mb-4">
-      <div className="col-md-6">
-        {/* Вкладки */}
-        <div className="mb-3 d-flex gap-2 flex-wrap" style={{ marginBottom: "40px" }}>
-          <button
-            className={`btn ${activeTab === "about" ? "btn-primary" : "btn-light"}`}
-            onClick={() => setActiveTab("about")}
-          >
-            About
-          </button>
-          <button
-            className={`btn ${activeTab === "services" ? "btn-primary" : "btn-light"}`}
-            onClick={() => setActiveTab("services")}
-          >
-            Services
-          </button>
-          <button
-            className={`btn ${activeTab === "terms" ? "btn-primary" : "btn-light"}`}
-            onClick={() => setActiveTab("terms")}
-          >
-            Terms of accommodation
-          </button>
-        </div>
-        {/* Контент вкладки */}
-        <div
-          className="p-4"
-          style={{
-            background: "#fff",
-            borderRadius: 16,
-            boxShadow: "0 0 5px 3px #D6E7EE",
-            minHeight: 600,
-          }}
-        >
-          {activeTab === "about" && (
-            <>
-              <div className="mb-2" style={{ color: "#22614D", fontWeight: 500 }}>
-                <i className="bi bi-geo-alt" style={{color: "#22614D"}} />{" "}
-                {hotel.geolocation?.address
-                  ?.split(",")
-                  ?.filter((_, i) => [0, 1, 3, 6].includes(i)) // 0 - номер, 1 - вулиця, 3 - місто, 6 - країна
-                  ?.join(", ")}
-              </div>
-              <div style={{ fontSize: 24 }}>{hotel.description}</div>
-            </>
-          )}
-          {activeTab === "services" && hotel.features && (
-            <ul style={{ fontSize: 24, marginBottom: 0, listStyleType: "disc", paddingLeft: 20 }}>
-              {Object.entries(hotel.features)
-                .filter(([key, value]) => value)
-                .map(([key], i) => (
-                  <li key={i}>
-                    {ESTABLISHMENT_FEATURE_LABELS[key] || key.charAt(0).toUpperCase() + key.slice(1)}
-                  </li>
-                ))}
-            </ul>
-          )}
 
-          {activeTab === "terms" && (
-            <div style={{ fontSize: 15 }}>
-              {apartments.length === 0 && <div className="text-muted">No apartments available.</div>}
-              {apartments.map((apt, i) => (
-                <div key={apt.id} className="mb-4 p-3" style={{ borderBottom: "1px solid #ccc" }}>
-                  <div style={{fontSize: 20}}>🛏 {apt.name}</div>
-                  <div><strong>Capacity:</strong> {apt.capacity} persons</div>
-                  <div><strong>Area:</strong> {apt.area ? `${apt.area} m²` : "N/A"}</div>
-                  <div><strong>Description:</strong> {apt.description}</div>
-                  <div><strong>Features:</strong>
-                    <ul style={{ marginTop: 6 }}>
-                      {Object.entries(apt.features || {})
-                        .filter(([_, v]) => v)
-                        .map(([k], j) => (
-                          <li key={j}>
-                            {APARTMENT_FEATURE_LABELS[k] || k.charAt(0).toUpperCase() + k.slice(1)}
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                  <div><strong>Price:</strong> {apt.price} $ / night</div>
+        {/* 3. ОПИС */}
+        <div className="col-md-6">
+          {/* Вкладки */}
+          <div className="mb-3 d-flex gap-2 flex-wrap" style={{ marginBottom: "40px" }}>
+            <button
+              className={`btn ${activeTab === "about" ? "btn-primary" : "btn-light"}`}
+              onClick={() => setActiveTab("about")}
+            >
+              About
+            </button>
+            <button
+              className={`btn ${activeTab === "services" ? "btn-primary" : "btn-light"}`}
+              onClick={() => setActiveTab("services")}
+            >
+              Services
+            </button>
+            <button
+              className={`btn ${activeTab === "terms" ? "btn-primary" : "btn-light"}`}
+              onClick={() => setActiveTab("terms")}
+            >
+              Terms of accommodation
+            </button>
+          </div>
+          {/* Контент вкладки */}
+          <div
+            className="p-4"
+            style={{
+              background: "#fff",
+              borderRadius: 16,
+              boxShadow: "0 0 5px 3px #D6E7EE",
+              minHeight: 600,
+            }}
+          >
+            {activeTab === "about" && (
+              <>
+                <div className="mb-2" style={{ color: "#22614D", fontWeight: 500 }}>
+                  <i className="bi bi-geo-alt" style={{color: "#22614D"}} />{" "}
+                  {hotel.geolocation?.address
+                    ?.split(",")
+                    ?.filter((_, i) => [0, 1, 3, 6].includes(i)) // 0 - номер, 1 - вулиця, 3 - місто, 6 - країна
+                    ?.join(", ")}
                 </div>
-              ))}
-            </div>
-          )}
+                <div style={{ fontSize: 24 }}>{hotel.description}</div>
+              </>
+            )}
+            {activeTab === "services" && hotel.features && (
+              <div className="d-flex flex-column gap-2">
+                {(() => {
+                  let featureNames = [];
+                  if (typeof hotel?.features === "number") {
+                    featureNames = decodeFlagsUser(hotel.features, ESTABLISHMENT_FEATURE_LABELS);
+                  } else if (hotel?.features && typeof hotel.features === "object") {
+                    featureNames = Object.keys(ESTABLISHMENT_FEATURE_LABELS).filter(k =>
+                      hotel.features[k.charAt(0).toLowerCase() + k.slice(1)]
+                    );
+                  }
 
+                  if (featureNames.length === 0) {
+                    return <span className="text-muted">No services listed.</span>;
+                  }
 
-        </div>
-      </div>
-
-      {/* Rooms – картки номерів */}
-      <div className="col-md-6 mt-4 mt-md-0" style={{ fontSize: 15 }}>
-        {apartments.length === 0 && <div className="text-muted">No rooms found</div>}
-        {apartments.map((apt) => {
-          const currentPreviewIdx = previewIndexes[apt.id] || 0;
-          const mainPhoto = apt.photos?.[currentPreviewIdx];
-          const thumbnails = (apt.photos || []).filter((_, i) => i !== currentPreviewIdx).slice(0, 3);
-
-          return (
-            <React.Fragment key={apt.id}>
-              <div className="card mb-4" style={{ borderRadius: 16, overflow: "hidden", padding: 0, boxShadow: "0 0 5px 3px #D6E7EE" }}>
-                <div className="d-flex flex-row" style={{ minHeight: 230 }}>
-                  <div style={{ width: 220, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-                    {/* Головне фото */}
-                    <img
-                      src={mainPhoto?.blobUrl || "/noimage.png"}
-                      alt={apt.name}
-                      style={{
-                        width: 200,
-                        height: 140,
-                        objectFit: "cover",
-                        borderRadius: 10,
-                        margin: "20px 0 10px 10px",
-                      }}
-                    />
-                    {/* favorite поверх фото */}
-                    <button
-                      style={{
-                        position: "absolute",
-                        top: 30,
-                        right: 20,
-                        background: "rgba(255,255,255,1)", borderRadius: "50%",
-                        border: "none", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center",
-                        boxShadow: "0 0 12px #eee", color: "#BF9D78", zIndex: 5
-                      }}
-                      onClick={() => toggleApartmentFavorite({
-                        user,
-                        favorites,
-                        setFavorites,
-                        apartmentId: apt.id,
-                        setFavoriteApartments,
-                      })}
-                      title={favorites.find(f => f.apartment && f.apartment.id === apt.id)
-                        ? "Remove from favorites"
-                        : "Add to favorites"
-                      }
+                  return featureNames.map((featureName) => (
+                    <div
+                      key={featureName}
+                      className="d-flex align-items-center px-3 py-2 rounded border bg-light"
+                      style={{ fontSize: 16, color: "#001B48" }}
                     >
                       <img
-                        src="/images/favorite.png"
-                        alt="favorite"
+                        src={`/images/features/${featureName}.png`}
+                        alt={featureName}
+                        style={{ width: 20, height: 20, marginRight: 8 }}
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                      {featureName.replace(/([A-Z])/g, " $1").trim()}
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+
+
+
+            {activeTab === "terms" && (
+              <div style={{ fontSize: 15 }}>
+                {apartments.length === 0 && <div className="text-muted">No apartments available.</div>}
+                {apartments.map((apt, i) => (
+                  <div key={apt.id} className="mb-4 p-3" style={{ borderBottom: "1px solid #ccc" }}>
+                    <div style={{fontSize: 20}}>🛏 {apt.name}</div>
+                    <div><strong>Capacity:</strong> {apt.capacity} persons</div>
+                    <div><strong>Area:</strong> {apt.area ? `${apt.area} m²` : "N/A"}</div>
+                    <div><strong>Description:</strong> {apt.description}</div>
+                    <div><strong>Features:</strong>
+                      <ul style={{ marginTop: 6 }}>
+                        {Object.entries(apt.features || {})
+                          .filter(([_, v]) => v)
+                          .map(([k], j) => (
+                            <li key={j}>
+                              {APARTMENT_FEATURE_LABELS[k] || k.charAt(0).toUpperCase() + k.slice(1)}
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                    <div><strong>Price:</strong> {apt.price} $ / night</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+
+          </div>
+        </div>
+
+        {/* Rooms – картки номерів */}
+        <div className="col-md-6 mt-4 mt-md-0" style={{ fontSize: 15 }}>
+          {apartments.length === 0 && <div className="text-muted">No rooms found</div>}
+          {apartments.map((apt) => {
+            const currentPreviewIdx = previewIndexes[apt.id] || 0;
+            const mainPhoto = apt.photos?.[currentPreviewIdx];
+            const thumbnails = (apt.photos || []).filter((_, i) => i !== currentPreviewIdx).slice(0, 3);
+
+            return (
+              <React.Fragment key={apt.id}>
+                <div className="card mb-4" style={{ borderRadius: 16, overflow: "hidden", padding: 0, boxShadow: "0 0 5px 3px #D6E7EE" }}>
+                  {/* Apartment features with icons */}
+                  {apt.features && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "10px 10px 8px" }}>
+                      {(() => {
+                        let names = [];
+                        if (typeof apt.features === "number") {
+                          names = decodeFlagsUser(apt.features, APARTMENT_FEATURE_LABELS);
+                        } else if (typeof apt.features === "object") {
+                          names = Object.keys(APARTMENT_FEATURE_LABELS).filter(k =>
+                            apt.features[k.charAt(0).toLowerCase() + k.slice(1)]
+                          );
+                        }
+
+                        return names.map((name) => (
+                          <div
+                            key={name}
+                            className="d-inline-flex align-items-center px-2 py-1 rounded border bg-light"
+                            style={{ fontSize: 10, color: "#001B48" }}
+                          >
+                            <img
+                              src={`/images/apartment-features/${name}.png`}
+                              alt={name}
+                              style={{ width: 16, height: 16, marginRight: 6 }}
+                              onError={(e) => {
+                                const fallback = `/images/features/${name}.png`;
+                                if (!e.currentTarget.dataset.tried) {
+                                  e.currentTarget.dataset.tried = "1";
+                                  e.currentTarget.src = fallback;
+                                } else {
+                                  e.currentTarget.style.display = "none";
+                                }
+                              }}
+                            />
+                            {name.replace(/([A-Z])/g, " $1").trim()}
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+
+                  <div className="d-flex flex-row" style={{ minHeight: 230 }}>
+                    <div style={{ width: 220, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+                      {/* Головне фото */}
+                      <img
+                        src={mainPhoto?.blobUrl || "/noimage.png"}
+                        alt={apt.name}
                         style={{
-                          width: 28,
-                          filter: favorites.find(f => f.apartment && f.apartment.id === apt.id) ? "none" : "grayscale(1)"
+                          width: 200,
+                          height: 140,
+                          objectFit: "cover",
+                          borderRadius: 10,
+                          margin: "20px 0 10px 10px",
                         }}
                       />
-                    </button>
-                    {/* Мініатюри */}
-                    <div className="d-flex" style={{ gap: 2 }}>
-                      {thumbnails.map((photo, idx) => {
-                        const realIdx = apt.photos.findIndex(p => p.id === photo.id);
-                        return (
-                          <img
-                            key={photo.id || idx}
-                            src={photo.blobUrl}
-                            alt=""
-                            style={{
-                              width: 65,
-                              height: 50,
-                              objectFit: "cover",
-                              borderRadius: 6,
-                              border: "1px solid #eee",
-                              cursor: "pointer",
-                              boxShadow: "0 1px 4px #ddd"
-                            }}
-                            onClick={() => {
-                              setPreviewIndexes(prev => ({
-                                ...prev,
-                                [apt.id]: realIdx
-                              }));
-                            }}
-                          />
-                        );
-                      })}
+                      {/* favorite поверх фото */}
+                      <button
+                        style={{
+                          position: "absolute",
+                          top: 30,
+                          right: 20,
+                          background: "rgba(255,255,255,1)", borderRadius: "50%",
+                          border: "none", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center",
+                          boxShadow: "0 0 12px #eee", color: "#BF9D78", zIndex: 5
+                        }}
+                        onClick={() => toggleApartmentFavorite({
+                          user,
+                          favorites,
+                          setFavorites,
+                          apartmentId: apt.id,
+                          setFavoriteApartments,
+                        })}
+                        title={favorites.find(f => f.apartment && f.apartment.id === apt.id)
+                          ? "Remove from favorites"
+                          : "Add to favorites"
+                        }
+                      >
+                        <img
+                          src="/images/favorite.png"
+                          alt="favorite"
+                          style={{
+                            width: 28,
+                            filter: favorites.find(f => f.apartment && f.apartment.id === apt.id) ? "none" : "grayscale(1)"
+                          }}
+                        />
+                      </button>
+                      {/* Мініатюри */}
+                      <div className="d-flex" style={{ gap: 2 }}>
+                        {thumbnails.map((photo, idx) => {
+                          const realIdx = apt.photos.findIndex(p => p.id === photo.id);
+                          return (
+                            <img
+                              key={photo.id || idx}
+                              src={photo.blobUrl}
+                              alt=""
+                              style={{
+                                width: 65,
+                                height: 50,
+                                objectFit: "cover",
+                                borderRadius: 6,
+                                border: "1px solid #eee",
+                                cursor: "pointer",
+                                boxShadow: "0 1px 4px #ddd"
+                              }}
+                              onClick={() => {
+                                setPreviewIndexes(prev => ({
+                                  ...prev,
+                                  [apt.id]: realIdx
+                                }));
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Права частина: інфа про номер */}
-                  <div className="flex-grow-1 d-flex flex-column justify-content-between p-3">
-                    <div>
-                      <div className="d-flex justify-content-between align-items-center" style={{ marginBottom: 6 }}>
-                        <div style={{ fontWeight: 700, fontSize: 18, color: "#001B48" }}>
-                          {apt.name}
+                    {/* Права частина: інфа про номер */}
+                    <div className="flex-grow-1 d-flex flex-column justify-content-between p-3">
+                      
+                      <div>
+                        <div className="d-flex justify-content-between align-items-center" style={{ marginBottom: 6 }}>
+                          <div style={{ fontWeight: 700, fontSize: 18, color: "#001B48" }}>
+                            {apt.name}
+                          </div>
+                          
+                          <span style={{ fontWeight: 500, fontSize: 12, color: "#BF9D78", display: "flex", alignItems: "center", gap: 6 }}>
+                            <img src="/images/reitingstar.png" alt="Star" style={{ width: 14, height: 14 }} />
+                            {apt.rating?.generalRating !== undefined && apt.rating?.generalRating !== null
+                              ? apt.rating.generalRating.toFixed(1)
+                              : "—"}
+                            <button
+                              type="button"
+                              className="btn btn-link p-0"
+                              style={{ fontSize: 12 }}
+                              onClick={() => openApartmentReviews(apt.id)}
+                              title="Show reviews for this room"
+                            >
+                              (Reviews: {apt.rating?.reviewCount ?? reviews.filter(r => r.booking?.apartment?.id === apt.id).length})
+                            </button>
+                          </span>
+
+                        </div>
+                        <div className="text-muted" style={{ fontSize: 12, marginBottom: 4 }}>
+                          {apt.description}
+                        </div>
+
+                        
+
+
+
+                        <div className="text-secondary mb-2" style={{ fontSize: 13, color: "#001B48" }}>
+                          {apt.capacity && <>apartments for {apt.capacity} persons</>}
+                        </div>
+                      </div>
+                      <div className="d-flex align-items-end justify-content-between mt-1">
+                        <div style={{ fontWeight: 700, fontSize: 18, color: "#02457A" }}>
+                          {apt.price} <span style={{ fontWeight: 400, fontSize: 14 }}>$ / night</span>
                         </div>
                         
-                        <span style={{ fontWeight: 500, fontSize: 15, color: "#BF9D78", display: "flex", alignItems: "center" }}>
-                          <img src="/images/reitingstar.png" alt="Star" style={{ width: 14, height: 14, marginRight: 3 }} />
-                          {apt.rating?.generalRating !== undefined && apt.rating?.generalRating !== null
-                            ? apt.rating.generalRating.toFixed(1)
-                            : "—"}
-                          {" "}
-                          ({apt.rating?.reviewCount || 0})
-                        </span>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          style={{ borderRadius: 8, fontWeight: 600, fontSize: 14, padding: "6px 22px" }}
+                          onClick={() => {
+                            setBookingApartmentId(apt.id);
+                            //setBookingForm({ dateFrom: "", dateTo: "" }); // очищаємо форму                          
+                          }}
+                        >
+                          Book now
+                        </button>
                       </div>
-                      <div className="text-muted" style={{ fontSize: 12, marginBottom: 4 }}>
-                        {apt.description}
-                      </div>
-                      <div className="text-secondary mb-2" style={{ fontSize: 13, color: "#001B48" }}>
-                        {apt.capacity && <>apartments for {apt.capacity} persons</>}
-                      </div>
-                    </div>
-                    <div className="d-flex align-items-end justify-content-between mt-1">
-                      <div style={{ fontWeight: 700, fontSize: 18, color: "#02457A" }}>
-                        {apt.price} <span style={{ fontWeight: 400, fontSize: 14 }}>$ / night</span>
-                      </div>
-                      
-                      <button
-                        className="btn btn-primary btn-sm"
-                        style={{ borderRadius: 8, fontWeight: 600, fontSize: 14, padding: "6px 22px" }}
-                        onClick={() => {
-                          setBookingApartmentId(apt.id);
-                          //setBookingForm({ dateFrom: "", dateTo: "" }); // очищаємо форму                          
-                        }}
-                      >
-                        Book now
-                      </button>
                     </div>
                   </div>
-                </div>
-              </div>        
-            </React.Fragment>
-          );
-        })}
+                </div>        
+              </React.Fragment>
+            );
+          })}
+        </div>
       </div>
     </div>
+
+          {/* модалка виводу відгуку */}
+      {showReviewsModal && (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          background: "rgba(36,67,96,0.24)",
+          zIndex: 1300,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+        onClick={() => setShowReviewsModal(false)}
+      >
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 18,
+            minWidth: 380,
+            maxWidth: 550,
+            maxHeight: "80vh",
+            overflowY: "auto",
+            padding: "34px 28px 24px 28px",
+            boxShadow: "0 12px 48px #446e958f",
+            position: "relative"
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            className="btn btn-outline-secondary btn-sm"
+            style={{ position: "absolute", right: 16, top: 12, borderRadius: 8, fontWeight: 600 }}
+            onClick={() => setShowReviewsModal(false)}
+          >×</button>
+          <h5 style={{ fontWeight: 700, marginBottom: 16 }}>Reviews</h5>
+          {reviews.length === 0 && <div className="text-muted">No reviews yet.</div>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {modalReviews.map((r, i) => (
+              <div key={r.id || i} style={{
+                borderBottom: "1px solid #eee",
+                paddingBottom: 10,
+                marginBottom: 8
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+                  {r.booking?.customer?.username || "Anonymous"}
+                  <span style={{ marginLeft: 10, color: "#FE7C2C" }}>
+                    {typeof r.rating === "number" ? r.rating.toFixed(1) : ""}
+                  </span>
+                </div>
+                <div style={{ fontSize: 15 }}>{r.text}</div>
+                {Array.isArray(r.photos) && r.photos.length > 0 && (
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    {r.photos.map((photo, idx) => (
+                      <img
+                        key={photo.id || idx}
+                        src={photo.blobUrl || "/noimage.png"}
+                        alt=""
+                        style={{ width: 54, height: 54, objectFit: "cover", borderRadius: 7, border: "1px solid #ddd" }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+
   </div>
-
-    </div>
-    
-    
-
   );
 };
 

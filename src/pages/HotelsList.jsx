@@ -8,6 +8,7 @@ import countriesList from "../utils/countriesList";
 import { getUserFavorites, addFavorite } from "../api/favoriteApi";
 import { toast } from "react-toastify";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
+import { getAllReviews } from "../api/reviewApi";
 
 
 export default function HotelsList() {
@@ -30,6 +31,9 @@ export default function HotelsList() {
     maxPrice: "",
     rating: "",
   });
+  const [reviews, setReviews] = useState([]);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [modalReviews, setModalReviews] = useState([]);
 
   useEffect(() => {
     getAllEstablishments().then(setHotels);
@@ -38,6 +42,25 @@ export default function HotelsList() {
       getUserFavorites(userId).then(setFavorites);
     }
   }, [userId]);
+
+    useEffect(() => {
+      const fetchReviews = async () => {
+        try {
+          const all = await getAllReviews();          
+          setReviews(all);
+        } catch (e) {
+          console.error("Error loading reviews:", e);
+          setReviews([]);
+        }
+      };
+      fetchReviews();
+    }, [apartments]);
+
+  const openApartmentReviews = (apartmentId) => {
+    const list = reviews.filter(r => r.booking?.apartment?.id === apartmentId);
+    setModalReviews(list);
+    setShowReviewsModal(true);
+  };
 
   const handleAddFavorite = async (apartmentId) => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -141,25 +164,79 @@ export default function HotelsList() {
         <h2 className="fw-bold mb-3" style={{color: '#16396A'}}>
           {hotelsTitle}
         </h2>
-        <h2 className="fw-bold mb-3 d-flex align-items-center" style={{color: '#16396A'}}>
-          <img
-            src="/images/filter.png"
-            alt="Filters icon"
-            style={{ width: 40, height: 40, marginRight: 14 }}
-          />
-          Filter hotels
-        </h2>
+        <div className="d-none d-md-flex align-items-center">
+            <img
+              src="/images/filter.png"
+              alt="Filters icon"
+              style={{ width: 40, height: 40, marginRight: 14, marginBlockEnd: 20 }}
+            />
+            <span className="fw-bold" style={{ color: '#16396A', fontSize: 26, marginBlockEnd: 20 }}>
+              Filters hotel
+            </span>
+          </div>
 
         <div className="row">
-          {/* Фільтр зліва */}
-          <div className="col-12 col-md-3 mb-4">
-            <HotelFilters
-              filters={filters}
-              setFilters={setFilters}
-              countryOptions={countryOptions}
-              showCountry={true}
-            />
+        {/* Фільтр зліва */}
+    
+        {/* Mobile filter button */}
+        <div className="d-block d-md-none mb-3">
+          <button
+            className="btn btn-outline-primary"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#filtersOffcanvas"
+            aria-controls="filtersOffcanvas"
+            style={{ fontWeight: 600 }}
+          >
+            <i className="bi bi-funnel"></i> Filters
+          </button>
+        </div>
+        {/* Desktop фільтр */}
+        <div className="col-12 col-md-3 mb-4 d-none d-md-block">
+          <HotelFilters
+            filters={filters}
+            setFilters={newFilters => {
+              setFilters(newFilters);
+              if (newFilters.country !== filters.country) {
+                navigate(`/country-select?country=${encodeURIComponent(newFilters.country)}`);
+              }
+            }}
+            countryOptions={countryOptions}
+            showCountry={true}
+          />
+        </div>
+        {/* Mobile offcanvas filters */}
+        <div
+          className="offcanvas offcanvas-start"
+          tabIndex="-1"
+          id="filtersOffcanvas"
+          aria-labelledby="filtersOffcanvasLabel"
+        >
+           <div className="offcanvas-header">
+            <h5 id="filtersOffcanvasLabel">Filters</h5>
+               <button
+                 type="button"
+                 className="btn-close"
+                 data-bs-dismiss="offcanvas"
+                 aria-label="Close"
+               ></button>
+             </div>
+             <div className="offcanvas-body">
+               <HotelFilters
+                 filters={filters}
+                 setFilters={newFilters => {
+                   setFilters(newFilters);
+                   if (newFilters.country !== filters.country) {
+                     navigate(`/country-select?country=${encodeURIComponent(newFilters.country)}`);
+                   }
+                 }}
+                 countryOptions={countryOptions}
+                 showCountry={true}
+               />
           </div>
+        </div>
+
+          
           {/* Список готелів */}
           <div className="col-12 col-md-9">
             {filteredHotels.length > 0 ? (
@@ -217,17 +294,43 @@ export default function HotelsList() {
                               style={{
                                 width: 13,
                                 height: 13,
-                                marginRight: 6,
+                                marginRight: 4,
                                 verticalAlign: "middle",
                                 objectFit: "contain"
                               }}
                             />
-                            {hotel.rating?.reviewCount || 0}
+                            {/* Середній рейтинг */}
+                            {typeof hotel.rating?.generalRating === "number"
+                              ? hotel.rating.generalRating.toFixed(1)
+                              : "—"}
+                            {/* Кількість відгуків */}
+                            <a
+                              href="#reviews"
+                              style={{
+                                marginLeft: 10,
+                                color: "#0074e4",
+                                fontWeight: 300,
+                                fontSize: 12,
+                                textDecoration: "underline"
+                              }}
+                              onClick={e => {
+                                e.preventDefault();
+                                const list = reviews.filter(r => r.booking?.apartment?.establishment?.id === hotel.id);
+                                setModalReviews(list);
+                                setShowReviewsModal(true);
+                              }}
+                            >
+                              {hotel.rating?.reviewCount ?? 0} reviews
+                            </a>
                           </span>
+
                         </div>
                         <div className="d-flex align-items-center mb-1">
                           <span className="fw-bold" style={{ fontSize: 12, color: "#02457A" }}>
-                            {hotel.geolocation?.address}
+                            {hotel.geolocation?.address
+                              ?.split(",")
+                              ?.filter((_, i) => [0, 1, 3, 6].includes(i)) // 0 - номер, 1 - вулиця, 3 - місто, 6 - країна
+                              ?.join(", ")}
                           </span>
                         </div>
                         <div className="mb-2" style={{ fontSize: 12, minHeight: 46 }}>{hotel.description}</div>
@@ -259,8 +362,79 @@ export default function HotelsList() {
               </div>
             )}
           </div>
-        </div>
+        </div>        
       </div>
+
+      {/* модалка виводу відгуку */}
+      {showReviewsModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(36,67,96,0.24)",
+            zIndex: 1300,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          onClick={() => setShowReviewsModal(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 18,
+              minWidth: 380,
+              maxWidth: 550,
+              maxHeight: "80vh",
+              overflowY: "auto",
+              padding: "34px 28px 24px 28px",
+              boxShadow: "0 12px 48px #446e958f",
+              position: "relative"
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              style={{ position: "absolute", right: 16, top: 12, borderRadius: 8, fontWeight: 600 }}
+              onClick={() => setShowReviewsModal(false)}
+            >×</button>
+            <h5 style={{ fontWeight: 700, marginBottom: 16 }}>Reviews</h5>
+            {modalReviews.length === 0 && <div className="text-muted">No reviews yet.</div>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              {modalReviews.map((r, i) => (
+                <div key={r.id || i} style={{
+                  borderBottom: "1px solid #eee",
+                  paddingBottom: 10,
+                  marginBottom: 8
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+                    {r.booking?.customer?.username || "Anonymous"}
+                    <span style={{ marginLeft: 10, color: "#FE7C2C" }}>
+                      {typeof r.rating === "number" ? r.rating.toFixed(1) : ""}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 15 }}>{r.text}</div>
+                  {Array.isArray(r.photos) && r.photos.length > 0 && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                      {r.photos.map((photo, idx) => (
+                        <img
+                          key={photo.id || idx}
+                          src={photo.blobUrl || "/noimage.png"}
+                          alt=""
+                          style={{ width: 54, height: 54, objectFit: "cover", borderRadius: 7, border: "1px solid #ddd" }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

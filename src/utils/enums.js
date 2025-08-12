@@ -69,6 +69,16 @@ export function decodeFlags(enumValue, LABELS) {
   return result.join(', ');
 }
 
+export function decodeFlagsUser(mask, LABELS) {
+  if (typeof mask !== "number") return [];
+  const names = [];
+  for (const [key, bitIndex] of Object.entries(LABELS)) {
+    if ((mask & (1 << bitIndex)) !== 0) names.push(key);
+  }
+  return names; // масив назв фіч
+}
+
+
 export function getEstablishmentTypeName(typeId) {
   const entry = Object.entries(ESTABLISHMENT_TYPE_LABELS)
     .find(([key, value]) => value === typeId);

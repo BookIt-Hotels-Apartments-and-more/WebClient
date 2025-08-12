@@ -167,7 +167,7 @@ const displayHotels = popularHotels.slice(0, 5);
                     boxShadow: "none",
                     cursor: "pointer"
                 }}
-                onClick={() => navigate(`/hotels/${popularHotels[0]?.id}`)}
+                onClick={() => navigate(`/hotels/${firstHotel?.id}`)}
                 >
                 <div style={{
                     position: "relative",
@@ -181,8 +181,8 @@ const displayHotels = popularHotels.slice(0, 5);
                     }}
                     >
                     <img
-                        src={popularHotels[0]?.photos?.[0]?.blobUrl || "/noimage.png"}
-                        alt={popularHotels[0]?.name}
+                        src={firstHotel?.photos?.[0]?.blobUrl || "/noimage.png"}
+                        alt={firstHotel?.name}
                         style={{
                         width: "100%",
                         height: "100%",
@@ -207,7 +207,7 @@ const displayHotels = popularHotels.slice(0, 5);
                           user,
                           favorites,
                           setFavorites,
-                          hotel: popularHotels[0],
+                          hotel: firstHotel,
                           apartments,
                         });
                       }}
@@ -231,7 +231,7 @@ const displayHotels = popularHotels.slice(0, 5);
                     justifyContent: "flex-end"
                     }}>
                     <div className="d-flex align-items-center justify-content-between mb-1">
-                        <span style={{ fontWeight: 700, fontSize: 19, color: "#2C5C4E" }}>{popularHotels[0]?.name}</span>
+                        <span style={{ fontWeight: 700, fontSize: 19, color: "#2C5C4E" }}>{firstHotel?.name}</span>
                         <span style={{
                         background: "rgba(255,255,255,0.96)",
                         borderRadius: 12,
@@ -246,15 +246,15 @@ const displayHotels = popularHotels.slice(0, 5);
                         }}>
                         
                         <img src="/images/reitingstar-orange.png" alt="" style={{ width: 16, height: 16, marginRight: 5, verticalAlign: "middle" }} />
-                        {typeof displayHotels[0]?.rating?.generalRating === "number"
-                          ? hotel.rating.generalRating.toFixed(1)
+                        {typeof firstHotel?.rating?.generalRating === "number"
+                          ? firstHotel.rating.generalRating.toFixed(1)
                           : "—"}
 
                         </span>
                     </div>
                     
-                    <div style={{ fontWeight: 400, fontSize: 13, color: "#333" }}>{popularHotels[0]?.description}</div>
-                <div style={{ fontWeight: 400, fontSize: 13, color: "#666", marginTop: 4 }}>Бронювань: {popularHotels[0]?.bookingsCount}</div>
+                    <div style={{ fontWeight: 400, fontSize: 13, color: "#333" }}>{firstHotel?.description}</div>
+                <div style={{ fontWeight: 400, fontSize: 13, color: "#666", marginTop: 4 }}>Бронювань: {firstHotel?.bookingsCount}</div>
             </div>
           </div>
         </div>
