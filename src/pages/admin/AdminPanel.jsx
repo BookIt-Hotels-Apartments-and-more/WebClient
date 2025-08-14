@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { getAllUsers, deleteUser } from "../../api/userApi";
 import { getAllEstablishments, deleteEstablishment } from "../../api/establishmentsApi";
 import {getAllBookings, deleteBooking} from "../../api/bookingApi";
 
@@ -28,13 +27,6 @@ const AdminPanel = () => {
   useEffect(() => {
     loadData();
   }, []);
-
-  const handleDeleteUser = async (id) => {
-    if (confirm("Delete user?")) {
-      await deleteUser(id);
-      loadData();
-    }
-  };
 
   const handleDeleteEstablishment = async (id) => {
     if (confirm("Delete hotel?")) {

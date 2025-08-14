@@ -12,6 +12,9 @@ const criteria = [
   { key: "CustomerStay", label: "Overall stay" }
 ];
 
+const MAX = 10;
+const PER_ROW = 5;
+
 const AddComment = (props) => {
   if (!props.bookingId || !props.apartmentId) {
     return <div>Invalid review context. Try to reload the page.</div>;
@@ -89,68 +92,125 @@ const AddComment = (props) => {
       reader.readAsDataURL(file);
     });
 
+  const renderTenStars = (critKey, label) => {
+    return (
+      <div style={{ minWidth: 160 }}>
+        <div style={{ fontSize: 12, marginBottom: 4, color: "#4a5568" }}>
+          {label}
+          <span style={{ marginLeft: 8, fontSize: 11, color: "#718096" }}>
+            {ratings[critKey]}/10
+          </span>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${PER_ROW}, 22px)`,
+            gridAutoRows: "22px",
+            gap: 4,
+            alignItems: "center",
+          }}
+        >
+          {Array.from({ length: MAX }, (_, i) => i + 1).map((val) => {
+            const active = ratings[critKey] >= val;
+            return (
+              <button
+                key={val}
+                type="button"
+                onClick={() => handleRating(critKey, val)}
+                aria-label={`${label} ${val}/10`}
+                title={`${label}: ${val}/10`}
+                style={{
+                  all: "unset",
+                  cursor: "pointer",
+                  lineHeight: "22px",
+                  textAlign: "center",
+                  userSelect: "none",
+                }}
+              >
+                <span
+                  style={{
+                    color: active ? "#F7B801" : "#CBD5E0",
+                    fontSize: 18,
+                    transition: "color .12s",
+                    display: "inline-block",
+                    width: 18,
+                  }}
+                >
+                  ★
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
 
   return (
     <section
+      role="dialog"
+      aria-modal="true"
       className="my-5"
       style={{
-        maxWidth: 900,
+        width: "min(80vw, 1000px)",
+        maxHeight: "60vh",
+        overflowY: "auto",
         margin: "0 auto",
-        background: "transparent",
-        padding: 0,
-        marginBottom: "-200px",
+        padding: 16,
+        borderRadius: 16,
+        boxShadow: "0 12px 40px rgba(0,0,0,.12)",
+        background: "rgba(255, 255, 255, 0.58)",   // ← напівпрозорий білий фон
+        backdropFilter: "blur(1px)",                // легкий блюр для краси
+        WebkitBackdropFilter: "blur(1px)",
       }}
     >
       <div
         style={{
           display: "flex",
-          alignItems: "center", 
-          justifyContent: "space-between",
-          gap: 36,
-          minHeight: 400,
-          background: "transparent",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 24,
         }}
       >
-        {/* --- Ліва частина: Форма --- */}
+        <div
+          style={{
+            width: "min(420px, 80%)",
+          }}
+        >
+          <img
+            src="/images/feedback.png"
+            alt="Feedback"
+            style={{ width: "100%", objectFit: "contain", display: "block" }}
+          />
+        </div>
+
         <div
           className="p-4"
           style={{
             background: "transparent",
             borderRadius: 16,
-            width: 550,        
-            minWidth: 340,
-            marginBottom: 0,
-            position: "relative",
-            zIndex: 2,
+            width: "100%",
+            maxWidth: 820,
           }}
         >
-          <h4 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Add a Comment</h4>
+          <h4 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
+            Add a Comment
+          </h4>
           <div className="mb-2" style={{ color: "#6A778B", fontSize: 10 }}>
             Your email address will not be published. Required fields are marked.
           </div>
+
           <form onSubmit={handleSubmit}>
-            <div className="d-flex mb-3" style={{ gap: 12, flexWrap: "wrap" }}>
-              {criteria.map(crit => (
-                <div key={crit.key} style={{ minWidth: 80 }}>
-                  <div style={{ fontSize: 10 }}>{crit.label}</div>
-                  {[1, 2, 3, 4, 5].map(val => (
-                    <span
-                      key={val}
-                      onClick={() => handleRating(crit.key, val)}
-                      style={{
-                        color: ratings[crit.key] >= val ? "#F7B801" : "#ccc",
-                        cursor: "pointer",
-                        fontSize: 18,
-                        transition: "color .12s"
-                      }}
-                    >★</span>
-                  ))}
-                </div>
+            <div className="mb-3" style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+              {criteria.map((crit) => (
+                <div key={crit.key}>{renderTenStars(crit.key, crit.label)}</div>
               ))}
-            </div>            
+            </div>
+
             <textarea
               className="form-control mb-3"
-              style={{fontSize: 12}}
+              style={{ fontSize: 12 }}
               placeholder="Comment"
               rows={2}
               name="comment"
@@ -159,7 +219,6 @@ const AddComment = (props) => {
               required
             />
 
-            {/* --- Фото upload --- */}
             <div className="mb-3">
               <label style={{ fontSize: 12, fontWeight: 600 }}>
                 Add photo(s) to your review (optional)
@@ -172,69 +231,56 @@ const AddComment = (props) => {
                 style={{ fontSize: 11 }}
                 onChange={handlePhotoChange}
               />
-              {/* Preview selected images */}
-              <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  marginTop: 10,
+                  flexWrap: "wrap",
+                }}
+              >
                 {newPhotos.map((p, idx) => (
                   <img
                     key={idx}
                     src={p.base64}
                     alt={`preview-${idx}`}
-                    style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 10, border: "1px solid #ddd" }}
+                    style={{
+                      width: 70,
+                      height: 70,
+                      objectFit: "cover",
+                      borderRadius: 10,
+                      border: "1px solid #ddd",
+                    }}
                   />
                 ))}
               </div>
             </div>
 
-
             <div className="mb-3 form-check" style={{ marginBottom: 22 }}>
-             
               <button
-              type="submit"
-              className="btn"
-              style={{
-                background: "#3CA19A",
-                color: "#fff",
-                borderRadius: 10,
-                padding: "5px 15px",
-                fontWeight: 300,
-                float: "right",
-                marginTop: 6,
-                boxShadow: "0 2px 6px rgba(60,161,154,0.08)",
-                fontSize: 10
-              }}
-            >
-              Send a comment
-            </button>
+                type="submit"
+                className="btn"
+                style={{
+                  background: "#3CA19A",
+                  color: "#fff",
+                  borderRadius: 10,
+                  padding: "5px 15px",
+                  fontWeight: 300,
+                  float: "right",
+                  marginTop: 6,
+                  boxShadow: "0 2px 6px rgba(60,161,154,0.08)",
+                  fontSize: 10,
+                }}
+              >
+                Send a comment
+              </button>
             </div>
-            
           </form>
-        </div>
-        {/* --- Права частина: Картинка --- */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center", 
-            minHeight: 360,
-            height: "100%",
-            flex: 1,
-            justifyContent: "flex-end",
-            zIndex: 1,
-          }}
-        >
-          <img
-            src="/images/feedback.png"
-            alt="Feedback"
-            style={{
-              width: "100%",
-              minWidth: 360,
-              objectFit: "contain",
-              display: "block",
-            }}
-          />
         </div>
       </div>
     </section>
   );
+
 };
 
 export default AddComment;

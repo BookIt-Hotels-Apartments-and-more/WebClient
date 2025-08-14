@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { getAllEstablishments } from "../api/establishmentsApi";
+import { getAllEstablishments, getEstablishmentsByVibe } from "../api/establishmentsApi";
 import { axiosInstance } from "../api/axios";
 import BookingBannerForm from '../components/BookingBannerForm';
 import HotelFilters from "../components/HotelFilters";
@@ -10,6 +10,9 @@ import { toast } from "react-toastify";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 import { getAllReviews } from "../api/reviewApi";
 
+const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
+const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "");
+
 
 export default function HotelsList() {
   const location = useLocation();
@@ -17,6 +20,8 @@ export default function HotelsList() {
   const hotelsTitle = location.state?.title || "All Hotels";
   const params = new URLSearchParams(location.search);
   const selectedType = params.get("type");
+  const vibeParam = params.get("vibe");
+  const selectedVibe = vibeParam !== null ? Number(vibeParam) : null;
 
   const [search, setSearch] = useState("");
   const [hotels, setHotels] = useState([]);
@@ -36,25 +41,35 @@ export default function HotelsList() {
   const [modalReviews, setModalReviews] = useState([]);
 
   useEffect(() => {
-    getAllEstablishments().then(setHotels);
-    axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
-    if (userId) {
-      getUserFavorites(userId).then(setFavorites);
+    if (selectedVibe !== null && !Number.isNaN(selectedVibe)) {
+      getEstablishmentsByVibe(selectedVibe)
+        .then((res) => {
+          const data = Array.isArray(res) ? res : (res?.items ?? []);
+          setHotels(data);
+        })
+        .catch(() => setHotels([]));
+    } else {
+      getAllEstablishments().then(setHotels);
     }
-  }, [userId]);
+      axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
+      if (userId) {
+        getUserFavorites(userId).then(setFavorites);
+      }
 
-    useEffect(() => {
-      const fetchReviews = async () => {
-        try {
-          const all = await getAllReviews();          
-          setReviews(all);
-        } catch (e) {
-          console.error("Error loading reviews:", e);
-          setReviews([]);
-        }
-      };
-      fetchReviews();
-    }, [apartments]);
+ }, [userId, selectedVibe]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const all = await getAllReviews();          
+        setReviews(all);
+      } catch (e) {
+        console.error("Error loading reviews:", e);
+        setReviews([]);
+      }
+    };
+    fetchReviews();
+  }, [apartments]);
 
   const openApartmentReviews = (apartmentId) => {
     const list = reviews.filter(r => r.booking?.apartment?.id === apartmentId);
@@ -93,14 +108,11 @@ export default function HotelsList() {
       .map(c => c.name.toLowerCase());
   }, [selectedType]);
 
-
-  // Вибираємо, з якими готелями працюємо — sourceHotels чи повний список
   const hotelsBase = useMemo(
     () => sourceHotels || hotels,
     [sourceHotels, hotels]
   );
 
-  // Додаємо фільтрацію та пошук
   const filteredHotels = useMemo(() => {
     return hotelsBase.filter(hotel => {
       // Фільтр по країні
@@ -109,7 +121,9 @@ export default function HotelsList() {
       const matchesCountry = !filters.country || country === filters.country.toLowerCase();
 
       // Фільтр для QuickPlanning
-      const matchesType = !matchingCountries || matchingCountries.includes(country);
+      const matchesType = (selectedVibe !== null && !Number.isNaN(selectedVibe))
+        ? true
+        : (!matchingCountries || matchingCountries.includes(country));
 
       // Мін/макс ціна
       const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
@@ -300,9 +314,7 @@ export default function HotelsList() {
                               }}
                             />
                             {/* Середній рейтинг */}
-                            {typeof hotel.rating?.generalRating === "number"
-                              ? hotel.rating.generalRating.toFixed(1)
-                              : "—"}
+                            {fmt1(hotel?.rating?.generalRating)}
                             {/* Кількість відгуків */}
                             <a
                               href="#reviews"
@@ -413,7 +425,7 @@ export default function HotelsList() {
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
                     {r.booking?.customer?.username || "Anonymous"}
                     <span style={{ marginLeft: 10, color: "#FE7C2C" }}>
-                      {typeof r.rating === "number" ? r.rating.toFixed(1) : ""}
+                      {fmt1Blank(r?.rating)}
                     </span>
                   </div>
                   <div style={{ fontSize: 15 }}>{r.text}</div>

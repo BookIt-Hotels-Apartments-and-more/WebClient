@@ -10,8 +10,7 @@ import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
 import { toggleApartmentFavorite } from "../utils/favoriteUtils";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 
-
-
+const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 
 export default function Apartments() {
   const navigate = useNavigate();
@@ -381,7 +380,7 @@ export default function Apartments() {
                             </a>
                             <span className="d-flex align-items-center ms-2" style={{ color: "#FE7C2C", fontWeight: 700, fontSize: 15 }}>
                             <img src="/images/reitingstar-orange.png" alt="Star" style={{ width: 18, height: 18, marginRight: 4 }} />
-                            {apt.rating?.generalRating ? apt.rating.generalRating.toFixed(1) : "0"}
+                            {fmt1(apt?.rating?.generalRating)}
                             </span>
                         </div>
 

@@ -4,7 +4,7 @@ import { getAllBookings, deleteBooking, updateBooking } from "../../api/bookingA
 import { getUserFavorites, removeFavorite  } from "../../api/favoriteApi";
 import { getApartmentById } from "../../api/apartmentApi";
 import { toast } from 'react-toastify';
-import { uploadUserPhoto } from "../../api/userApi";
+import { uploadUserPhoto, updateUserPassword, updateUserDetails  } from "../../api/userApi";
 import AddComment from "../../components/AddComment";
 import { decodeFlagsUser, ESTABLISHMENT_TYPE_LABELS, 
   ESTABLISHMENT_FEATURE_LABELS,  
@@ -37,7 +37,16 @@ const UserPanel = () => {
   });
   const [addReviewModal, setAddReviewModal] = useState({ show: false, booking: null });
   const [activeStep] = useState(2); // 1-2-3; поки статично
-  const FACILITIES = Object.keys(ESTABLISHMENT_TYPE_LABELS);
+  const [pwModal, setPwModal] = useState({
+   show: false,
+   current: "",
+   next: "",
+   confirm: "",
+   loading: false,
+   error: ""
+ });
+ const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
+
 
   useEffect(() => {
     setLoading(true);
@@ -86,15 +95,40 @@ const UserPanel = () => {
 
   const handleSave = async () => {
     try {
+      setLoading(true);
+
+      const payload = {
+        username: (editedUser.username || "").trim(),
+        email: (editedUser.email || "").trim(),
+        phoneNumber: (editedUser.phonenumber || "").trim(),
+        bio: (editedUser.bio || "").trim?.() || ""
+      };
+      await updateUserDetails(payload);
+
       if (editedUser.photoBase64) {
         await uploadUserPhoto(editedUser.photoBase64);
       }
-      // Додати потім інше для збереження профілю (ім’я, email і т.д.)
+
+      const current = JSON.parse(localStorage.getItem("user") || "{}");
+      const nextUser = {
+        ...current,
+        username: payload.username,
+        email: payload.email,
+        phonenumber: payload.phoneNumber,
+        photoUrl: editedUser.photoPreview || current.photoUrl
+      };
+      localStorage.setItem("user", JSON.stringify(nextUser));
+
       setIsEditing(false);
+      toast.success("Profile saved!", { autoClose: 3000 });
     } catch (err) {
+      console.error(err?.response || err);
       toast.error("Error saving profile!", { autoClose: 4000 });
+    } finally {
+      setLoading(false);
     }
   };
+
 
   const handleCancel = () => {
     setEditedUser({
@@ -194,15 +228,64 @@ const UserPanel = () => {
     }
   };
 
-
   const getNights = (fromStr, toStr) => {
     if (!fromStr || !toStr) return 0;
     const from = new Date(fromStr);
     const to   = new Date(toStr);
     const diffMs = to - from;
     const nights = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    return Math.max(1, nights); // мінімум 1 ніч
+    return Math.max(1, nights);
   };
+
+  // ПАРОЛЬ
+  const SPECIALS = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+  const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const validatePassword = (pwd, username) => {
+    const errors = [];
+      if (!/[A-Z]/.test(pwd)) errors.push("contain at least one uppercase letter");
+      if (!/[a-z]/.test(pwd)) errors.push("contain at least one lowercase letter");
+      if (!/\d/.test(pwd)) errors.push("contain at least one number");
+      if (!new RegExp(`[${escapeRegExp(SPECIALS)}]`).test(pwd))
+        errors.push("contain at least one special character");
+      if (/(.)\1\1/.test(pwd))
+        errors.push("contain no more than 2 consecutive identical characters");
+      if (username && pwd.toLowerCase().includes(username.toLowerCase()))
+        errors.push("not contain the username");
+      return errors;
+    };
+
+
+  const handleChangePassword = async () => {
+    if (!pwModal.current || !pwModal.next) {
+      return setPwModal(m => ({ ...m, error: "Please fill in both fields." }));
+    }
+    if (pwModal.next.length < 6) {
+      return setPwModal(m => ({ ...m, error: "New password must be at least 6 characters." }));
+    }
+    if (pwModal.next !== pwModal.confirm) {
+      return setPwModal(m => ({ ...m, error: "Passwords do not match." }));
+    }
+
+    const username = user?.username || user?.email?.split("@")[0];
+    const vErrors = validatePassword(pwModal.next, username);
+      if (vErrors.length) {
+        return setPwModal(m => ({ ...m, error: `Password must ${vErrors.join(", ")}.` }));
+      }
+
+      try {
+        setPwModal(m => ({ ...m, loading: true, error: "" }));
+        await updateUserPassword(pwModal.current, pwModal.next);
+        setPwModal({ show: false, current: "", next: "", confirm: "", loading: false, error: "" });
+        toast.success("Password changed successfully!", { autoClose: 3000 });
+      } catch (err) {
+        const msg = err?.response?.data?.message || "Failed to change password.";
+        setPwModal(m => ({ ...m, loading: false, error: msg }));
+        toast.error(msg, { autoClose: 4000 });
+      }
+    };
+
+
 
 
   // --- Розбивка бронювань
@@ -404,6 +487,12 @@ const UserPanel = () => {
                           </button>
                         </div>
                       )}
+
+                      <button className="btn btn-outline-primary btn-sm" style={{ minWidth: 80, marginTop: 20 }}                        
+                        onClick={() => setPwModal(m => ({ ...m, show: true, error: "" }))}
+                      >
+                        Change password
+                      </button>
 
                     </div>
 
@@ -678,9 +767,7 @@ const UserPanel = () => {
                                 objectFit: "contain"
                               }}
                             />
-                          {typeof apt?.rating?.generalRating === "number"
-                            ? apt.rating.generalRating.toFixed(1)
-                            : "—"}
+                          {fmt1(apt?.rating?.generalRating)}
                         </span>
                       </div>
 
@@ -713,9 +800,7 @@ const UserPanel = () => {
                       </div>                      
 
                       <div className="mt-2" style={{ fontSize: 14, color: "#001B48" }}>
-                        Great location - {typeof apt?.rating?.generalRating === "number"
-                          ? apt.rating.generalRating.toFixed(1)
-                          : "—"}
+                        Great location - {fmt1(apt?.rating?.generalRating)}
                       </div>
 
                       <div className="mt-2" style={{ fontSize: 14 }}>
@@ -730,17 +815,15 @@ const UserPanel = () => {
                                 objectFit: "contain"
                               }}
                             />
-                          {typeof apt?.rating?.generalRating === "number"
-                            ? apt.rating.generalRating.toFixed(1)
-                            : "—"} 
+                          {fmt1(apt?.rating?.generalRating)}
                         </span>
                         <span style={{marginLeft: 6, marginRight: 6, color: "#001B48"}}>
                           Rating excellent /                            
                         </span>
                         <span style={{ color: "#737373" }}>
-                          {typeof hotel?.rating?.reviewCount === "number"
-                            ? hotel.rating.reviewCount
-                            : "-"} reviews
+                          {hotel?.rating?.reviewCount != null
+                            ? Number(hotel.rating.reviewCount)
+                            : "-"}
                         </span>
                       </div>
                       {/* Вивід зручностей готеля з іконками */}
@@ -1017,7 +1100,7 @@ const UserPanel = () => {
         >
           <div
             style={{
-              background: "#fff",
+              background: "rgba(255, 255, 255, 0.88)",
               borderRadius: 18,
               padding: 32,
               minWidth: 420,
@@ -1041,6 +1124,85 @@ const UserPanel = () => {
           </div>
         </div>
       )}
+      {/* Модалка зміни пароля */}
+      {pwModal.show && (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.38)",
+          zIndex: 2100,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+        onClick={() => setPwModal({ show: false, current: "", next: "", confirm: "", loading: false, error: "" })}
+      >
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 18,
+            padding: 28,
+            minWidth: 360,
+            boxShadow: "0 8px 36px rgba(31,38,135,.19)"
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h5 className="mb-3">Change password</h5>
+
+          <label className="form-label">Current password</label>
+          <input
+            type="password"
+            className="form-control mb-2"
+            value={pwModal.current}
+            onChange={(e) => setPwModal(m => ({ ...m, current: e.target.value }))}
+            placeholder="Current password"
+          />
+
+          <label className="form-label mt-2">New password</label>
+          <input
+            type="password"
+            className="form-control mb-2"
+            value={pwModal.next}
+            onChange={(e) => setPwModal(m => ({ ...m, next: e.target.value }))}
+            placeholder="New password (min 6 chars)"
+          />
+
+          <label className="form-label mt-2">Confirm new password</label>
+          <input
+            type="password"
+            className="form-control"
+            value={pwModal.confirm}
+            onChange={(e) => setPwModal(m => ({ ...m, confirm: e.target.value }))}
+            placeholder="Repeat new password"
+          />
+
+          {pwModal.error && (
+            <div className="text-danger mt-2" style={{ fontSize: 13 }}>
+              {pwModal.error}
+            </div>
+          )}
+
+          <div className="d-flex gap-2 mt-3">
+            <button
+              className="btn btn-primary"
+              onClick={handleChangePassword}
+              disabled={pwModal.loading}
+            >
+              {pwModal.loading ? "Saving..." : "Change"}
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setPwModal({ show: false, current: "", next: "", confirm: "", loading: false, error: "" })}
+              disabled={pwModal.loading}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
 
       
     </div>

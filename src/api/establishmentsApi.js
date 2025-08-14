@@ -30,6 +30,15 @@ export const updateEstablishment = async (id, data) => {
   return res.data;
 };
 
+export const getEstablishmentsFiltered = async (params = {}) => {
+  const res = await axiosInstance.get("/api/Establishments/filter", { params });
+  return res.data?.items ?? res.data;
+};
+
+export const getEstablishmentsByVibe = async (vibe) => {
+  return getEstablishmentsFiltered({ vibe });
+};
+
 export const getEstablishmentsByOwnerFiltered = async (ownerId, filters = {}) => {
   const params = {
     ownerId,

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect  } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { loginUser, getCurrentUser, forgotPassword } from "../api/authApi";
+import { loginUser, getCurrentUser, generateResetToken, resetPassword  } from "../api/authApi";
 import { getUserById } from "../api/userApi";
 import { useDispatch } from "react-redux";
 import { setUser } from "../store/slices/userSlice";
@@ -9,14 +9,31 @@ import { useLocation } from "react-router-dom";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const dispatch = useDispatch();
-  const [showForgot, setShowForgot] = useState(false);
-  const [recoveryEmail, setRecoveryEmail] = useState("");
-  const [message, setMessage] = useState("");
   const location = useLocation();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState(""); 
+
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [loadingReset, setLoadingReset] = useState(false);
+  const [message, setMessage] = useState("");  
+
   const loginSource = location.state?.source || sessionStorage.getItem('loginSource') || null;
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token");
+
+    if (location.pathname === "/auth/reset-token" && token) {
+      setShowReset(true);
+      setResetForm(prev => ({ ...prev, token }));
+    }
+  }, [location]);
 
   const handleEmailLogin = async () => {
     if (!email.includes("@")) {
@@ -56,21 +73,47 @@ const Login = () => {
     }
   };
 
-
-  const handleForgotPassword = async () => {
+  const handleGenerateToken = async () => {
     if (!recoveryEmail.includes("@")) {
       alert("Please enter a valid email address");
       return;
     }
+    setLoadingReset(true);
+    setMessage("");
     try {
-      const res = await forgotPassword(recoveryEmail);
-      setMessage(res.message || `A password recovery email has been sent to ${recoveryEmail}`);
+      const res = await generateResetToken(recoveryEmail);
+      if (res?.token) setResetToken(res.token);
+      setMessage(res?.message || `If this email exists, we sent a reset link/token to ${recoveryEmail}.`);
+      setForgotStep(2);
     } catch (err) {
-      setMessage("An error occurred during password recovery.");
-      console.error("❌ Forgot password error:", err);
+      setMessage(err?.response?.data?.message || "Error while generating reset token.");
     } finally {
-      setRecoveryEmail("");
-      setShowForgot(false);
+      setLoadingReset(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetToken || !newPwd || newPwd.length < 6) {
+      alert("Enter token and a new password (min 6 chars).");
+      return;
+    }
+    setLoadingReset(true);
+    setMessage("");
+    try {
+      const res = await resetPassword({ token: resetToken, newPassword: newPwd });
+      setMessage(res?.message || "Password was successfully changed. Please login with the new password.");
+      setTimeout(() => {
+        setShowForgot(false);
+        setForgotStep(1);
+        setRecoveryEmail("");
+        setResetToken("");
+        setNewPwd("");
+        setMessage("");
+      }, 1200);
+    } catch (err) {
+      setMessage(err?.response?.data?.message || "Failed to reset password. Check token and try again.");
+    } finally {
+      setLoadingReset(false);
     }
   };
 
@@ -82,9 +125,9 @@ const Login = () => {
         backgroundImage: `
           linear-gradient(
             to bottom,
-           rgba(255,255,255,0.95) 0%,
-                rgba(255,255,255,0.10) 20%,
-                rgba(255,255,255,0) 60%
+            rgba(255,255,255,0.95) 0%,
+            rgba(255,255,255,0.10) 20%,
+            rgba(255,255,255,0) 60%
           ),
           url('/images/signin.png')
         `,
@@ -115,15 +158,8 @@ const Login = () => {
           zIndex: 5,
         }}
       >
-       {/* Outline-текст ЗВЕРХУ */}
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 1150,
-            textAlign: "center",
-            marginBottom: 18,
-          }}
-        >
+        {/* Title */}
+        <div style={{ width: "100%", maxWidth: 1150, textAlign: "center", marginBottom: 18 }}>
           <span
             style={{
               fontFamily: "'Sora', Arial, sans-serif",
@@ -155,87 +191,69 @@ const Login = () => {
           Login to Your Account
         </div>
 
-        <div style={{
-            position: "relative",
-            width: "100%",
-            maxWidth: 500,
-            marginBottom: 10
-          }}>
-            <img
-              src="/images/email-icon.png"
-              alt="email"
-              style={{
-                position: "absolute",
-                left: 14,
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: 24,
-                height: 17
-              }}
-            />
-            <input
-              type="email"
-              className="form-control"
-              placeholder="Email address"
-              value={email}
-              style={{
-                fontSize: 16,
-                minHeight: 44,
-                borderRadius: 16,
-                border: "1.5px solid #02457A",
-                background: "transparent",
-                color: "#183E6B",
-                boxShadow: "none",
-                paddingLeft: 48, 
-                fontWeight: 500,
-              }}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+        {/* Email */}
+        <div style={{ position: "relative", width: "100%", maxWidth: 500, marginBottom: 10 }}>
+          <img
+            src="/images/email-icon.png"
+            alt="email"
+            style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", width: 24, height: 17 }}
+          />
+          <input
+            type="email"
+            className="form-control"
+            placeholder="Email address"
+            value={email}
+            style={{
+              fontSize: 16,
+              minHeight: 44,
+              borderRadius: 16,
+              border: "1.5px solid #02457A",
+              background: "transparent",
+              color: "#183E6B",
+              boxShadow: "none",
+              paddingLeft: 48,
+              fontWeight: 500,
+            }}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
 
-          <div style={{
-            position: "relative",
-            width: "100%",
-            maxWidth: 500,
-            marginBottom: 10
-          }}>
-            <img
-              src="/images/password-icon.png"
-              alt="password"
-              style={{
-                position: "absolute",
-                left: 14,
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: 24,
-                height: 17
-              }}
-            />
-            <input
-              type="password"
-              className="form-control"
-              placeholder="password"
-              value={password}
-              style={{
-                fontSize: 16,
-                minHeight: 44,
-                borderRadius: 16,
-                border: "1.5px solid #02457A",
-                background: "transparent",
-                color: "#183E6B",
-                boxShadow: "none",
-                paddingLeft: 48, 
-                fontWeight: 500,
-              }}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+        {/* Password */}
+        <div style={{ position: "relative", width: "100%", maxWidth: 500, marginBottom: 10 }}>
+          <img
+            src="/images/password-icon.png"
+            alt="password"
+            style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", width: 24, height: 17 }}
+          />
+          <input
+            type="password"
+            className="form-control"
+            placeholder="password"
+            value={password}
+            style={{
+              fontSize: 16,
+              minHeight: 44,
+              borderRadius: 16,
+              border: "1.5px solid #02457A",
+              background: "transparent",
+              color: "#183E6B",
+              boxShadow: "none",
+              paddingLeft: 48,
+              fontWeight: 500,
+            }}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
         <div className="text-end w-50" style={{ marginBottom: 8 }}>
           <button
             className="btn btn-link p-0"
             style={{ color: "#183E6B", fontWeight: 500, fontSize: 14, textDecoration: "underline" }}
-            onClick={() => setShowForgot(true)}
+            onClick={() => {
+              setShowForgot(true);
+              setForgotStep(1);
+              setMessage("");
+            }}
           >
             Forgot your password?
           </button>
@@ -259,55 +277,37 @@ const Login = () => {
           Login
         </button>
 
-        <div style={{
-          display: "flex", alignItems: "center",
-          width: 500, maxWidth: "100%", margin: "24px 0"
-        }}>
-          <div style={{
-            flex: 1, height: 1, background: "#888", opacity: 0.5,
-          }}></div>
-          <span style={{
-            color: "#888", fontWeight: 500, fontSize: 16, margin: "0 12px"
-          }}>or</span>
-          <div style={{
-            flex: 1, height: 1, background: "#888", opacity: 0.5,
-          }}></div>
+        {/* ... Google button + register link залишив без змін ... */}
+        <div style={{ display: "flex", alignItems: "center", width: 500, maxWidth: "100%", margin: "24px 0" }}>
+          <div style={{ flex: 1, height: 1, background: "#888", opacity: 0.5 }}></div>
+          <span style={{ color: "#888", fontWeight: 500, fontSize: 16, margin: "0 12px" }}>or</span>
+          <div style={{ flex: 1, height: 1, background: "#888", opacity: 0.5 }}></div>
         </div>
 
         <button
           className="btn"
           style={{
             background: "transparent",
-              color: "#001B48",
-              fontWeight: 500,
-              fontSize: 16,
-              borderRadius: 16,
-              minHeight: 44,
-              border: "2px solid #02457A",
-              width: "500px",
-              boxShadow: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              fontFamily: "'Sora', Arial, sans-serif",
-              transition: "box-shadow 0.2s",
+            color: "#001B48",
+            fontWeight: 500,
+            fontSize: 16,
+            borderRadius: 16,
+            minHeight: 44,
+            border: "2px solid #02457A",
+            width: "500px",
+            boxShadow: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            fontFamily: "'Sora', Arial, sans-serif",
+            transition: "box-shadow 0.2s",
           }}
-          onClick={() => window.location.href = "https://localhost:7065/google-auth/login"}
+          onClick={() => (window.location.href = "https://localhost:7065/google-auth/login")}
         >
-          <img
-            src="/images/Google.png"
-              alt="google"
-              style={{
-                width: 30,
-                height: 30,
-                marginRight: 10,
-                marginLeft: -6,
-            }}
-          />
+          <img src="/images/Google.png" alt="google" style={{ width: 30, height: 30, marginRight: 10, marginLeft: -6 }} />
           Sign in with Google
         </button>
-
 
         <div className="w-100 text-center" style={{ marginTop: 20, color: "#8898b3", fontSize: 16 }}>
           Don’t have an account?
@@ -317,32 +317,79 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Forgot Password Modal */}
+      {/* Forgot/Reset Modal */}
       {showForgot && (
         <div className="modal d-block" tabIndex="-1" style={{ background: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Password Recovery</h5>
-                <button type="button" className="btn-close" onClick={() => setShowForgot(false)}></button>
-              </div>
-              <div className="modal-body">
-                <input
-                  type="email"
-                  className="form-control"
-                  placeholder="Enter your email"
-                  value={recoveryEmail}
-                  onChange={(e) => setRecoveryEmail(e.target.value)}
+                <h5 className="modal-title">
+                  {forgotStep === 1 ? "Password Recovery" : "Set a New Password"}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => {
+                    setShowForgot(false);
+                    setForgotStep(1);
+                    setRecoveryEmail("");
+                    setResetToken("");
+                    setNewPwd("");
+                    setMessage("");
+                  }}
                 />
               </div>
+
+              <div className="modal-body">
+                {forgotStep === 1 ? (
+                  <>
+                    <label className="form-label">Email</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      placeholder="Enter your email"
+                      value={recoveryEmail}
+                      onChange={(e) => setRecoveryEmail(e.target.value)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label className="form-label">Token</label>
+                    <input
+                      type="text"
+                      className="form-control mb-2"
+                      placeholder="Paste token from email"
+                      value={resetToken}
+                      onChange={(e) => setResetToken(e.target.value)}
+                    />
+                    <label className="form-label">New password</label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      placeholder="New password"
+                      value={newPwd}
+                      onChange={(e) => setNewPwd(e.target.value)}
+                    />
+                    <div className="form-text">Min length: 6 characters</div>
+                  </>
+                )}
+
+                {message && <div className="alert alert-info mt-3">{message}</div>}
+              </div>
+
               <div className="modal-footer">
-                <button className="btn btn-primary w-100" onClick={handleForgotPassword}>
-                  Send
-                </button>
+                {forgotStep === 1 ? (
+                  <button className="btn btn-primary w-100" disabled={loadingReset} onClick={handleGenerateToken}>
+                    {loadingReset ? "Sending..." : "Send reset email"}
+                  </button>
+                ) : (
+                  <button className="btn btn-success w-100" disabled={loadingReset} onClick={handleResetPassword}>
+                    {loadingReset ? "Saving..." : "Set new password"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
-          {message && <div className="alert alert-info text-center">{message}</div>}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { getEstablishmentTypeName } from "../utils/enums";
 
+const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 
 const HotelCard = ({
   hotel,
@@ -71,9 +72,7 @@ const HotelCard = ({
           display: "flex", alignItems: "center"
         }}>
             <img src="/images/reitingstar-orange.png" alt="rating" style={{ marginRight: 5, width: 16 }} />
-          {typeof hotel.rating?.generalRating === "number"
-            ? hotel.rating.generalRating.toFixed(1)
-            : "—"}        
+          {fmt1(hotel?.rating?.generalRating)}    
         </div>
       </div>
       

@@ -23,6 +23,9 @@ const cardStyles = {
   justifyContent: "flex-end"
 };
 
+const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
+
+
 const PopularDestinations = ({ search = "" }) => {
   const [hotels, setHotels] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -246,10 +249,7 @@ const displayHotels = popularHotels.slice(0, 5);
                         }}>
                         
                         <img src="/images/reitingstar-orange.png" alt="" style={{ width: 16, height: 16, marginRight: 5, verticalAlign: "middle" }} />
-                        {typeof firstHotel?.rating?.generalRating === "number"
-                          ? firstHotel.rating.generalRating.toFixed(1)
-                          : "—"}
-
+                        {fmt1(firstHotel?.rating?.generalRating)}
                         </span>
                     </div>
                     
@@ -341,9 +341,7 @@ const displayHotels = popularHotels.slice(0, 5);
                         alignItems: "center"
                       }}>
                         <img src="/images/reitingstar-orange.png" alt="" style={{ width: 14, height: 14, marginRight: 5, verticalAlign: "middle" }} />
-                        {typeof hotel.rating?.generalRating === "number"
-                          ? hotel.rating.generalRating.toFixed(1)
-                          : "—"}
+                        {fmt1(hotel?.rating?.generalRating)}
                       </span>
                     </div>
 

@@ -14,7 +14,7 @@ import {
 } from "../../api/reviewApi";
 import { deleteEstablishment } from "../../api/establishmentsApi";
 import { Link } from "react-router-dom";
-import { APARTMENT_FEATURE_LABELS } from "../../utils/enums";
+import { APARTMENT_FEATURE_LABELS, ESTABLISHMENT_FEATURE_LABELS, decodeFlagsUser } from "../../utils/enums";
 
 const LandEstablishmentCard = ({ est, reloadStats  }) => {
   const [apartments, setApartments] = useState([]);
@@ -153,18 +153,51 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
 
         {/* Вивід удобств */}
         <p className="card-text mb-1 fw-bold">Facilities:</p>
-          {est.features && Object.keys(est.features).filter(f => est.features[f]).length > 0 ? (
-            <div className="mb-2">
-              {Object.keys(est.features)
-                .filter(key => est.features[key])
-                .map(key =>
-                  <span key={key} className="badge rounded-pill bg-info text-dark me-2 mb-1" style={{fontSize: 13}}>
-                    {key.charAt(0).toUpperCase() + key.slice(1)}
-                  </span>)}
+
+        {(() => {
+          let featureNames = [];
+
+          if (typeof est?.features === "number") {
+            // бек віддав бітмаску
+            featureNames = decodeFlagsUser(est.features, ESTABLISHMENT_FEATURE_LABELS);
+          } else if (est?.features && typeof est.features === "object") {
+            // бек віддав об’єкт булів { parking: true, ... }
+            featureNames = Object.keys(ESTABLISHMENT_FEATURE_LABELS).filter(k =>
+              est.features[k.charAt(0).toLowerCase() + k.slice(1)]
+            );
+          }
+
+          if (featureNames.length === 0) {
+            return <div className="text-muted mb-2">No facilities specified</div>;
+          }
+
+          return (
+            <div className="d-flex flex-wrap gap-3 mb-2">
+              {featureNames.map((name) => (
+                <span
+                  key={name}
+                  className="d-inline-flex align-items-center"
+                  style={{
+                    fontSize: 12,
+                    color: "#001B48",
+                    background: "#D6E7EE",
+                    padding: "4px 10px",
+                    borderRadius: 14,
+                    boxShadow: "0 1px 4px #e2e8f0",
+                  }}
+                >
+                  <img
+                    src={`/images/features/${name}.png`}
+                    alt={name}
+                    style={{ width: 18, height: 18, marginRight: 6 }}
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  {name.replace(/([A-Z])/g, " $1").trim()}
+                </span>
+              ))}
             </div>
-          ) : (
-            <div className="text-muted mb-2">No facilities specified</div>
-          )}
+          );
+        })()}
 
         <hr />
 
@@ -173,7 +206,6 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
           className="btn btn-success btn-sm mt-2">
           Add apartment
         </Link>
-
 
         <hr />
         <h6>Apartment:</h6>
@@ -222,21 +254,56 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                 </div>                
               )}
               {apt.description}
-              {/* Вивід зручностей апартаменту */}
-              {apt.features && Object.keys(apt.features).filter(f => apt.features[f]).length > 0 ? (
-                <div className="mb-2 mt-1">
-                  {Object.keys(apt.features)
-                    .filter(key => apt.features[key])
-                    .map(key =>
-                      <span key={key} className="badge rounded-pill bg-info text-dark me-2 mb-1" style={{fontSize: 12}}>
-                        {key.charAt(0).toUpperCase() + key.slice(1)}
-                      </span>
-                    )
+              {/* Вивід зручностей апартаменту (з іконками) */}
+              <div className="mb-2 mt-2">
+                <p className="card-text mb-1 fw-bold">Room facilities:</p>
+
+                {(() => {
+                  let featureNames = [];
+
+                  if (typeof apt?.features === "number") {
+                    // бек повернув бітмаску
+                    featureNames = decodeFlagsUser(apt.features, APARTMENT_FEATURE_LABELS);
+                  } else if (apt?.features && typeof apt.features === "object") {
+                    // бек повернув об’єкт булів { freeWifi: true, ... }
+                    featureNames = Object.keys(APARTMENT_FEATURE_LABELS).filter(k =>
+                      apt.features[k.charAt(0).toLowerCase() + k.slice(1)]
+                    );
                   }
-                </div>
-              ) : (
-                <div className="text-muted mb-2">No facilities</div>
-              )}
+
+                  if (featureNames.length === 0) {
+                    return <div className="text-muted">No facilities</div>;
+                  }
+
+                  return (
+                    <div className="d-flex flex-wrap gap-2">
+                      {featureNames.map((name) => (
+                        <span
+                          key={name}
+                          className="d-inline-flex align-items-center"
+                          style={{
+                            fontSize: 12,
+                            color: "#001B48",
+                            background: "#EEF5FF",
+                            padding: "4px 10px",
+                            borderRadius: 14,
+                            boxShadow: "0 1px 4px #e2e8f0",
+                          }}
+                        >
+                          <img
+                            src={`/images/features/${name}.png`}  // ВАЖЛИВО: без .toLowerCase()
+                            alt={name}
+                            style={{ width: 18, height: 18, marginRight: 6 }}
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          />
+                          {name.replace(/([A-Z])/g, " $1").trim()}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
 
             </div>
           ))}

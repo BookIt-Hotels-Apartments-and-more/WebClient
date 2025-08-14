@@ -23,8 +23,13 @@ export const getCurrentUser = async () => {
   return res.data;
 };
 
-export const forgotPassword = async (email) => {
-  const res = await axiosInstance.post("/auth/forgot-password", { email });
+export const generateResetToken = async (email) => {
+  const res = await axiosInstance.post("/auth/reset-password/generate-token", { email });
+  return res.data;
+};
+
+export const resetPassword = async ({ token, newPassword }) => {
+  const res = await axiosInstance.post("/auth/reset-password", { token, newPassword });
   return res.data;
 };
 

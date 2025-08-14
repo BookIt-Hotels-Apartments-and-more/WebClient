@@ -16,6 +16,10 @@ import { toggleApartmentFavorite } from "../utils/favoriteUtils";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
+const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
+const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "");
+
+
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -151,7 +155,6 @@ const HotelDetails = () => {
   };
 
   const handleBooking = async (apartmentId) => {
-    // 1) Перевіряємо авторизацію
     let currentUser = null;
     try {
       currentUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -166,12 +169,11 @@ const HotelDetails = () => {
       return;
     }
 
-    // 2) Беремо дати з форми або з localStorage (якщо прийшли з головного банера)
     const stored = JSON.parse(localStorage.getItem("bookingForm") || "{}");
     const rawFrom = bookingForm.dateFrom || stored.checkIn || "";
     const rawTo   = bookingForm.dateTo   || stored.checkOut || "";
 
-    const df = rawFrom.slice(0, 10); // YYYY-MM-DD
+    const df = rawFrom.slice(0, 10);
     const dt = rawTo.slice(0, 10);
 
     if (!df || !dt) {
@@ -183,7 +185,6 @@ const HotelDetails = () => {
       return;
     }
 
-    // 3) Швидка клієнтська перевірка по вже завантажених недоступних датах
     if (isDateUnavailable(df, dt)) {
       toast.error("These dates are already booked for this room. Please select other dates.", { autoClose: 12000 });
       return;
@@ -192,30 +193,25 @@ const HotelDetails = () => {
     setBookingLoading(true);
 
     try {
-      // Нормалізуємо у ISO date-time (бек очікує $date-time)
       const isoFrom = `${df}T00:00:00`;
       const isoTo   = `${dt}T00:00:00`;
 
-      // 4) ОБОВ'ЯЗКОВА серверна перевірка: чи вільний номер на вибрані дати
-      await checkApartmentAvailability(apartmentId, isoFrom, isoTo); // 200 — ок; 409 — конфлікт
+      await checkApartmentAvailability(apartmentId, isoFrom, isoTo);
 
-      // 5) Рахуємо кількість ночей та суму
       const nights = Math.max(1, Math.ceil((new Date(isoTo) - new Date(isoFrom)) / (1000 * 60 * 60 * 24)));
       const apt = apartments.find(a => a.id === apartmentId);
       const price = apt?.price || 0;
       const totalPrice = price * nights;
 
-      // 6) Створюємо бронювання
       const created = await createBooking({
         dateFrom: isoFrom,
         dateTo: isoTo,
         customerId: currentUser.id,
         apartmentId,
-        paymentType // "Cash" | "Mono" | "BankTransfer"
+        paymentType
       });
       const bookingId = created?.id ?? created?.data?.id;
 
-      // 7) Створюємо платіж
       const payDto = {
         type: PAYMENT_TYPE[paymentType],
         amount: totalPrice,
@@ -237,13 +233,11 @@ const HotelDetails = () => {
         toast.success("Booking successful! Details in your profile.", { autoClose: 10000 });
       }
 
-      // 8) Чистимо форму та закриваємо модалку
       setBookingApartmentId(null);
       setBookingForm({ dateFrom: "", dateTo: "" });
 
     } catch (err) {
       if (err?.response?.status === 409) {
-        // Бек повертає зрозуміле повідомлення + може додати conflictingBookings
         const msg = err?.response?.data?.message || "This room is not available for the selected dates.";
         toast.error(msg, { autoClose: 12000 });
       } else {
@@ -259,14 +253,14 @@ const HotelDetails = () => {
     <div className="mb-3">
       <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: 12, fontWeight: 500 }}>
         <span>{label}</span>
-        <span style={{ color: "#001B48", fontWeight: 600 }}>{value.toFixed(1)}</span>
+        <span style={{ color: "#001B48", fontWeight: 600 }}>{fmt1(value)}</span>
       </div>
       <div style={{ width: "100%", height: 8, borderRadius: 4, background: "#F2F6FF" }}>
         <div
           style={{
             height: 8,
             borderRadius: 4,
-            width: `${Math.round((value / 5) * 100)}%`,
+            width: `${Math.round((value / 10) * 100)}%`,
             background: "#22614D",
             transition: "width .3s"
           }}
@@ -504,9 +498,7 @@ const HotelDetails = () => {
               <div className="d-flex align-items-center mb-2">
                 <span className="badge me-2" style={{ fontSize: 17, background: "#fff", color: "#BF9D78" }}>
                   <img src="/images/reitingstar.png" alt="Star" style={{ width: 16, height: 16, marginRight: 7 }} />
-                  {typeof hotel?.rating?.generalRating === "number"
-                          ? hotel.rating.generalRating.toFixed(1)
-                          : "—"}
+                  {fmt1(hotel?.rating?.generalRating)}
                 </span>            
               </div>
               <h2 className="text-white mb-1" style={{ fontWeight: 700 }}>{hotel.name}</h2>
@@ -616,15 +608,13 @@ const HotelDetails = () => {
             <div className="d-flex align-items-center justify-content-center mb-2" style={{ gap: 10 }}>
               <img src="/images/reitingstar-orange.png" alt="star" style={{ width: 24, height: 24, marginRight: 6 }} />
               <span style={{ color: "#FE7C2C", fontWeight: 700, fontSize: 24, marginRight: 6 }}>
-                {typeof hotel.rating?.generalRating === "number"
-                  ? hotel.rating.generalRating.toFixed(1)
-                  : "—"}
+                {fmt1(hotel?.rating?.generalRating)}
               </span>
               <span style={{ fontWeight: 300, color: "#001B48", fontSize: 12 }}>
                 {typeof hotel.rating?.generalRating === "number"
-                  ? hotel.rating.generalRating >= 4.5
+                  ? hotel.rating.generalRating >= 8
                     ? "Excellent rating"
-                    : hotel.rating.generalRating >= 4
+                    : hotel.rating.generalRating >= 6
                     ? "Very good"
                     : "No rating"
                   : "No rating"}
@@ -919,9 +909,7 @@ const HotelDetails = () => {
                           
                           <span style={{ fontWeight: 500, fontSize: 12, color: "#BF9D78", display: "flex", alignItems: "center", gap: 6 }}>
                             <img src="/images/reitingstar.png" alt="Star" style={{ width: 14, height: 14 }} />
-                            {apt.rating?.generalRating !== undefined && apt.rating?.generalRating !== null
-                              ? apt.rating.generalRating.toFixed(1)
-                              : "—"}
+                            {fmt1(apt?.rating?.generalRating)}
                             <button
                               type="button"
                               className="btn btn-link p-0"
@@ -936,11 +924,7 @@ const HotelDetails = () => {
                         </div>
                         <div className="text-muted" style={{ fontSize: 12, marginBottom: 4 }}>
                           {apt.description}
-                        </div>
-
-                        
-
-
+                        </div>       
 
                         <div className="text-secondary mb-2" style={{ fontSize: 13, color: "#001B48" }}>
                           {apt.capacity && <>apartments for {apt.capacity} persons</>}
@@ -1020,7 +1004,7 @@ const HotelDetails = () => {
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
                   {r.booking?.customer?.username || "Anonymous"}
                   <span style={{ marginLeft: 10, color: "#FE7C2C" }}>
-                    {typeof r.rating === "number" ? r.rating.toFixed(1) : ""}
+                    {fmt1Blank(r?.rating)}
                   </span>
                 </div>
                 <div style={{ fontSize: 15 }}>{r.text}</div>

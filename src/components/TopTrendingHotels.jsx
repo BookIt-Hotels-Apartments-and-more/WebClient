@@ -60,18 +60,18 @@ const TopTrendingHotels = ({ search = "" }) => {
 
   // Топові готелі за останні 30 днів
   const topHotels = useMemo(() => {
-  if (!hotels.length) return [];
+    if (!hotels.length) return [];
 
-  const now = new Date();
-  const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
-  const bookingsCount = {};
-  bookings.forEach(b => {
-    const estId = b.apartment?.establishment?.id || b.establishment?.id;
-    const created = b.createdAt ? new Date(b.createdAt) : null;
-    if (estId && (!created || (now - created) < THIRTY_DAYS)) {
-      bookingsCount[estId] = (bookingsCount[estId] || 0) + 1;
-    }
-  });
+    const now = new Date();
+    const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
+    const bookingsCount = {};
+    bookings.forEach(b => {
+      const estId = b.apartment?.establishment?.id || b.establishment?.id;
+      const created = b.createdAt ? new Date(b.createdAt) : null;
+      if (estId && (!created || (now - created) < THIRTY_DAYS)) {
+        bookingsCount[estId] = (bookingsCount[estId] || 0) + 1;
+      }
+    });
 
   let hotelsWithCount = hotels.map(hotel => ({
     ...hotel,
