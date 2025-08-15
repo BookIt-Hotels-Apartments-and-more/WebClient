@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import { registerUser } from "../api/authApi";
+import { registerUser, registerLandlord } from "../api/authApi";
+import { toast } from 'react-toastify';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ const Register = () => {
   });
   const [error, setError] = useState("");
   const location = useLocation();
-  const selectedRole = location.state?.role || "Tenant";
+  const selectedRole = location.state?.role || localStorage.getItem("registerRole") || "Tenant";
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -48,14 +49,16 @@ const Register = () => {
       return;
     }
 
-    registerUser({
+    const payload = {
       username: formData.fullName,
       email: formData.email,
       password: formData.password,
-      //role: selectedRole,
-    })
+    };
+    const apiCall = selectedRole === "Landlord" ? registerLandlord : registerUser;
+    apiCall(payload)
       .then((data) => {
-        alert("You have successfully registered in our service!");
+        toast.error("EYou have successfully registered in our service!", { autoClose: 4000 });
+        localStorage.removeItem("registerRole");
         navigate("/login");
       })
       .catch((err) => {

@@ -15,6 +15,7 @@ import { createUniversalPayment } from "../api/paymentApi";
 import { toggleApartmentFavorite } from "../utils/favoriteUtils";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { getApiErrorMessage } from "../utils/apiError";
 
 const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "");
@@ -237,12 +238,8 @@ const HotelDetails = () => {
       setBookingForm({ dateFrom: "", dateTo: "" });
 
     } catch (err) {
-      if (err?.response?.status === 409) {
-        const msg = err?.response?.data?.message || "This room is not available for the selected dates.";
-        toast.error(msg, { autoClose: 12000 });
-      } else {
-        toast.error("Booking/payment error!", { autoClose: 10000 });
-      }
+      const msg = getApiErrorMessage(err);
+      toast.error(<div style={{ whiteSpace: "pre-wrap" }}>{msg}</div>, { autoClose: 12000 });
     } finally {
       setBookingLoading(false);
     }

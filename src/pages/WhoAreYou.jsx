@@ -100,8 +100,9 @@ const WhoAreYou = () => {
           <button
             className="btn"
               onClick={() => {
-                localStorage.setItem("whoareyou", "traveler"); // зберігаємо в localStorage
-                navigate("/login");
+                localStorage.setItem("registerRole", "Tenant");
+                localStorage.setItem("whoareyou", "traveler");
+                navigate("/register", { state: { role: "Tenant" } });
               }}
             style={{
               fontWeight: 700,
@@ -123,8 +124,9 @@ const WhoAreYou = () => {
           <button
             className="btn"
               onClick={() => {
+                localStorage.setItem("registerRole", "Landlord");
                 localStorage.setItem("whoareyou", "landlord");
-                navigate("/login");
+                navigate("/register", { state: { role: "Landlord" } });
               }}
             style={{
               fontWeight: 700,
