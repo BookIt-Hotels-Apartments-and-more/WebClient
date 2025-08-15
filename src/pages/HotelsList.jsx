@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { getAllEstablishments, getEstablishmentsByVibe } from "../api/establishmentsApi";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getAllEstablishments, getEstablishmentsByVibe, getTrendingEstablishments } from "../api/establishmentsApi";
 import { axiosInstance } from "../api/axios";
 import BookingBannerForm from '../components/BookingBannerForm';
 import HotelFilters from "../components/HotelFilters";
@@ -16,12 +16,18 @@ const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixe
 
 export default function HotelsList() {
   const location = useLocation();
+  const navigate = useNavigate();
   const sourceHotels = location.state?.hotels || null;
-  const hotelsTitle = location.state?.title || "All Hotels";
   const params = new URLSearchParams(location.search);
   const selectedType = params.get("type");
   const vibeParam = params.get("vibe");
   const selectedVibe = vibeParam !== null ? Number(vibeParam) : null;
+  const trendingFlag = params.get("trending");
+  const trendingDays = Number(params.get("days") || 30);
+  const hotelsTitle =
+      (new URLSearchParams(location.search).get("trending") === "1")
+        ? "Top trending hotels"
+        : (location.state?.title || "All Hotels");
 
   const [search, setSearch] = useState("");
   const [hotels, setHotels] = useState([]);
@@ -41,7 +47,11 @@ export default function HotelsList() {
   const [modalReviews, setModalReviews] = useState([]);
 
   useEffect(() => {
-    if (selectedVibe !== null && !Number.isNaN(selectedVibe)) {
+    if (trendingFlag === "1") {
+      getTrendingEstablishments(100, trendingDays)
+        .then(data => setHotels(Array.isArray(data) ? data : (data?.items ?? [])))
+        .catch(() => setHotels([]));
+    } else if (selectedVibe !== null && !Number.isNaN(selectedVibe)) {
       getEstablishmentsByVibe(selectedVibe)
         .then((res) => {
           const data = Array.isArray(res) ? res : (res?.items ?? []);
@@ -56,7 +66,7 @@ export default function HotelsList() {
         getUserFavorites(userId).then(setFavorites);
       }
 
- }, [userId, selectedVibe]);
+ }, [userId, selectedVibe, trendingFlag, trendingDays]);
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -132,12 +142,22 @@ export default function HotelsList() {
       const matchesMinPrice = !filters.minPrice || (price !== null && price >= Number(filters.minPrice));
       const matchesMaxPrice = !filters.maxPrice || (price !== null && price <= Number(filters.maxPrice));
       // Рейтинг
-      const matchesRating = !filters.rating || (hotel.rating && hotel.rating >= Number(filters.rating));
+      const ratingRaw = filters?.rating ?? "";
+      let minRating = null;
+      if (ratingRaw !== "") {
+        const parsed = Number(String(ratingRaw).replace("+", "").trim());
+        if (Number.isFinite(parsed)) minRating = parsed;
+      }
+      const ratingNum =
+        hotel?.rating?.generalRating != null
+          ? Number(hotel.rating.generalRating)
+          : (typeof hotel?.rating === "number" ? Number(hotel.rating) : null);
+      const matchesRating = (minRating == null) || (ratingNum != null && ratingNum >= minRating);
       // Пошук (якщо ввели в BookingBannerForm)
       const searchLower = search.trim().toLowerCase();
       const matchesSearch = !searchLower ||
-        hotel.name.toLowerCase().includes(searchLower) ||
-        geo.City?.toLowerCase().includes(searchLower);
+          (hotel.name || "").toLowerCase().includes(searchLower) ||
+          (geo.city || "").toLowerCase().includes(searchLower);
 
       const hasAllFacilities = FACILITIES.every(fac => {
         if (!filters[fac]) return true;
@@ -209,12 +229,7 @@ export default function HotelsList() {
         <div className="col-12 col-md-3 mb-4 d-none d-md-block">
           <HotelFilters
             filters={filters}
-            setFilters={newFilters => {
-              setFilters(newFilters);
-              if (newFilters.country !== filters.country) {
-                navigate(`/country-select?country=${encodeURIComponent(newFilters.country)}`);
-              }
-            }}
+            setFilters={newFilters => setFilters(newFilters)}
             countryOptions={countryOptions}
             showCountry={true}
           />
@@ -238,12 +253,7 @@ export default function HotelsList() {
              <div className="offcanvas-body">
                <HotelFilters
                  filters={filters}
-                 setFilters={newFilters => {
-                   setFilters(newFilters);
-                   if (newFilters.country !== filters.country) {
-                     navigate(`/country-select?country=${encodeURIComponent(newFilters.country)}`);
-                   }
-                 }}
+                 setFilters={newFilters => setFilters(newFilters)}
                  countryOptions={countryOptions}
                  showCountry={true}
                />

@@ -48,6 +48,13 @@ export const getEstablishmentsByOwnerFiltered = async (ownerId, filters = {}) =>
   return res.data.items;
 };
 
+export const getTrendingEstablishments = async (count = 5, pastDays = 30) => {
+  const res = await axiosInstance.get("/api/Establishments/trending", {
+    params: { count, pastDays },
+  });
+  return res.data;
+};
+
 
 
 

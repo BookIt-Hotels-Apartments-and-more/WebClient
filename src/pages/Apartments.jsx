@@ -74,7 +74,18 @@ export default function Apartments() {
       const price = typeof apt.price === "number" ? apt.price : null;
       const matchesMinPrice = !filters.minPrice || (price !== null && price >= Number(filters.minPrice));
       const matchesMaxPrice = !filters.maxPrice || (price !== null && price <= Number(filters.maxPrice));
-      const matchesRating = !filters.rating || (apt.rating && apt.rating >= Number(filters.rating));
+      const ratingRaw = filters?.rating ?? "";
+      let minRating = null;
+      if (ratingRaw !== "") {
+        const parsed = Number(String(ratingRaw).replace("+", "").trim());
+        if (Number.isFinite(parsed)) minRating = parsed;
+      }
+      const ratingNum =
+        apt?.rating?.generalRating != null
+          ? Number(apt.rating.generalRating)
+          : (typeof apt?.rating === "number" ? Number(apt.rating) : null);
+
+      const matchesRating = (minRating == null) || (ratingNum != null && ratingNum >= minRating);
       const searchLower = search.trim().toLowerCase();
       const geo = apt.establishment?.geolocation || {};
       const matchesSearch = !searchLower ||

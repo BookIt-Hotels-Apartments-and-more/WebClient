@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { getAllEstablishments } from "../api/establishmentsApi";
-import { getAllBookings } from "../api/bookingApi";
+import { getTrendingEstablishments } from "../api/establishmentsApi";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../api/axios";
-import HotelCard from "../components/HotelCard ";
+import HotelCard from "./HotelCard ";
 import { getUserFavorites, addFavorite, removeFavorite  } from "../api/favoriteApi";
 import { toast } from 'react-toastify';
 import { toggleHotelFavorite } from "../utils/favoriteUtils";
@@ -24,7 +23,6 @@ const cardStyles = {
 
 const TopTrendingHotels = ({ search = "" }) => {
   const [hotels, setHotels] = useState([]);
-  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState("All");
   const navigate = useNavigate();
@@ -35,14 +33,12 @@ const TopTrendingHotels = ({ search = "" }) => {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      getAllEstablishments(),
-      getAllBookings(),
+      getTrendingEstablishments(12, 30),
       axiosInstance.get("/api/apartments"),
       userId ? getUserFavorites(userId) : Promise.resolve([]),
     ])
-      .then(([hotelsData, bookingsData, apartmentsData, favoritesData]) => {
-        setHotels(hotelsData);
-        setBookings(bookingsData);
+      .then(([trendingData, apartmentsData, favoritesData]) => {
+        setHotels(trendingData);
         setApartments(apartmentsData.data);
         setFavorites(favoritesData);
       })
@@ -58,53 +54,32 @@ const TopTrendingHotels = ({ search = "" }) => {
     return ["All", ...Array.from(set)];
   }, [hotels]);
 
-  // Топові готелі за останні 30 днів
-  const topHotels = useMemo(() => {
-    if (!hotels.length) return [];
-
-    const now = new Date();
-    const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
-    const bookingsCount = {};
-    bookings.forEach(b => {
-      const estId = b.apartment?.establishment?.id || b.establishment?.id;
-      const created = b.createdAt ? new Date(b.createdAt) : null;
-      if (estId && (!created || (now - created) < THIRTY_DAYS)) {
-        bookingsCount[estId] = (bookingsCount[estId] || 0) + 1;
+  const searchLower = (search || "").trim().toLowerCase();
+    const topHotels = useMemo(() => {
+      let list = hotels;
+      if (selectedCountry !== "All") {
+        list = list.filter(h => h.geolocation?.country === selectedCountry);
       }
-    });
+      if (searchLower) {
+        list = list.filter(h => {
+          const country = (h.geolocation?.country || "").toLowerCase();
+          const city = (h.geolocation?.city || "").toLowerCase();
+          return (
+            (h.name || "").toLowerCase().includes(searchLower) ||
+            country.includes(searchLower) ||
+            city.includes(searchLower)
+          );
+        });
+      }
+      return list;
+    }, [hotels, selectedCountry, searchLower]);
 
-  let hotelsWithCount = hotels.map(hotel => ({
-    ...hotel,
-    bookingsCount: bookingsCount[hotel.id] || 0,
-  }));
+  const displayTopHotels = topHotels.slice(0, 3);
 
-  // Фільтрація по країні
-  if (selectedCountry && selectedCountry !== "All") {
-    hotelsWithCount = hotelsWithCount.filter(h => h.geolocation?.country === selectedCountry);
-  }
+  
 
-  hotelsWithCount.sort((a, b) => b.bookingsCount - a.bookingsCount);
 
-  return hotelsWithCount; // <-- Всі топові, без slice!
-}, [hotels, bookings, selectedCountry]);
 
-const searchLower = (search || "").trim().toLowerCase();
-const filteredTopHotels = topHotels.filter(hotel => {
-  const country = (hotel.geolocation?.country || "").toLowerCase();
-  const city = (hotel.geolocation?.city || "").toLowerCase();
-  return (
-    hotel.name.toLowerCase().includes(searchLower) ||
-    country.includes(searchLower) ||
-    city.includes(searchLower)
-  );
-});
-
-const hotelsToShow =
-  searchLower && filteredTopHotels.length === 0
-    ? topHotels
-    : filteredTopHotels;
-
-const displayTopHotels = hotelsToShow.slice(0, 3);
 
 
   if (loading) {
@@ -139,13 +114,7 @@ const displayTopHotels = hotelsToShow.slice(0, 3);
           <button
               className="btn btn-link fw-bold"
               style={{ color: "#1b3966", fontSize: 15, textDecoration: "none" }}
-              onClick={() => navigate("/hotels", {
-                state: {
-                  source: "TopTrendingHotels",
-                  hotels: topHotels,
-                  title: "Top Trending Hotels"
-                }
-              })}
+              onClick={() => navigate("/hotels?trending=1&days=30")}
           >
             See all →
           </button>

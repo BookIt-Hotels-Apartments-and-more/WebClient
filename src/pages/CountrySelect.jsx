@@ -9,7 +9,7 @@ import countriesList from "../utils/countriesList";
 import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
 import { getUserFavorites  } from "../api/favoriteApi";
 import { toggleHotelFavorite } from "../utils/favoriteUtils";
-import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
+import { ESTABLISHMENT_FEATURE_LABELS, VIBE_TYPE } from "../utils/enums";
 
 
 export default function CountrySelect() {
@@ -27,8 +27,14 @@ export default function CountrySelect() {
     maxPrice: "",
     rating: "",
   });
-  const filtersList = ["Beach", "Nature", "City", "Mountains", "Relax"];
-  const [selectedFilter, setSelectedFilter] = useState("All");
+  const [selectedVibe, setSelectedVibe] = useState(null);
+  const vibeButtons = [
+    { label: "Beach",     code: VIBE_TYPE.Beach },
+    { label: "Nature",    code: VIBE_TYPE.Nature },
+    { label: "City",      code: VIBE_TYPE.City },
+    { label: "Mountains", code: VIBE_TYPE.Mountains },
+    { label: "Relax",     code: VIBE_TYPE.Relax },
+  ];
   const [selectedType, setSelectedType] = useState("All");
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const [showAuthMsg, setShowAuthMsg] = useState(false);  
@@ -64,7 +70,17 @@ export default function CountrySelect() {
       const matchesMaxPrice = !filters.maxPrice || (price !== null && price <= Number(filters.maxPrice));
       
       // Рейтинг
-      const matchesRating = !filters.rating || (hotel.rating && hotel.rating >= Number(filters.rating));
+      const ratingRaw = filters?.rating ?? "";
+      let minRating = null;
+      if (ratingRaw !== "") {
+        const parsed = Number(String(ratingRaw).replace("+", "").trim());
+        if (Number.isFinite(parsed)) minRating = parsed;
+      }
+      const ratingNum =
+        hotel?.rating?.generalRating != null
+          ? Number(hotel.rating.generalRating)
+          : (typeof hotel?.rating === "number" ? Number(hotel.rating) : null);
+      const matchesRating = (minRating == null) || (ratingNum != null && ratingNum >= minRating);
       
       // Пошук
       const searchLower = search.trim().toLowerCase();
@@ -72,7 +88,11 @@ export default function CountrySelect() {
         hotel.name.toLowerCase().includes(searchLower) ||
         (geo.city || "").toLowerCase().includes(searchLower);
 
-      // Фільтр по типу закладу
+        // Фільтр по VIBE
+      const hotelVibe = typeof hotel.vibe === "number" ? hotel.vibe : null;
+      const matchesVibe = selectedVibe == null || hotelVibe === selectedVibe;
+      
+        // Фільтр по типу закладу
       const matchesType =
         selectedType === "All"
           ? true
@@ -91,17 +111,12 @@ export default function CountrySelect() {
         matchesRating &&
         matchesSearch &&
         matchesType &&
+        matchesVibe &&
         hasAllFacilities 
       );
     });
-  }, [hotels, apartments, filters, search, selectedType]);
+  }, [hotels, apartments, filters, search, selectedType, selectedVibe]);
 
-
-  if (selectedFilter !== "All") {
-  hotelsToShow = hotelsToShow.filter(hotel =>
-    Array.isArray(hotel.types) && hotel.types.includes(selectedFilter)
-  );
-}
 
   return (
     <div>
@@ -177,16 +192,16 @@ export default function CountrySelect() {
             ]}
           />
 
-          {/* блок з кнопками */}
+          {/* Vibe */}
           <div style={{ margin: "10px 20px" }}>
-            {filtersList.map((f) => (
+            {vibeButtons.map(({ label, code }) => (
               <button
-                key={f}
+                key={label}
                 style={{
                   margin: "0 3px",
                   padding: "7px 18px",
-                  background: selectedFilter === f ? "#1b3966" : "#fff",
-                  color: selectedFilter === f ? "#fff" : "#1b3966",
+                  background: selectedVibe === code ? "#1b3966" : "#fff",
+                  color: selectedVibe === code ? "#fff" : "#1b3966",
                   border: "1px solid #1b3966",
                   borderRadius: "8px",
                   fontWeight: 300,
@@ -194,24 +209,24 @@ export default function CountrySelect() {
                   fontSize: 13,
                   transition: "all 0.2s",
                 }}
-                onClick={() => setSelectedFilter(f)}
+                onClick={() => setSelectedVibe(code)}
               >
-                {f}
+                {label}
               </button>
             ))}
             <button
               style={{
                 margin: "0 8px",
                 padding: "7px 18px",
-                background: selectedFilter === "All" ? "#1b3966" : "#fff",
-                color: selectedFilter === "All" ? "#fff" : "#1b3966",
+                background: selectedVibe == null ? "#1b3966" : "#fff",
+                color: selectedVibe == null ? "#fff" : "#1b3966",
                 border: "1px solid #1b3966",
                 borderRadius: "8px",
                 fontWeight: 500,
                 cursor: "pointer",
                 fontSize: 16,
               }}
-              onClick={() => setSelectedFilter("All")}
+              onClick={() => setSelectedVibe(null)}
             >
               All
             </button>
@@ -443,7 +458,11 @@ export default function CountrySelect() {
                           <span className="badge" style={{ fontSize: 14, color: "#FE7C2C" }}>
                             <img src="/images/reitingstar-orange.png" alt="Star"
                               style={{ width: 14, height: 14, marginRight: 6, verticalAlign: "middle", objectFit: "contain" }} />
-                            {hotel.rating?.reviewCount || 0}
+                            {
+                              hotel?.rating?.generalRating != null
+                                ? Number(hotel.rating.generalRating).toFixed(1)
+                                : (typeof hotel?.rating === "number" ? Number(hotel.rating).toFixed(1) : "—")
+                            }
                           </span>
                         </div>
                         <div className="d-flex align-items-center mb-1">

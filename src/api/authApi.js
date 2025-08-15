@@ -10,6 +10,11 @@ export const registerUser = async (data) => {
   return res.data;
 };
 
+export const registerLandlord = async (data) => {
+  const res = await axiosInstance.post("/auth/register-landlord", data);
+  return res.data;
+};
+
 export const loginWithGoogle = async (token) => {
   const res = await axiosInstance.post("/auth/google", { token });
   return res.data;
