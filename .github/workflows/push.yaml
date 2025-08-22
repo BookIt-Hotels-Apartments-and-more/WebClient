@@ -1,0 +1,55 @@
+name: CI/CD
+on:
+  push:
+    branches: [ master ] 
+  workflow_dispatch:
+  
+env: 
+  IMAGE_NAME: pok1min/webclient
+  IMAGE_TAG: latest
+  CONTAINER_NAME: webclient
+  REMOTE_HOST: 34.34.77.107
+  
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Get repository
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}  
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.MYTOKEN }}
+      
+      - name: Deploy container on remote server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            sudo docker pull pok1min/webclient:latest
+            sudo docker stop webclient || true
+            sudo docker rm webclient || true
+            sudo docker run -d --name webclient --network my_network pok1min/webclient
+
+  zap_scan:
+    runs-on: ubuntu-24.04
+    needs: deploy
+    steps:
+      - name: ZAP Scan
+        uses: zaproxy/action-full-scan@v0.12.0
+        with:
+          target: 'https://bookit.pp.ua/'
+          token: ${{ secrets.MYTOKEN }}
