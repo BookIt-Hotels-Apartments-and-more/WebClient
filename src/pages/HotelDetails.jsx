@@ -1,5 +1,5 @@
-import { useParams } from "react-router-dom";
-import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useRef  } from "react";
 import { axiosInstance } from "../api/axios";
 import { createBooking, getApartmentAvailability, checkApartmentAvailability } from "../api/bookingApi";
 import { getAllReviews } from "../api/reviewApi";
@@ -23,6 +23,7 @@ const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixe
 
 
 const HotelDetails = () => {
+  const navigate = useNavigate();
   const { id } = useParams();
   const [hotel, setHotel] = useState(null);
   const [apartments, setApartments] = useState([]);
@@ -35,6 +36,7 @@ const HotelDetails = () => {
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "null");
+  const finalizeOnceRef = useRef(false);
   const [favoriteApartments, setFavoriteApartments] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -47,7 +49,10 @@ const HotelDetails = () => {
   });
   const [paymentType, setPaymentType] = useState("Cash");
   const [unavailableDates, setUnavailableDates] = useState([]);
-  const disabledDates = unavailableDates.map(d => new Date(d));
+  const disabledDates = unavailableDates.map((d) => {
+    const nd = new Date(d);
+    return new Date(nd.getFullYear(), nd.getMonth(), nd.getDate()); // обнуляємо час → локальна доба
+  });
   const [reviews, setReviews] = useState([]);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [modalReviews, setModalReviews] = useState([]);
@@ -134,12 +139,27 @@ const HotelDetails = () => {
 
   const toInputDate = (dateStr) => {
     if (!dateStr) return "";
-    // dateStr вже 'YYYY-MM-DD', просто повертаємо
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-    // fallback на старі дані
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr; 
     const d = new Date(dateStr);
-    if (!isNaN(d)) return d.toISOString().slice(0, 10);
-    return "";
+    if (isNaN(d)) return "";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`; 
+  };
+
+  const toLocalDateString = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const parseLocalDate = (s) => {
+    if (!s) return null;
+    const [y, m, d] = s.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
   };
 
   const isDateUnavailable = (from, to) => {
@@ -156,28 +176,25 @@ const HotelDetails = () => {
   };
 
   const handleBooking = async (apartmentId) => {
+
     let currentUser = null;
     try {
       currentUser = JSON.parse(localStorage.getItem("user") || "null");
     } catch {
       currentUser = null;
     }
-
-    if (!currentUser?.id || !localStorage.getItem("token")) {
+     if (!currentUser?.id || !localStorage.getItem("token")) {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       toast.warn("To book a room, log in to your account!", { autoClose: 10000 });
       return;
     }
-
-    const stored = JSON.parse(localStorage.getItem("bookingForm") || "{}");
+     const stored = JSON.parse(localStorage.getItem("bookingForm") || "{}");
     const rawFrom = bookingForm.dateFrom || stored.checkIn || "";
     const rawTo   = bookingForm.dateTo   || stored.checkOut || "";
-
-    const df = rawFrom.slice(0, 10);
+     const df = rawFrom.slice(0, 10);
     const dt = rawTo.slice(0, 10);
-
-    if (!df || !dt) {
+     if (!df || !dt) {
       toast.warn("Please select dates for booking.", { autoClose: 10000 });
       return;
     }
@@ -185,66 +202,82 @@ const HotelDetails = () => {
       toast.warn("Check-out must be after check-in.", { autoClose: 8000 });
       return;
     }
-
-    if (isDateUnavailable(df, dt)) {
+     if (isDateUnavailable(df, dt)) {
       toast.error("These dates are already booked for this room. Please select other dates.", { autoClose: 12000 });
       return;
     }
 
-    setBookingLoading(true);
-
+    // НІЧОГО НЕ СТВОРЮЄМО. Лише перевіряємо доступність та зберігаємо "чернетку".
     try {
       const isoFrom = `${df}T00:00:00`;
       const isoTo   = `${dt}T00:00:00`;
-
       await checkApartmentAvailability(apartmentId, isoFrom, isoTo);
 
-      const nights = Math.max(1, Math.ceil((new Date(isoTo) - new Date(isoFrom)) / (1000 * 60 * 60 * 24)));
       const apt = apartments.find(a => a.id === apartmentId);
-      const price = apt?.price || 0;
-      const totalPrice = price * nights;
+      const nights = Math.max(1, Math.ceil((new Date(isoTo) - new Date(isoFrom)) / 86400000));
+      const amount = (apt?.price || 0) * nights;
 
-      const created = await createBooking({
+      localStorage.setItem("pendingBooking", JSON.stringify({
+        hotelId: Number(id),
+        apartmentId,
         dateFrom: isoFrom,
         dateTo: isoTo,
-        customerId: currentUser.id,
-        apartmentId,
-        paymentType
-      });
-      const bookingId = created?.id ?? created?.data?.id;
-
-      const payDto = {
-        type: PAYMENT_TYPE[paymentType],
-        amount: totalPrice,
-        bookingId
-      };
-
-      if (paymentType === "Mono") {
-        const payRes = await createUniversalPayment(payDto);
-        const invoiceUrl = payRes?.data?.invoiceUrl || payRes?.data?.url;
-
-        if (invoiceUrl) {
-          window.open(invoiceUrl, "_blank");
-          toast.success("Payment created! Pay via MonoBank.", { autoClose: 10000 });
-        } else {
-          toast.warn("Mono invoice error! No URL received.", { autoClose: 10000 });
-        }
-      } else {
-        await createUniversalPayment(payDto);
-        toast.success("Booking successful! Details in your profile.", { autoClose: 10000 });
-      }
+        paymentType,
+        amount
+      }));
 
       setBookingApartmentId(null);
-      setBookingForm({ dateFrom: "", dateTo: "" });
-
+      navigate("/booking?preview=1");
     } catch (err) {
       const msg = getApiErrorMessage(err);
       toast.error(<div style={{ whiteSpace: "pre-wrap" }}>{msg}</div>, { autoClose: 12000 });
-    } finally {
-      setBookingLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (!apartments?.length) return;
+    if (finalizeOnceRef.current) return;
+
+    const finStr = localStorage.getItem("finalizeBooking");
+    if (!finStr) return;
+    const fin = JSON.parse(finStr);
+    if (String(fin.hotelId) !== String(id)) return;
+
+    finalizeOnceRef.current = true;
+    localStorage.removeItem("finalizeBooking");
+
+    (async () => {
+      try {
+        setBookingLoading(true);
+        await checkApartmentAvailability(fin.apartmentId, fin.dateFrom, fin.dateTo);
+        // створення бронювання
+        const created = await createBooking({
+          dateFrom: fin.dateFrom,
+          dateTo: fin.dateTo,
+          customerId: JSON.parse(localStorage.getItem("user") || "{}").id,
+          apartmentId: fin.apartmentId,
+          paymentType: fin.paymentType,
+        });
+        const bookingId = created?.id ?? created?.data?.id;
+        // платіж
+        const nights = Math.max(1, Math.ceil((new Date(fin.dateTo) - new Date(fin.dateFrom)) / 86400000));
+        const apt = apartments.find(a => a.id === fin.apartmentId);
+        const amount = fin.amount ?? ((apt?.price || 0) * nights);
+        const payRes = await createUniversalPayment({ type: PAYMENT_TYPE[fin.paymentType], amount, bookingId });
+        if (fin.paymentType === "Mono") {
+          const url = payRes?.data?.invoiceUrl || payRes?.data?.url;
+          if (url) window.open(url, "_blank");
+          toast.success("Payment created! Complete it in the opened tab.", { autoClose: 10000 });
+        } else {
+          toast.success("Booking successful! Details in your profile.", { autoClose: 9000 });
+        }
+      } catch {
+        toast.error("Failed to finalise booking.", { autoClose: 10000 });
+      } finally {
+        setBookingLoading(false);
+      }
+    })();
+  }, [id, apartments?.length]);
 
   const RatingCategory = ({ label, value }) => (
     <div className="mb-3">
@@ -386,8 +419,8 @@ const HotelDetails = () => {
                 <div className="col">
                   <label className="form-label">Date from</label>
                   <DatePicker
-                    selected={bookingForm.dateFrom ? new Date(bookingForm.dateFrom) : null}
-                    onChange={date => setBookingForm(f => ({ ...f, dateFrom: date ? date.toISOString().slice(0,10) : "" }))}
+                    selected={parseLocalDate(bookingForm.dateFrom)}
+                    onChange={date => setBookingForm(f => ({ ...f, dateFrom: date ? toLocalDateString(date) : "" }))}
                     excludeDates={disabledDates}
                     minDate={new Date()}
                     placeholderText="Select start date"
@@ -398,10 +431,10 @@ const HotelDetails = () => {
                 <div className="col">
                   <label className="form-label">Date to</label>
                   <DatePicker
-                    selected={bookingForm.dateTo ? new Date(bookingForm.dateTo) : null}
-                    onChange={date => setBookingForm(f => ({ ...f, dateTo: date ? date.toISOString().slice(0,10) : "" }))}
+                    selected={parseLocalDate(bookingForm.dateTo)}
+                    onChange={date => setBookingForm(f => ({ ...f, dateTo: date ? toLocalDateString(date) : "" }))}
                     excludeDates={disabledDates}
-                    minDate={bookingForm.dateFrom ? new Date(bookingForm.dateFrom) : new Date()}
+                    minDate={bookingForm.dateFrom ? parseLocalDate(bookingForm.dateFrom) : new Date()}
                     placeholderText="Select end date"
                     dateFormat="yyyy-MM-dd"
                     className="form-control"
@@ -504,7 +537,7 @@ const HotelDetails = () => {
                 <span style={{ background: "#fff", borderRadius: 10, padding: "3px 12px" }}>
               <span style={{ fontWeight: 400, fontSize: 15, color: "#02457A" }}>Start from </span>
               <span style={{ fontWeight: 700, fontSize: 24, color: "#02457A" }}>
-                {apartments[0]?.price ? `${apartments[0].price} $` : "See prices"}
+                {apartments[0]?.price ? `$${apartments[0].price}` : "See prices"}
               </span>
             </span>
 
@@ -866,7 +899,7 @@ const HotelDetails = () => {
                         />
                       </button>
                       {/* Мініатюри */}
-                      <div className="d-flex" style={{ gap: 2 }}>
+                      <div className="d-flex" style={{ gap: 2, marginLeft: 10 }}>
                         {thumbnails.map((photo, idx) => {
                           const realIdx = apt.photos.findIndex(p => p.id === photo.id);
                           return (
@@ -929,7 +962,7 @@ const HotelDetails = () => {
                       </div>
                       <div className="d-flex align-items-end justify-content-between mt-1">
                         <div style={{ fontWeight: 700, fontSize: 18, color: "#02457A" }}>
-                          {apt.price} <span style={{ fontWeight: 400, fontSize: 14 }}>$ / night</span>
+                          ${apt.price} <span style={{ fontWeight: 400, fontSize: 14 }}> / night</span>
                         </div>
                         
                         <button

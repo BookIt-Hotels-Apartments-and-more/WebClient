@@ -61,7 +61,7 @@ const LandPanel = () => {
   const [editedUser, setEditedUser] = useState({
     username: user?.username || "",
     email: user?.email || "",
-    phonenumber: user?.phonenumber || "",
+    phoneNumber: user?.phoneNumber || "",
   });
   const [selectedType, setSelectedType] = useState("");
 
@@ -102,7 +102,7 @@ const LandPanel = () => {
     setEditedUser({
       username: user?.username || "",
       email: user?.email || "",
-      phonenumber: user?.phonenumber || "",
+      phoneNumber: user?.phoneNumber || "",
     });
     setIsEditing(false);
   };
@@ -216,7 +216,7 @@ const LandPanel = () => {
                     </label>
                     <input
                       type="text"
-                      name="phonenumber"
+                      name="phoneNumber"
                       className="form-control"
                       style={{
                         borderRadius: 16,
@@ -228,7 +228,7 @@ const LandPanel = () => {
                         paddingLeft: 16,
                         marginBottom: 6,
                       }}
-                      value={editedUser.phonenumber}
+                      value={editedUser.phoneNumber}
                       onChange={handleInputChange}
                       placeholder="Phone number"
                     />
@@ -307,7 +307,7 @@ const LandPanel = () => {
                   </div>
                   <div style={{ fontSize: 16, marginBlockStart: 20 }}>
                     <span style={{ fontWeight: 400 }}>Phone number:</span>{" "}
-                    <span style={{ fontWeight: 700 }}>{user?.phonenumber}</span>
+                    <span style={{ fontWeight: 700 }}>{user?.phoneNumber}</span>
                   </div>
                   <button
                     className="btn btn-outline-primary btn-sm mt-4"

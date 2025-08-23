@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../api/axios";
 import HotelCard from "./HotelCard ";
 import { getUserFavorites, addFavorite, removeFavorite  } from "../api/favoriteApi";
-import { toast } from 'react-toastify';
 import { toggleHotelFavorite } from "../utils/favoriteUtils";
 
 

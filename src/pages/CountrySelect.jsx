@@ -41,6 +41,7 @@ export default function CountrySelect() {
   const currentCountry = filters.country || selectedCountry || "";
   const [favorites, setFavorites] = useState([]);
   const FACILITIES = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
+  const [sortMode, setSortMode] = useState("recommendations");
 
 
 
@@ -51,9 +52,47 @@ export default function CountrySelect() {
     getUserFavorites(user.id).then(setFavorites);
   }
   }, [user?.id]);
+
+  const CONTENT_MAX = 1250;
+  const H_PADDING   = 36; 
+
+  // поки мокові дані
+  const REGION_SUGGESTIONS = {
+    Thailand: [
+      { key: 'patong', title: 'Patong Beach', city: 'Patong',    badges: ['Beaches', 'Nightlife', 'Watersports'], img: '/images/patong.png' },
+      { key: 'phi',    title: 'Phi Phi',       city: 'Phi Phi',   badges: ['Watersports', 'Beaches', 'Family Holiday'], img: '/images/phi.png' },
+      { key: 'lanta',  title: 'Lanta Yai',     city: 'Lanta',     badges: ['Nature & Hiking', 'Beaches', 'Seafood'],   img: '/images/lanta.png' },
+      { key: 'krabi',  title: 'Krabi',         city: 'Krabi',     badges: ['Cliffs', 'Longtail boats', 'Viewpoints'],  img: '/images/krabi.png' },
+      { key: 'phuket', title: 'Phuket Town',   city: 'Phuket',    badges: ['Old town', 'Markets', 'Food'],             img: '/images/phuket.png' },
+    ],
+    _default: [
+      { key: 'coast',  title: 'Sea Coast',     badges: ['Beaches', 'Seafood', 'Sunsets'], img: '/images/patong.png' },
+      { key: 'old',    title: 'Old Town',      badges: ['Culture', 'Cafés', 'Walks'],     img: '/images/phi.png' },
+      { key: 'mount',  title: 'Mountains',     badges: ['Trails', 'Views', 'Lakes'],      img: '/images/lanta.png' },
+      { key: 'resort', title: 'Resort Area',   badges: ['Pools', 'SPA', 'Family'],        img: '/images/krabi.png' },
+      { key: 'center', title: 'City Center',   badges: ['Museums', 'Food', 'Nightlife'],  img: '/images/phuket.png' },
+    ],
+  };
+
+  const [regionIndex, setRegionIndex] = useState(0);
+  const REGIONS_VISIBLE = 3;
+
+  const regions = (REGION_SUGGESTIONS[currentCountry] || REGION_SUGGESTIONS._default);
+  const visibleRegions = Array.from({ length: REGIONS_VISIBLE }, (_, i) => {
+    const idx = (regionIndex + i) % regions.length;
+    return regions[idx];
+  });
+
+  const handleRegionClick = (r) => {
+    // Підставляємо пошук за містом/назвою — список нижче звузиться
+    setSearch(r.city || r.title);
+  };
+
+  const nextRegion = () => setRegionIndex(i => (i + 1) % regions.length);
+
   
   let hotelsToShow = hotels;
-
+  
   const filteredHotels = useMemo(() => {
     return hotels.filter(hotel => {
       // Фільтр по країні
@@ -117,6 +156,42 @@ export default function CountrySelect() {
     });
   }, [hotels, apartments, filters, search, selectedType, selectedVibe]);
 
+  // мінімальна ціна по готелю
+  const getMinPrice = (hotel) => {
+    const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
+    const prices = hotelApartments
+      .map(a => a.price)
+      .filter(p => typeof p === "number" && !isNaN(p));
+    return prices.length ? Math.min(...prices) : null;
+  };
+
+  // числовий рейтинг (з урахуванням 2 форматів)
+  const getRating = (hotel) => {
+    if (hotel?.rating?.generalRating != null) return Number(hotel.rating.generalRating);
+    if (typeof hotel?.rating === "number") return Number(hotel.rating);
+    return null;
+  };
+
+  // відсортований список для показу
+  const sortedHotels = useMemo(() => {
+    const copy = [...filteredHotels];
+    if (sortMode === "recommendations") {
+      copy.sort((a, b) => {
+        const ra = getRating(a) ?? -1;
+        const rb = getRating(b) ?? -1;
+        if (rb !== ra) return rb - ra;
+
+        const pa = getMinPrice(a);
+        const pb = getMinPrice(b);
+        if (pa == null && pb == null) return 0;
+        if (pa == null) return 1;
+        if (pb == null) return -1;
+        return pa - pb;
+      });
+    }
+    return copy;
+  }, [filteredHotels, sortMode, apartments]);
+
 
   return (
     <div>
@@ -170,20 +245,23 @@ export default function CountrySelect() {
         </span>
       </div>
 
-      <div className="container py-5" style={{ width: 2800}}>
-        <div className="breadcrumbs"
+      <div className="container py-5" style={{ paddingTop: 40, paddingLeft: 0, paddingRight: 0, marginTop: 30 }}>
+        {/* Заголовкова лінія: breadcrumbs + Vibe */}
+        <div
+          className="breadcrumbs"
           style={{
-             display: "flex",
-            flexDirection: window.innerWidth < 768 ? "column" : "row",
-            alignItems: window.innerWidth < 768 ? "flex-start" : "center",
-            padding: window.innerWidth < 768 ? "0 8px" : "0 24px",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            maxWidth: CONTENT_MAX,
+            margin: "0 auto",
+            padding: 0,
             marginTop: window.innerWidth < 768 ? "-30px" : "-50px",
-            gap: window.innerWidth < 768 ? 12 : 0,
-            maxWidth: 1300,
-            margin: "0px auto 0 auto",
-            marginBlockEnd: "30px",
-            flexWrap: "wrap"
-          }}>
+            marginBottom: 30,
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
           <Breadcrumbs
             items={[
               { label: "Main page", to: "/" },
@@ -192,8 +270,8 @@ export default function CountrySelect() {
             ]}
           />
 
-          {/* Vibe */}
-          <div style={{ margin: "10px 20px" }}>
+          {/* Кнопки Vibe */}
+          <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: 6 }}>
             {vibeButtons.map(({ label, code }) => (
               <button
                 key={label}
@@ -206,7 +284,7 @@ export default function CountrySelect() {
                   borderRadius: "8px",
                   fontWeight: 300,
                   cursor: "pointer",
-                  fontSize: 13,
+                  fontSize: 14,
                   transition: "all 0.2s",
                 }}
                 onClick={() => setSelectedVibe(code)}
@@ -216,7 +294,6 @@ export default function CountrySelect() {
             ))}
             <button
               style={{
-                margin: "0 8px",
                 padding: "7px 18px",
                 background: selectedVibe == null ? "#1b3966" : "#fff",
                 color: selectedVibe == null ? "#fff" : "#1b3966",
@@ -232,23 +309,34 @@ export default function CountrySelect() {
             </button>
           </div>
         </div>
-
         
-        {/* Filters by + кнопки категорії готелю */}
-        <div className="d-flex align-items-center justify-content-between mb-3" style={{ width: "95%" }}>
+        {/* Лінія "Filters by" + кнопки типів */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            maxWidth: CONTENT_MAX,
+            margin: "0 auto 30px",
+            padding: 0,
+            gap: 16,
+          }}
+        >
           <div className="d-none d-md-flex align-items-center">
             <img
               src="/images/filter.png"
               alt="Filters icon"
-              style={{ width: 40, height: 40, marginRight: 14 }}
+              style={{ width: 25, height: 25, marginRight: 14 }}
             />
-            <span className="fw-bold" style={{ color: '#16396A', fontSize: 26 }}>
+            <span className="fw-bold" style={{ color: "#16396A", fontSize: 20 }}>
               Filters by
             </span>
           </div>
 
-          <div className="filter-types-wrapper mb-3" style={{ overflowX: "auto" }}>
-            <div className="d-flex flex-nowrap gap-2">
+          {/* Кнопки типів — прилипають праворуч */}
+          <div className="filter-types-wrapper" style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", justifyContent: "flex-end"}}>
+           <div className="d-flex flex-wrap gap-2 justify-content-end">
+              {/* All */}
               <button
                 className="btn"
                 style={{
@@ -259,12 +347,14 @@ export default function CountrySelect() {
                   fontWeight: 500,
                   fontSize: 14,
                   whiteSpace: "nowrap",
-                  minWidth: 80
+                  minWidth: 80,
                 }}
                 onClick={() => setSelectedType("All")}
               >
                 All
               </button>
+
+              {/* Решта типів */}
               {Object.keys(ESTABLISHMENT_TYPE_LABELS).map((type) => (
                 <button
                   key={type}
@@ -276,9 +366,9 @@ export default function CountrySelect() {
                     borderRadius: "8px",
                     fontWeight: 500,
                     fontSize: 12,
-                    transition: "all 0.2s",
                     whiteSpace: "nowrap",
-                    minWidth: 80
+                    minWidth: 80,
+                    transition: "all 0.2s",
                   }}
                   onClick={() => setSelectedType(type)}
                 >
@@ -287,8 +377,11 @@ export default function CountrySelect() {
               ))}
             </div>
           </div>
-
         </div>
+
+        
+
+
 
 
         <div className="row">
@@ -352,16 +445,137 @@ export default function CountrySelect() {
             </div>
           </div>
 
+          
+          <div className="col-12 col-md-9">
+            {/* === Region picker (добірка районів країни) === */}
+            <div style={{ position: "relative", marginBottom: 18 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${REGIONS_VISIBLE}, 1fr)`,
+                gap: 12,
+                alignItems: "stretch",
+              }}
+            >
+              {visibleRegions.map((r) => {
+                const dynamicCount = r.city
+                  ? apartments.filter(a =>
+                      (a.establishment?.geolocation?.city || "").toLowerCase() === r.city.toLowerCase()
+                    ).length
+                  : 0;
 
-          {/* Список готелів */}
-          <div className="col-12 col-md-8" style={{ marginLeft: 50 }}>
-            {filteredHotels.length > 0 ? (
-              filteredHotels.map((hotel) => {
+                return (
+                  <div
+                    key={r.key}
+                    onClick={() => handleRegionClick(r)}
+                    style={{
+                      cursor: "pointer",
+                      borderRadius: 14,
+                      background: "#fff",
+                      boxShadow: "0 2px 10px rgba(2,69,122,0.08)",
+                      padding: 10,
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "center",
+                      minHeight: 110,
+                    }}
+                  >
+                    <img
+                      src={r.img}
+                      alt={r.title}
+                      style={{
+                        width: 128,
+                        height: 128,
+                        objectFit: "cover",
+                        borderRadius: 12,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: "#1b3966", marginBottom: 6, marginBlockEnd: 15 }}>
+                        {r.title}
+                      </div>
+                      <ul style={{ paddingLeft: 18, margin: 0, color: "#02457A", fontSize: 12, lineHeight: 1.2 }}>
+                        {(r.badges || []).slice(0, 3).map((b) => (
+                          <li key={b}>{b}</li>
+                        ))}
+                      </ul>
+                      <div style={{ marginTop: 15, fontSize: 12, color: "#6b7b8a" }}>
+                        {(dynamicCount || r.count) ? `${dynamicCount || r.count} Apartments` : '128 Apartaments'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Стрілка вправо — крок на 1 картку, по колу */}
+            <button
+              onClick={nextRegion}
+              aria-label="Next"
+              style={{
+                position: "absolute",
+                right: -6,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                border: "none",
+                background: "#97CADB",
+                color: "#001B48",
+                fontWeight: 700,
+                boxShadow: "0 2px 8px rgba(2,69,122,0.18)",
+                cursor: "pointer",
+              }}
+            >
+              ›
+            </button>
+          </div>
+
+          {/* Sort bar */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              margin: "22px 0 12px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setSortMode("recommendations")}
+              style={{
+                border: "1px solid #97CADB",
+                background: "#EAF6FB",
+                color: "#02457A",
+                borderRadius: 10,
+                padding: "6px 12px",
+                fontWeight: 600,
+                fontSize: 12,
+                boxShadow: "0 1px 3px rgba(2,69,122,0.08)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8
+              }}
+              title="Sort by rating (desc), then by price (asc)"
+            >
+              <span style={{ opacity: 0.8 }}>Sort:</span>
+              <span>Our recommendations</span>
+            </button>
+          </div>
+
+
+          <div>
+            {/* Список готелів */}          
+            {sortedHotels.length > 0 ? (
+              sortedHotels.map((hotel) => {
                 const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
                 const apartmentId = hotelApartments[0]?.id;
                 const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
                 const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
                 let priceText = null;
+                const IMG_HEIGHT = window.innerWidth >= 768 ? 180 : 180;
                 if (prices.length > 0) {
                   priceText = Math.min(...prices);
                 }
@@ -370,22 +584,23 @@ export default function CountrySelect() {
                     <div
                       className="hotel-card row g-0 align-items-stretch flex-md-row flex-column"
                       style={{
-                        borderRadius: 16,
+                        borderRadius: 10,
                         overflow: "hidden",
                         boxShadow: "0 0 3px 2px #9ad8ef",
                         background: "#fff",
                         margin: "0 auto",
                         maxWidth: 950,
-                        minHeight: 220,
+                        height: 180, //  ЗМЕНЬШИТИ
                         width: "100%"
                       }}
                     >
                       {/* Фото готелю */}
-                      <div className="col-md-4 col-12 d-flex align-items-stretch" style={{padding: 0}}>
+                      <div className="col-md-5 col-12 d-flex align-items-stretch" style={{padding: 0}}>
                         <div style={{
                           width: "100%",
-                          height: "100%",
-                          minHeight: 180,
+                          height: IMG_HEIGHT,
+                          minHeight: IMG_HEIGHT,
+                          maxHeight: IMG_HEIGHT,
                           position: "relative",
                           background: "#f8f9fa"
                         }}>
@@ -396,9 +611,7 @@ export default function CountrySelect() {
                               width: "100%",
                               height: "100%",
                               objectFit: "cover",
-                              borderRadius: 16,
-                              minHeight: 180,
-                              maxHeight: 250
+                              borderRadius: 10
                             }}
                           />
                           <img
@@ -452,9 +665,9 @@ export default function CountrySelect() {
                         </div>
                       </div>
                       {/* Контент готелю */}
-                      <div className="col-md-8 col-12 d-flex flex-column justify-content-between py-3 px-4" style={{background: "#fff"}}>
+                      <div className="col-md-7 col-12 d-flex flex-column py-2 px-3" style={{background: "#fff", gap: 14 }}>
                         <div className="d-flex align-items-center justify-content-between mb-1">
-                          <span className="fw-bold" style={{ fontSize: 17, color: "#22614D" }}>{hotel.name}</span>
+                          <span className="fw-bold" style={{ fontSize: 16, color: "#22614D" }}>{hotel.name}</span>
                           <span className="badge" style={{ fontSize: 14, color: "#FE7C2C" }}>
                             <img src="/images/reitingstar-orange.png" alt="Star"
                               style={{ width: 14, height: 14, marginRight: 6, verticalAlign: "middle", objectFit: "contain" }} />
@@ -465,7 +678,7 @@ export default function CountrySelect() {
                             }
                           </span>
                         </div>
-                        <div className="d-flex align-items-center mb-1">
+                        <div className="d-flex align-items-center">
                           <a
                             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.geolocation?.address || "")}`}
                             target="_blank"
@@ -479,14 +692,14 @@ export default function CountrySelect() {
                             }}
                           >
                             <img src="/images/geoikon.png" alt="Geo-ikon"
-                              style={{ width: 16, height: 16, marginRight: 6, objectFit: "contain" }} />
+                              style={{ width: 14, height: 14, marginRight: 6, objectFit: "contain" }} />
                             <span className="fw-bold" style={{ fontSize: 11, color: "#02457A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {hotel.geolocation?.address?.split(",")?.filter((_, i) => [0, 1, 3, 6].includes(i))?.join(", ")}
                             </span>
                           </a>
                         </div>
-                        <div className="d-flex align-items-end justify-content-between" style={{ gap: 10 }}>
-                          <div className="mb-2" style={{ fontSize: 12, minHeight: 46, maxWidth: 330, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div className="d-flex align-items-end justify-content-between" style={{ gap: 8 }}>
+                          <div className="mb-1" style={{ fontSize: 12, minHeight: 40, maxWidth: 330, color: "#001B48", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {hotel.description}
                           </div>
                           <span className="fw-bold" style={{ color: "#001B48", fontSize: 14 }}>
@@ -500,13 +713,13 @@ export default function CountrySelect() {
                             )}
                           </span>
                         </div>
-                        <div className="d-flex align-items-end justify-content-between" style={{ gap: 10 }}>
+                        <div className="d-flex align-items-end justify-content-between" style={{ gap: 8 }}>
                           {hotelApartments.some(a => a.features?.breakfast) ? (
                             <span style={{ color: "#FE7C2C", fontWeight: 300, fontSize: 13 }}>Breakfast is included</span>
                           ) : (
                             <span style={{ color: "#FE7C2C", fontWeight: 300, fontSize: 13 }}>Breakfast is paid separately</span>
                           )}
-                          <Link to={`/hotels/${hotel.id}`} className="btn fw-bold px-4 py-2"
+                          <Link to={`/hotels/${hotel.id}`} className="btn fw-bold px-4 py-1"
                             style={{ fontSize: 13, background: "#97CADB", color: "#001B48", borderRadius: "10px" }}>
                             More Details
                           </Link>
@@ -525,6 +738,16 @@ export default function CountrySelect() {
               </div>
             )}
           </div>
+              
+              
+          </div>
+                
+          
+        
+
+
+            
+          
         </div>
       </div>
     </div>

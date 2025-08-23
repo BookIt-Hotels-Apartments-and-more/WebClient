@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAllBookings, deleteBooking, updateBooking } from "../../api/bookingApi";
 import { getUserFavorites, removeFavorite  } from "../../api/favoriteApi";
@@ -6,7 +6,7 @@ import { getApartmentById } from "../../api/apartmentApi";
 import { toast } from 'react-toastify';
 import { uploadUserPhoto, updateUserPassword, updateUserDetails  } from "../../api/userApi";
 import AddComment from "../../components/AddComment";
-import { decodeFlagsUser, ESTABLISHMENT_TYPE_LABELS, 
+import { decodeFlagsUser, 
   ESTABLISHMENT_FEATURE_LABELS,  
   getEstablishmentTypeName, 
   APARTMENT_FEATURE_LABELS } from "../../utils/enums";
@@ -25,7 +25,7 @@ const UserPanel = () => {
   const [editedUser, setEditedUser] = useState({
     username: user?.username || "",
     email: user?.email || "",
-    phonenumber: user?.phonenumber,
+    phoneNumber: user?.phoneNumber,
     photoBase64: "",
     photoPreview: user?.photoUrl || "",
   });
@@ -36,7 +36,7 @@ const UserPanel = () => {
     dateTo: ""
   });
   const [addReviewModal, setAddReviewModal] = useState({ show: false, booking: null });
-  const [activeStep] = useState(2); // 1-2-3; поки статично
+  const [activeStep] = useState(2);
   const [pwModal, setPwModal] = useState({
    show: false,
    current: "",
@@ -100,7 +100,7 @@ const UserPanel = () => {
       const payload = {
         username: (editedUser.username || "").trim(),
         email: (editedUser.email || "").trim(),
-        phoneNumber: (editedUser.phonenumber || "").trim(),
+        phoneNumber: (editedUser.phoneNumber || "").trim(),
         bio: (editedUser.bio || "").trim?.() || ""
       };
       await updateUserDetails(payload);
@@ -114,7 +114,7 @@ const UserPanel = () => {
         ...current,
         username: payload.username,
         email: payload.email,
-        phonenumber: payload.phoneNumber,
+        phoneNumber: payload.phoneNumber,
         photoUrl: editedUser.photoPreview || current.photoUrl
       };
       localStorage.setItem("user", JSON.stringify(nextUser));
@@ -134,7 +134,7 @@ const UserPanel = () => {
     setEditedUser({
       username: user?.username || "",
       email: user?.email || "",
-      phonenumber: user?.phonenumber || "",
+      phoneNumber: user?.phoneNumber || "",
     });
     setIsEditing(false);
   };
@@ -255,7 +255,6 @@ const UserPanel = () => {
       return errors;
     };
 
-
   const handleChangePassword = async () => {
     if (!pwModal.current || !pwModal.next) {
       return setPwModal(m => ({ ...m, error: "Please fill in both fields." }));
@@ -284,9 +283,6 @@ const UserPanel = () => {
         toast.error(msg, { autoClose: 4000 });
       }
     };
-
-
-
 
   // --- Розбивка бронювань
   const myBookings = bookings.filter(
@@ -432,7 +428,7 @@ const UserPanel = () => {
                     </label>
                     <input
                       type="text"
-                      name="phonenumber"
+                      name="phoneNumber"
                       className="form-control"
                       style={{
                         borderRadius: 16,
@@ -444,7 +440,7 @@ const UserPanel = () => {
                         paddingLeft: 16,
                         marginBottom: 6,
                       }}
-                      value={editedUser.phonenumber}
+                      value={editedUser.phoneNumber}
                       onChange={handleInputChange}
                       placeholder="Phone number"
                     />
@@ -573,7 +569,7 @@ const UserPanel = () => {
                       </div>
                       <div style={{ fontSize: 16, marginBlockStart: 20 }}>
                         <span style={{ fontWeight: 400 }}>Phone number:</span>{" "}
-                        <span style={{ fontWeight: 700 }}>{user?.phonenumber}</span>
+                        <span style={{ fontWeight: 700 }}>{user?.phoneNumber}</span>
                       </div>
                       
                       <button
@@ -589,34 +585,7 @@ const UserPanel = () => {
               </div>            
             </div>
             
-            {/* 2. Add to your booking */}
-            <div style={{
-              background: "#fcfcfc",
-              borderRadius: 18,
-              padding: 24,
-              minHeight: 140,
-              boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)"
-            }}>
-              <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 12 }}>Add to your booking</div>
-              <div style={{ color: "#444", fontSize: 15 }}>
-                {/* Тут будуть чекбокси: "I need airfares for this trip", "Save on car hire", ... */}
-                <div>
-                  <input type="checkbox" id="needAirfares" disabled />{" "}
-                  <label htmlFor="needAirfares" style={{ color: "#888" }}>I need airfares for this trip</label>
-                </div>
-                <div>
-                  <input type="checkbox" id="saveCarHire" disabled />{" "}
-                  <label htmlFor="saveCarHire" style={{ color: "#888" }}>I want to save up to 10% on car hire</label>
-                </div>
-                <div>
-                  <input type="checkbox" id="saveTaxis" disabled />{" "}
-                  <label htmlFor="saveTaxis" style={{ color: "#888" }}>I want to save 10% on airport taxis</label>
-                </div>
-                {/*  потім реалізувати як форми */}
-              </div>
-            </div>
-
-
+            
             {/* --- Блок "Favorites" --- */}
               <div
                 style={{

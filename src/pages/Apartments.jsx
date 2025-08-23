@@ -155,9 +155,10 @@ export default function Apartments() {
 
 
 
-        {/* Filters by + кнопки категорії готелю */}
-        <div className="d-flex align-items-center justify-content-between mb-3" style={{ width: "95%", marginTop: 30 }}>
-          <div className="d-none d-md-flex align-items-center">
+        {/* Filters by + типи — в тій самій сітці 3/9, що й список апартаментів */}
+        <div className="row align-items-center mb-3" style={{ marginTop: 30 }}>
+          {/* Ліва колонка під сайдбар фільтрів (3) */}
+          <div className="col-12 col-md-3 d-none d-md-flex align-items-center">
             <img
               src="/images/filter.png"
               alt="Filters icon"
@@ -168,49 +169,51 @@ export default function Apartments() {
             </span>
           </div>
 
-          <div className="filter-types-wrapper mb-3" style={{ overflowX: "auto" }}>
-            <div className="d-flex flex-nowrap gap-2">
-              <button
-                className="btn"
-                style={{
-                  background: selectedType === "All" ? "#FE7C2C" : "#fff",
-                  color: selectedType === "All" ? "#fff" : "#1b3966",
-                  border: "1px solid #1b3966",
-                  borderRadius: "8px",
-                  fontWeight: 500,
-                  fontSize: 14,
-                  whiteSpace: "nowrap",
-                  minWidth: 80
-                }}
-                onClick={() => setSelectedType("All")}
-              >
-                All
-              </button>
-              {Object.keys(ESTABLISHMENT_TYPE_LABELS).map((type) => (
+          {/* Права колонка під список (9) — кнопки по правому краю */}
+          <div className="col-12 col-md-9">
+            <div className="filter-types-wrapper d-flex justify-content-md-end justify-content-start overflow-auto pb-2">
+              <div className="d-flex flex-nowrap gap-2">
                 <button
-                  key={type}
                   className="btn"
                   style={{
-                    background: selectedType === type ? "#FE7C2C" : "#fff",
-                    color: selectedType === type ? "#fff" : "#1b3966",
+                    background: selectedType === "All" ? "#FE7C2C" : "#fff",
+                    color: selectedType === "All" ? "#fff" : "#1b3966",
                     border: "1px solid #1b3966",
                     borderRadius: "8px",
                     fontWeight: 500,
-                    fontSize: 12,
-                    transition: "all 0.2s",
+                    fontSize: 14,
                     whiteSpace: "nowrap",
                     minWidth: 80
                   }}
-                  onClick={() => setSelectedType(type)}
+                  onClick={() => setSelectedType("All")}
                 >
-                  {type}
+                  All
                 </button>
-              ))}
+
+                {Object.keys(ESTABLISHMENT_TYPE_LABELS).map((type) => (
+                  <button
+                    key={type}
+                    className="btn"
+                    style={{
+                      background: selectedType === type ? "#FE7C2C" : "#fff",
+                      color: selectedType === type ? "#fff" : "#1b3966",
+                      border: "1px solid #1b3966",
+                      borderRadius: "8px",
+                      fontWeight: 500,
+                      fontSize: 12,
+                      transition: "all 0.2s",
+                      whiteSpace: "nowrap",
+                      minWidth: 80
+                    }}
+                    onClick={() => setSelectedType(type)}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-
         </div>
-
         
         <div className="row">
           {/* Mobile filter button */}
@@ -287,8 +290,7 @@ export default function Apartments() {
                             boxShadow: "0 0 3px 2px #9ad8ef",
                             background: "#fff",
                             width: "100%",
-                            minHeight: 420,
-                            height: "100%"
+                            minHeight: 230,
                         }}
                         >
                         {/* Фото */}
@@ -296,7 +298,7 @@ export default function Apartments() {
                             width: "100%",
                             position: "relative",
                             background: "#f8f9fa",
-                            paddingTop: "66.66%",
+                            paddingTop: "70%",
                             overflow: "hidden",
                         }}>
                             <img
@@ -360,7 +362,7 @@ export default function Apartments() {
                         </div>
 
                         {/* Місто + країна + рейтинг */}
-                        <div className="d-flex align-items-center justify-content-between px-3 pt-3 pb-1" style={{ minHeight: 32 }}>
+                        <div className="d-flex align-items-center justify-content-between px-3 pt-2 pb-1" style={{ minHeight: 24 }}>
                             <a
                             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(apt.establishment?.geolocation?.address || '')}`}
                             target="_blank"
@@ -376,16 +378,13 @@ export default function Apartments() {
                                 overflow: "hidden"
                             }}
                             >
-                            <img src="/images/geoikon.png" alt="Geo-ikon"
-                                style={{ width: 16, height: 16, marginRight: 6, objectFit: "contain" }} />
-                            <span className="fw-bold" style={{ fontSize: 11, color: "#02457A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            
+                            <span className="fw-bold" style={{ fontSize: 11, color: "#FE7C2C", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                 {
-                                apt.establishment?.geolocation?.address
-                                    ? apt.establishment.geolocation.address
-                                    .split(",")
-                                    .filter((_, i) => [0, 1, 3, 6].includes(i))
-                                    .join(", ")
-                                    : [apt.establishment?.geolocation?.city, apt.establishment?.geolocation?.country].filter(Boolean).join(", ")
+                                  [
+                                    apt?.establishment?.geolocation?.city,
+                                    apt?.establishment?.geolocation?.country
+                                  ].filter(Boolean).join(", ")
                                 }
                             </span>
                             </a>
@@ -395,23 +394,20 @@ export default function Apartments() {
                             </span>
                         </div>
 
-                        {/* Назва готеля + назва номера */}
-                        <div className="px-3" style={{ minHeight: 38 }}>
-                            <div style={{ fontWeight: 600, fontSize: 16, color: "#001B48" }}>
+                        {/* Назва готеля */}
+                        <div className="px-3" style={{ minHeight: 24 }}>
+                            <div style={{ fontWeight: 800, fontSize: 15, color: "#001B48" }}>
                             {apt.establishment?.name}
-                            </div>
-                            <div style={{ fontWeight: 700, fontSize: 19, color: "#22614D" }}>
-                            {apt.name}
                             </div>
                         </div>
 
                         {/* Вартість + More details */}
-                        <div className="d-flex align-items-center justify-content-between px-3 pb-3 mt-auto" style={{ minHeight: 52 }}>
+                        <div className="d-flex align-items-center justify-content-between px-3 pb-2 mt-auto" style={{ minHeight: 38 }}>
                             <div>
                             {typeof apt.price === "number" ? (
                                 <>
-                                <span style={{ fontWeight: 700, fontSize: 22, color: "#FE7C2C" }}>{apt.price} $</span>
-                                <span style={{ fontWeight: 400, fontSize: 15, color: "#001B48", marginLeft: 3 }}>/ night</span>
+                                <span style={{ fontWeight: 700, fontSize: 14, color: "#001B48" }}>{apt.price} $</span>
+                                <span style={{ fontWeight: 400, fontSize: 13, color: "#001B48", marginLeft: 3 }}>/ night</span>
                                 </>
                             ) : (
                                 <span style={{ color: "#001B48" }}>See prices</span>
@@ -419,8 +415,8 @@ export default function Apartments() {
                             </div>
                             <Link
                             to={`/hotels/${apt.establishment?.id}`}
-                            className="btn fw-bold px-4 py-2"
-                            style={{ fontSize: 14, background: "#97CADB", color: "#001B48", borderRadius: "10px" }}
+                            className="btn fw-bold px-3 py-1"
+                            style={{ fontSize: 12, background: "#97CADB", color: "#001B48", borderRadius: "10px" }}
                             >
                             More details
                             </Link>

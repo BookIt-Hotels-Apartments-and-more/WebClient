@@ -37,8 +37,6 @@ const AddHotel = () => {
   const [photos, setPhotos] = useState([]);
   const [position, setPosition] = useState([50.45, 30.52]); 
 
-  const getPureBase64 = (dataUrl) => dataUrl.split(',')[1];
-
   const handleChange = (e) => {
     setHotel({ ...hotel, [e.target.name]: e.target.value });
   };

@@ -5,15 +5,20 @@ const Footer = () => {
         backgroundImage: `
           linear-gradient(
             to bottom,
-            rgba(255,255,255,1) 0px,
-            rgba(255,255,255,0.7) 24px,
-            rgba(255,255,255,0.25) 60px,
-            rgba(255,255,255,0) 160px
+            rgba(255,255,255,1) 0%,
+            rgba(255,255,255,0.96) 6%,
+            rgba(255,255,255,0.88) 12%,
+            rgba(255,255,255,0.72) 24%,
+            rgba(255,255,255,0.48) 45%,
+            rgba(255,255,255,0.24) 70%,
+            rgba(255,255,255,0.10) 85%,
+            rgba(255,255,255,0) 100%
           ),
           url('/images/footerimage.png')
         `,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat, no-repeat',
+        backgroundSize: '100% 100%, cover',
+        backgroundPosition: '0 0, center',
         width: '100%',
         maxWidth: 1920,
         minHeight: 300,

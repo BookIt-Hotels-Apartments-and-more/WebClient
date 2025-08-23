@@ -4,7 +4,6 @@ import { getAllEstablishments } from "../api/establishmentsApi";
 import { axiosInstance } from "../api/axios";
 import "react-datepicker/dist/react-datepicker.css";
 import { useMemo } from "react";
-import BookingBannerForm from '../components/BookingBannerForm';
 import QuickPlanning from '../components/QuickPlanning';
 import PopularDestinations from '../components/PopularDestinations';
 import TopTrendingHotels from '../components/TopTrendingHotels';
@@ -75,8 +74,6 @@ const Home = () => {
     );
   });
 
-
-  
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const selectedCountry = params.get("country");
@@ -85,8 +82,6 @@ const Home = () => {
     }
   }, [location.search]);
   
-
-
     const sortedHotels = [...filteredHotels].sort((a, b) => {
       switch (sortBy) {
         case "price-asc":
@@ -101,44 +96,6 @@ const Home = () => {
           return 0;
       }
     });
-
-    // Популярні готелі
-    const popularCities = useMemo(() => {
-      const cityCount = {};
-      hotels.forEach(h => {
-        const city = h.geolocation?.city || "Unknown";
-        cityCount[city] = (cityCount[city] || 0) + 1;
-      });
-      return Object.entries(cityCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 4)
-        .map(([city, count]) => ({ city, count }));
-    }, [hotels]);
-
-    //  Готелі з найкращими рейтингами
-    const topRatedHotels = useMemo(() =>
-      [...hotelsWithPrice]
-        .filter(h => typeof h.rating === "number")
-        .sort((a, b) => b.rating - a.rating)
-        .slice(0, 8), [hotelsWithPrice]);
-
-        // Популярні готелі серед користувачів
-    const hotelsByBookings = useMemo(() => {
-      const countMap = {};
-      bookings.forEach(b => {
-        if (b.apartment?.establishment?.id) {
-          const hotelId = b.apartment.establishment.id;
-          countMap[hotelId] = (countMap[hotelId] || 0) + 1;
-        }
-      });
-      const topHotelIds = Object.entries(countMap)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
-        .map(([id]) => +id);
-
-      return hotelsWithPrice.filter(h => topHotelIds.includes(h.id));
-    }, [bookings, hotelsWithPrice]);
-
 
 
   return (

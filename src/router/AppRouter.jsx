@@ -1,5 +1,14 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { WizardProvider } from "../features/establishment/WizardContext";
+import Step1Name from "../pages/user/Step1Name";
+import Step2Location from "../pages/user/Step2Location";
+import Step3Feature from "../pages/user/Step3Feature";
+import Step4Description from '../pages/user/Step4Description';
+import Step5Photos from '../pages/user/Step5Photos';
+import Step6Publication from '../pages/user/Step6Publication';
+import Step7Addapartment from '../pages/user/Step7Addapartment';
+
 import Home from '../pages/Home';
 import AboutUs from '../pages/AboutUs';
 import WhoAreYou from '../pages/WhoAreYou';
@@ -24,8 +33,10 @@ import CountrySelect from "../pages/CountrySelect";
 import ScrollToTop from "../components/ScrollToTop";
 import HotelsList from "../pages/HotelsList";
 import Apartments from "../pages/Apartments";
-
-
+import Account from "../pages/user/AccountHome";
+import RegisterLanding from "../pages/user/RegisterLanding";
+import AddProperty from "../pages/user/AddProperty";
+import Booking from "../pages/Booking";
 
 
 
@@ -33,6 +44,7 @@ const AppRouter = () => {
   return (
     <BrowserRouter>
     <ScrollToTop />
+    <WizardProvider>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
@@ -41,6 +53,19 @@ const AppRouter = () => {
           <Route path="/userpanel" element={<UserPanel />} />
           <Route path="/whoareyou" element={<WhoAreYou />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/accounthome" element={<Account />} />
+          <Route path="/registerlanding" element={<RegisterLanding />} />
+          <Route path="/addproperty" element={<AddProperty />} />
+          <Route path="/add-establishment/step-1" element={<Step1Name />} />
+          <Route path="/add-establishment/step-2" element={<Step2Location />} />
+          <Route path="/add-establishment/step-3" element={<Step3Feature />} />
+          <Route path="/add-establishment/step-4" element={<Step4Description />} />
+          <Route path='/add-establishment/step-5' element={<Step5Photos />} />
+          <Route path='/add-establishment/step-6' element={<Step6Publication />} />
+          <Route path='/add-establishment/step-7' element={<Step7Addapartment />} />
+          <Route path="/add-establishment/step-7/:establishmentId" element={<Step7Addapartment />} />
+
+          <Route path="/booking" element={<Booking />} />
           <Route path="/hotels/:id" element={<HotelDetails />} />
           <Route path="/hotels" element={<HotelsList />} />
           <Route path="/admin-auth" element={<AdminAuth />} />
@@ -58,9 +83,10 @@ const AppRouter = () => {
           <Route path="/auth/success" element={<AuthSuccess />} />  
           <Route path="/google-auth/callback" element={<GoogleCallback />} /> 
           <Route path="/auth/error" element={<AuthError />} />
-          <Route path="/apartments" element={<Apartments />} />
+          <Route path="/apartments" element={<Apartments />} />         
         </Route>
       </Routes>
+    </WizardProvider>      
     </BrowserRouter>
   );
 };

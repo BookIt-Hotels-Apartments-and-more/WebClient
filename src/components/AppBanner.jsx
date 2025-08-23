@@ -6,7 +6,7 @@ const AppBanner = () => {
     <section className="my-5">
   <div
     style={{
-      maxWidth: 1500,
+      maxWidth: 1950,
       margin: "0 auto",
       marginTop: 80,
       display: "flex",
@@ -26,7 +26,7 @@ const AppBanner = () => {
       src="/images/appstore2.png"
       alt=""
       style={{
-        maxWidth: "1000px",
+        maxWidth: "2000px",
         width: "100%",
         height: "auto",
         display: "block",
