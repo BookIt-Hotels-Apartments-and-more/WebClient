@@ -1,7 +1,7 @@
 import {axiosInstance} from "./axios";
 
-export const getUserFavorites = async (userId) => {
-  const res = await axiosInstance.get(`/api/favorites/user/my`);
+export const getUserFavorites = async () => {
+  const res = await axiosInstance.get(`/api/favorites/my`);
   return res.data;
 };
 

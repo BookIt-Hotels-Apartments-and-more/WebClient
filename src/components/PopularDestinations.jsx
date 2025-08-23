@@ -32,9 +32,9 @@ const PopularDestinations = ({ search = "" }) => {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      getTrendingEstablishments(12, 365),      // популярні = трендові за рік
+      getTrendingEstablishments(12, 365),
       axiosInstance.get("/api/apartments"),
-      userId ? getUserFavorites(userId) : Promise.resolve([]),
+      userId ? getUserFavorites() : Promise.resolve([]),
     ])
       .then(([trending, apartmentsData, favoritesData]) => {
         const list = Array.isArray(trending) ? trending : trending?.items || [];

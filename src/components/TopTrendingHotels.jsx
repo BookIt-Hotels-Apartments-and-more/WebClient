@@ -3,22 +3,9 @@ import { getTrendingEstablishments } from "../api/establishmentsApi";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../api/axios";
 import HotelCard from "./HotelCard ";
-import { getUserFavorites, addFavorite, removeFavorite  } from "../api/favoriteApi";
+import { getUserFavorites } from "../api/favoriteApi";
 import { toggleHotelFavorite } from "../utils/favoriteUtils";
 
-
-const cardStyles = {
-  borderRadius: 18,
-  boxShadow: "0 4px 20px 0 rgba(40,46,72,0.09)",
-  background: "#fff",
-  overflow: "hidden",
-  position: "relative",
-  minHeight: 170,
-  height: "100%",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "flex-end"
-};
 
 const TopTrendingHotels = ({ search = "" }) => {
   const [hotels, setHotels] = useState([]);
@@ -34,7 +21,7 @@ const TopTrendingHotels = ({ search = "" }) => {
     Promise.all([
       getTrendingEstablishments(12, 30),
       axiosInstance.get("/api/apartments"),
-      userId ? getUserFavorites(userId) : Promise.resolve([]),
+      userId ? getUserFavorites() : Promise.resolve([]),
     ])
       .then(([trendingData, apartmentsData, favoritesData]) => {
         setHotels(trendingData);
@@ -54,7 +41,8 @@ const TopTrendingHotels = ({ search = "" }) => {
   }, [hotels]);
 
   const searchLower = (search || "").trim().toLowerCase();
-    const topHotels = useMemo(() => {
+
+  const topHotels = useMemo(() => {
       let list = hotels;
       if (selectedCountry !== "All") {
         list = list.filter(h => h.geolocation?.country === selectedCountry);
@@ -74,12 +62,6 @@ const TopTrendingHotels = ({ search = "" }) => {
     }, [hotels, selectedCountry, searchLower]);
 
   const displayTopHotels = topHotels.slice(0, 3);
-
-  
-
-
-
-
 
   if (loading) {
     return (
