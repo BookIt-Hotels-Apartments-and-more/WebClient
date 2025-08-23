@@ -132,14 +132,13 @@ const TopTrendingHotels = ({ search = "" }) => {
             }}
             >
             {displayTopHotels.map((hotel) => {
-                // Визначаємо apartmentId для фаворитів
                 const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
-                const apartmentId = hotelApartments[0]?.id;
-                const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
-                let minPrice = null;
-                if (prices.length > 0) {
-                minPrice = Math.min(...prices);
-                }
+                const minPrice = Number.isFinite(Number(hotel.minApartmentPrice))
+                  ? Number(hotel.minApartmentPrice)
+                  : null;
+                const apartmentId =
+                  hotelApartments.find(a => Number(a.price) === minPrice)?.id
+                  ?? hotelApartments[0]?.id;
                 // Перевірка, чи є вже у favorites
                 const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
 

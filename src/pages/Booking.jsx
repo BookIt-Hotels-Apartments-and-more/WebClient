@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate  } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import { getAllBookings, deleteBooking, updateBooking } from "../api/bookingApi";
+import { getAllBookings, updateBooking } from "../api/bookingApi";
 import { getApartmentById } from "../api/apartmentApi";
 import { updateUserDetails } from "../api/userApi";
 
@@ -19,12 +19,10 @@ export default function Booking() {
   const { search } = useLocation();
   const navigate = useNavigate();
   const focusBookingId = new URLSearchParams(search).get("focus");
-  const isPreviewQuery = new URLSearchParams(search).get("preview");
 
   const [bookings, setBookings] = useState([]);
   const [booking, setBooking] = useState(null);
   const [apartmentMap, setApartmentMap] = useState({});
-  const [loading, setLoading] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
 
   const KNOWN_CODES = ["+380", "+49", "+48", "+1"];
@@ -75,7 +73,6 @@ export default function Booking() {
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
-      setLoading(true);
       try {
         const bookData = await getAllBookings();
         const my = bookData.filter(b => b.customer?.email === user.email);
@@ -101,19 +98,15 @@ export default function Booking() {
       } catch (e) {
         console.error(e);
         toast.error("Failed to load booking data");
-      } finally {
-        setLoading(false);
       }
     })();
   }, [user?.id, user?.email, focusBookingId]);
 
-  // PREVIEW: якщо є pendingBooking у LS – показуємо його замість існуючих бронювань
   useEffect(() => {
     const pend = JSON.parse(localStorage.getItem("pendingBooking") || "null");
     if (!pend) return;
 
     if (apartmentMap[pend.apartmentId]) {
-        // вже є у мапі – лише встановлюємо booking/preview
         setBooking(prev => prev ?? {
         id: null,
         dateFrom: pend.dateFrom,
@@ -126,16 +119,26 @@ export default function Booking() {
         setIsPreview(true);
         return;
     }
-
     (async () => {
-        const apt = await getApartmentById(pend.apartmentId);
-        setApartmentMap(m => ({ ...m, [pend.apartmentId]: apt })); // викличеться один раз
-        setBooking({ id: null, dateFrom: pend.dateFrom, dateTo: pend.dateTo, apartmentId: pend.apartmentId, apartment: apt, currency: "$", adults: 2 });
-        setIsPreview(true);
+        try {
+          const apt = await getApartmentById(pend.apartmentId);
+          setApartmentMap(m => ({ ...m, [pend.apartmentId]: apt }));
+          setBooking({
+            id: null,
+            dateFrom: pend.dateFrom,
+            dateTo: pend.dateTo,
+            apartmentId: pend.apartmentId,
+            apartment: apt,
+            currency: "$",
+            adults: 2
+          });
+          setIsPreview(true);
+        } catch (e) {
+          console.error(e);
+          toast.error("Failed to load preview apartment.");
+        }
     })();
     }, [apartmentMap]);
-
-
 
   useEffect(() => {
    if (!focusBookingId) return;
@@ -343,7 +346,7 @@ export default function Booking() {
                     border: "2px solid #0f62fe33",
                 }}
                 >
-                <div style={{ fontWeight: 800, fontSize: 28, marginBottom: 6 }}>Add to your booking</div>
+                <div style={{ fontWeight: 800, fontSize: 28, marginBottom: 6 }}>Add to your booking </div>
 
                 <div className="d-flex justify-content-between align-items-start mb-3">
                     <div className="form-check d-flex align-items-start gap-2 flex-grow-1 mb-0">
@@ -529,7 +532,7 @@ export default function Booking() {
                     {fmt1(gen)}
                     </span>
                     <span style={{ marginLeft: 6, marginRight: 6, color: "#001B48" }}>Rating excellent /</span>
-                    <span style={{ color: "#737373" }}>{reviews} revievs</span>
+                    <span style={{ color: "#737373" }}>{reviews} reviews</span>
                 </div>
 
                 {/* Зручності готелю */}

@@ -21,14 +21,12 @@ export default function Apartments() {
     minPrice: "",
     maxPrice: "",
     rating: "",
-    // ... add other filters
   });
   const [selectedType, setSelectedType] = useState("All");
   const [showAuthMsg, setShowAuthMsg] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const countryOptions = countriesList.map(c => c.name);
   const [favorites, setFavorites] = useState([]);
-  const [favoriteApartments, setFavoriteApartments] = useState([]);
   const [establishments, setEstablishments] = useState([]);
   const FACILITIES = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
 
@@ -36,7 +34,7 @@ export default function Apartments() {
     axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
     axiosInstance.get("/api/establishments").then(res => setEstablishments(res.data));
     if (user?.id) {
-    getUserFavorites(user.id).then(setFavorites);
+    getUserFavorites().then(setFavorites);
   }
   }, [user?.id]);
 

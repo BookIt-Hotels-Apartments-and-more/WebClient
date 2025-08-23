@@ -49,7 +49,7 @@ export default function CountrySelect() {
     getAllEstablishments().then(setHotels);
     axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
     if (user?.id) {
-    getUserFavorites(user.id).then(setFavorites);
+    getUserFavorites().then(setFavorites);
   }
   }, [user?.id]);
 
@@ -84,14 +84,11 @@ export default function CountrySelect() {
   });
 
   const handleRegionClick = (r) => {
-    // Підставляємо пошук за містом/назвою — список нижче звузиться
     setSearch(r.city || r.title);
   };
 
   const nextRegion = () => setRegionIndex(i => (i + 1) % regions.length);
 
-  
-  let hotelsToShow = hotels;
   
   const filteredHotels = useMemo(() => {
     return hotels.filter(hotel => {
@@ -102,9 +99,9 @@ export default function CountrySelect() {
 
 
       // Мін/макс ціна
-      const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
-      const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
-      const price = prices.length > 0 ? Math.min(...prices) : null;
+      const price = Number.isFinite(Number(hotel?.minApartmentPrice))
+        ? Number(hotel.minApartmentPrice)
+        : null;
       const matchesMinPrice = !filters.minPrice || (price !== null && price >= Number(filters.minPrice));
       const matchesMaxPrice = !filters.maxPrice || (price !== null && price <= Number(filters.maxPrice));
       
@@ -156,15 +153,6 @@ export default function CountrySelect() {
     });
   }, [hotels, apartments, filters, search, selectedType, selectedVibe]);
 
-  // мінімальна ціна по готелю
-  const getMinPrice = (hotel) => {
-    const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
-    const prices = hotelApartments
-      .map(a => a.price)
-      .filter(p => typeof p === "number" && !isNaN(p));
-    return prices.length ? Math.min(...prices) : null;
-  };
-
   // числовий рейтинг (з урахуванням 2 форматів)
   const getRating = (hotel) => {
     if (hotel?.rating?.generalRating != null) return Number(hotel.rating.generalRating);
@@ -181,8 +169,8 @@ export default function CountrySelect() {
         const rb = getRating(b) ?? -1;
         if (rb !== ra) return rb - ra;
 
-        const pa = getMinPrice(a);
-        const pb = getMinPrice(b);
+        const pa = Number(a.minApartmentPrice);
+        const pb = Number(b.minApartmentPrice);
         if (pa == null && pb == null) return 0;
         if (pa == null) return 1;
         if (pb == null) return -1;
@@ -571,14 +559,15 @@ export default function CountrySelect() {
             {sortedHotels.length > 0 ? (
               sortedHotels.map((hotel) => {
                 const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
-                const apartmentId = hotelApartments[0]?.id;
+                const minPrice = Number.isFinite(Number(hotel?.minApartmentPrice))
+                  ? Number(hotel.minApartmentPrice)
+                  : null;
+                const apartmentId =
+                  hotelApartments.find(a => Number(a.price) === minPrice)?.id
+                  ?? hotelApartments[0]?.id;
                 const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
-                const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
-                let priceText = null;
+                const priceText = minPrice;
                 const IMG_HEIGHT = window.innerWidth >= 768 ? 180 : 180;
-                if (prices.length > 0) {
-                  priceText = Math.min(...prices);
-                }
                 return (
                   <div className="col-12 mb-4" key={hotel.id}>
                     <div

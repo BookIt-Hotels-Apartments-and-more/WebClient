@@ -37,21 +37,15 @@ const HotelDetails = () => {
   const [bookingLoading, setBookingLoading] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const finalizeOnceRef = useRef(false);
-  const [favoriteApartments, setFavoriteApartments] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("about");
   const [previewIndexes, setPreviewIndexes] = useState({});
-  const [reviewForm, setReviewForm] = useState({
-    apartmentId: "",
-    text: "",
-    rating: 5,
-  });
   const [paymentType, setPaymentType] = useState("Cash");
   const [unavailableDates, setUnavailableDates] = useState([]);
   const disabledDates = unavailableDates.map((d) => {
     const nd = new Date(d);
-    return new Date(nd.getFullYear(), nd.getMonth(), nd.getDate()); // обнуляємо час → локальна доба
+    return new Date(nd.getFullYear(), nd.getMonth(), nd.getDate());
   });
   const [reviews, setReviews] = useState([]);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
@@ -71,12 +65,15 @@ const HotelDetails = () => {
   }, [id]);
 
   useEffect(() => {
-    if (user?.id) {
-      getUserFavorites(user.id).then(favs => {
-        setFavorites(favs); 
-        setFavoriteApartments(favs.map(f => f.apartmentId));
-      });
-    }
+    if (!user?.id) return;
+    (async () => {
+      try {
+        const favs = await getUserFavorites();
+        setFavorites(favs);        
+      } catch (e) {
+        console.error("Failed to load favorites:", e);
+      }
+    })();
   }, [user?.id]);
 
   useEffect(() => {
@@ -114,7 +111,6 @@ const HotelDetails = () => {
     if (apartments.length) fetchReviews();
   }, [apartments]);
 
-
   useEffect(() => {
     if (!bookingApartmentId) return;
 
@@ -128,7 +124,6 @@ const HotelDetails = () => {
       .then(data => setUnavailableDates(data?.unavailableDates || []))
       .catch(() => setUnavailableDates([]));
   }, [bookingApartmentId]);
-
 
 
   const openApartmentReviews = (apartmentId) => {
@@ -537,7 +532,7 @@ const HotelDetails = () => {
                 <span style={{ background: "#fff", borderRadius: 10, padding: "3px 12px" }}>
               <span style={{ fontWeight: 400, fontSize: 15, color: "#02457A" }}>Start from </span>
               <span style={{ fontWeight: 700, fontSize: 24, color: "#02457A" }}>
-                {apartments[0]?.price ? `$${apartments[0].price}` : "See prices"}
+                {hotel?.minApartmentPrice}
               </span>
             </span>
 
@@ -878,11 +873,8 @@ const HotelDetails = () => {
                           boxShadow: "0 0 12px #eee", color: "#BF9D78", zIndex: 5
                         }}
                         onClick={() => toggleApartmentFavorite({
-                          user,
-                          favorites,
-                          setFavorites,
+                          user, favorites, setFavorites,
                           apartmentId: apt.id,
-                          setFavoriteApartments,
                         })}
                         title={favorites.find(f => f.apartment && f.apartment.id === apt.id)
                           ? "Remove from favorites"
@@ -969,8 +961,7 @@ const HotelDetails = () => {
                           className="btn btn-primary btn-sm"
                           style={{ borderRadius: 8, fontWeight: 600, fontSize: 14, padding: "6px 22px" }}
                           onClick={() => {
-                            setBookingApartmentId(apt.id);
-                            //setBookingForm({ dateFrom: "", dateTo: "" }); // очищаємо форму                          
+                            setBookingApartmentId(apt.id);                        
                           }}
                         >
                           Book now

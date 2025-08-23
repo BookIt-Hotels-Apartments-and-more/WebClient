@@ -9,6 +9,7 @@ import { getUserFavorites, addFavorite } from "../api/favoriteApi";
 import { toast } from "react-toastify";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 import { getAllReviews } from "../api/reviewApi";
+import { toggleHotelFavorite } from "../utils/favoriteUtils";
 
 const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "");
@@ -63,7 +64,7 @@ export default function HotelsList() {
     }
       axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
       if (userId) {
-        getUserFavorites(userId).then(setFavorites);
+        getUserFavorites().then(setFavorites);
       }
 
  }, [userId, selectedVibe, trendingFlag, trendingDays]);
@@ -86,31 +87,7 @@ export default function HotelsList() {
     setModalReviews(list);
     setShowReviewsModal(true);
   };
-
-  const handleAddFavorite = async (apartmentId) => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    const token = localStorage.getItem("token");
-    if (!user?.id || !token) {
-      toast.info("To add a hotel to your favorites, log in!");
-      return;
-    }
-    try {
-      const freshFavorites = await getUserFavorites(user.id);
-      setFavorites(freshFavorites);
-      const existing = freshFavorites.find(f => f.apartment && f.apartment.id === apartmentId);
-      if (existing) {
-        toast.info("This hotel is already in your favorites.");
-        return;
-      }
-      await addFavorite({ userId: user.id, apartmentId });
-      toast.success("Added to favorites!");
-      const updated = await getUserFavorites(user.id);
-      setFavorites(updated);
-    } catch (e) {
-      toast.error("Error updating favorites.");
-    }
-  };
-
+  
   const matchingCountries = useMemo(() => {
     if (!selectedType) return null;
     return countriesList
@@ -136,9 +113,9 @@ export default function HotelsList() {
         : (!matchingCountries || matchingCountries.includes(country));
 
       // Мін/макс ціна
-      const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
-      const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
-      const price = prices.length > 0 ? Math.min(...prices) : null;
+      const price = Number.isFinite(Number(hotel?.minApartmentPrice))
+        ? Number(hotel.minApartmentPrice)
+        : null;
       const matchesMinPrice = !filters.minPrice || (price !== null && price >= Number(filters.minPrice));
       const matchesMaxPrice = !filters.maxPrice || (price !== null && price <= Number(filters.maxPrice));
       // Рейтинг
@@ -266,13 +243,14 @@ export default function HotelsList() {
             {filteredHotels.length > 0 ? (
               filteredHotels.map((hotel) => {
                 const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
-                const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
-                let priceText = null;
-                if (prices.length > 0) {
-                  priceText = Math.min(...prices);
-                }
-                const apartmentId = hotelApartments[0]?.id;
+                const minPrice = Number.isFinite(Number(hotel?.minApartmentPrice))
+                  ? Number(hotel.minApartmentPrice)
+                  : null;
+                const apartmentId =
+                  hotelApartments.find(a => Number(a.price) === minPrice)?.id
+                  ?? hotelApartments[0]?.id;
                 const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
+                const priceText = minPrice;
 
                 return (
                   <div className="col-12 mb-4" key={hotel.id}>
@@ -302,7 +280,14 @@ export default function HotelsList() {
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAddFavorite(apartmentId);
+                            const user = JSON.parse(localStorage.getItem("user"));
+                            toggleHotelFavorite({
+                              user,
+                              favorites,
+                              setFavorites,
+                              hotel,
+                              apartments,
+                            });
                           }}
                         >
                           <img src="/images/favorite.png" alt="favorite" style={{ width: 38, filter: isFavorite ? "none" : "grayscale(1)" }} />
