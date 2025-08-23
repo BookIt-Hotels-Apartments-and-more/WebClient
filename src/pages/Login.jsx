@@ -1,7 +1,6 @@
 import { useState, useEffect  } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loginUser, getCurrentUser, generateResetToken, resetPassword  } from "../api/authApi";
-import { getUserById } from "../api/userApi";
 import { useDispatch } from "react-redux";
 import { setUser } from "../store/slices/userSlice";
 import { axiosInstance } from "../api/axios";
@@ -46,9 +45,7 @@ const Login = () => {
       localStorage.setItem("token", data.token);
       axiosInstance.defaults.headers["Authorization"] = `Bearer ${data.token}`;
 
-      const user = await getCurrentUser();
-
-      const fullUser = await getUserById(user.id);
+      const fullUser = await getCurrentUser();
 
       localStorage.setItem("user", JSON.stringify(fullUser));
       dispatch(setUser(fullUser));
