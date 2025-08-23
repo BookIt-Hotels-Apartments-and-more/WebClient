@@ -62,18 +62,6 @@ const Home = () => {
     }
   }, [hotelsWithPrice]);
 
-
-  const filteredHotels = hotelsWithPrice.filter((hotel) => {
-    const searchLower = search.trim().toLowerCase();
-    const country = (hotel.geolocation?.country || "").toLowerCase();
-    const city = (hotel.geolocation?.city || "").toLowerCase();
-    return (
-      hotel.name.toLowerCase().includes(searchLower) ||
-      country.includes(searchLower) ||
-      city.includes(searchLower)
-    );
-  });
-
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const selectedCountry = params.get("country");
@@ -81,22 +69,6 @@ const Home = () => {
       setSearch(selectedCountry);
     }
   }, [location.search]);
-  
-    const sortedHotels = [...filteredHotels].sort((a, b) => {
-      switch (sortBy) {
-        case "price-asc":
-          return (a.price || 0) - (b.price || 0);
-        case "price-desc":
-          return (b.price || 0) - (a.price || 0);
-        case "name-asc":
-          return a.name.localeCompare(b.name);
-        case "name-desc":
-          return b.name.localeCompare(a.name);
-        default:
-          return 0;
-      }
-    });
-
 
   return (
     <div>
@@ -117,10 +89,7 @@ const Home = () => {
           alignItems: "center",
           justifyContent: "center",
           zIndex: 1,
-        }}>
-          {/* <div style={{ zIndex: 2, marginTop: -150 }}>
-            <BookingBannerForm search={search} setSearch={setSearch} />
-          </div>           */}
+        }}>          
       </div>
       
 

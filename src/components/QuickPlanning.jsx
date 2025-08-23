@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { getEstablishmentsByVibe } from "../api/establishmentsApi";
 import { VIBE_TYPE } from "../utils/enums";
 import { useNavigate } from "react-router-dom";
@@ -16,36 +16,10 @@ const CARD_WIDTH = 200;
 const OVERLAP = 64; 
 
 const QuickPlanning = () => {
-  const [activeVibe, setActiveVibe] = useState(VIBE_TYPE.Beach);
-  const [isLoading, setIsLoading] = useState(false);
-  const [items, setItems] = useState([]);
-  const [cache, setCache] = useState({});
-
   const [hoveredIdx, setHoveredIdx] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      if (cache[activeVibe]) {
-        setItems(cache[activeVibe]);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const data = await getEstablishmentsByVibe(activeVibe);
-        if (!cancelled) {
-          setItems(data || []);
-          setCache(prev => ({ ...prev, [activeVibe]: data || [] }));
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [activeVibe]);
-
+  
   const handleCardClick = (vibe) => {
     navigate(`/hotels?vibe=${encodeURIComponent(vibe)}`);
   };
