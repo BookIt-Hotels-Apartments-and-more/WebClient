@@ -87,7 +87,7 @@ const HotelCard = ({
 
         {/* Ціна */}
         <div style={{ fontWeight: 700, color: "#11456D", fontSize: 16 }}>
-          {minPrice ? `${minPrice}$ / night` : ""}
+          {minPrice ? `$${minPrice} / night` : ""}
         </div>
 
         {/* More Details */}

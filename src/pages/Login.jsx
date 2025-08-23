@@ -57,14 +57,14 @@ const Login = () => {
 
       if (loginSource === "partner") {
         sessionStorage.removeItem('loginSource');
-        navigate("/landlordpanel");
+        navigate("/accounthome");
       } else if (loginSource === "employee") {
         sessionStorage.removeItem('loginSource');
         navigate("/adminpanel");
       } else if (whoAreYou === "landlord") {
-        navigate("/landlordpanel");
+        navigate("/accounthome");
       } else if (whoAreYou === "user" || whoAreYou === "traveler") {
-        navigate("/userpanel");
+        navigate("/accounthome");
       } else {
         navigate("/");
       }
