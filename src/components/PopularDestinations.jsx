@@ -42,6 +42,7 @@ const PopularDestinations = ({ search = "" }) => {
         setApartments(apartmentsData.data);
         setFavorites(favoritesData);
       })
+      .catch(err => console.error("Download error:", err))
       .finally(() => setLoading(false));
   }, [userId]);
 

@@ -8,7 +8,7 @@ import HotelFilters from "../components/HotelFilters";
 import countriesList from "../utils/countriesList";
 import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
 import { getUserFavorites  } from "../api/favoriteApi";
-import { toggleHotelFavorite } from "../utils/favoriteUtils";
+import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import { ESTABLISHMENT_FEATURE_LABELS, VIBE_TYPE } from "../utils/enums";
 
 
@@ -46,12 +46,24 @@ export default function CountrySelect() {
 
 
   useEffect(() => {
-    getAllEstablishments().then(setHotels);
-    axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
+    getAllEstablishments()
+      .then(setHotels)
+      .catch(err => console.error("Error loading establishments:", err));
+
+    axiosInstance.get("/api/apartments")
+      .then(res => {
+        const list = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        setApartments(list);
+      })
+      .catch(err => console.error("Error loading apartments:", err));
+
     if (user?.id) {
-    getUserFavorites().then(setFavorites);
-  }
+      getUserFavorites()
+        .then(setFavorites)
+        .catch(err => console.error("Error loading favorites:", err));
+    }
   }, [user?.id]);
+
 
   const CONTENT_MAX = 1250;
   const H_PADDING   = 36; 
@@ -321,7 +333,7 @@ export default function CountrySelect() {
             </span>
           </div>
 
-          {/* Кнопки типів — прилипають праворуч */}
+          {/* Кнопки типів */}
           <div className="filter-types-wrapper" style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", justifyContent: "flex-end"}}>
            <div className="d-flex flex-wrap gap-2 justify-content-end">
               {/* All */}
@@ -446,11 +458,11 @@ export default function CountrySelect() {
               }}
             >
               {visibleRegions.map((r) => {
+                const apts = Array.isArray(apartments) ? apartments : [];
                 const dynamicCount = r.city
-                  ? apartments.filter(a =>
-                      (a.establishment?.geolocation?.city || "").toLowerCase() === r.city.toLowerCase()
-                    ).length
+                  ? apts.filter(a => (a.establishment?.geolocation?.city || "").toLowerCase() === r.city.toLowerCase()).length
                   : 0;
+
 
                 return (
                   <div
@@ -558,14 +570,11 @@ export default function CountrySelect() {
             {/* Список готелів */}          
             {sortedHotels.length > 0 ? (
               sortedHotels.map((hotel) => {
-                const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
+                const apts = Array.isArray(apartments) ? apartments : [];
                 const minPrice = Number.isFinite(Number(hotel?.minApartmentPrice))
                   ? Number(hotel.minApartmentPrice)
                   : null;
-                const apartmentId =
-                  hotelApartments.find(a => Number(a.price) === minPrice)?.id
-                  ?? hotelApartments[0]?.id;
-                const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
+                const isFavorite = isHotelFavorite(favorites, hotel.id);
                 const priceText = minPrice;
                 const IMG_HEIGHT = window.innerWidth >= 768 ? 180 : 180;
                 return (
@@ -625,8 +634,7 @@ export default function CountrySelect() {
                                 user,
                                 favorites,
                                 setFavorites,
-                                hotel,
-                                apartments,
+                                establishmentId: hotel.id,
                               });
                             }}
                           />
@@ -726,16 +734,9 @@ export default function CountrySelect() {
                 </p>
               </div>
             )}
-          </div>
+          </div>          
               
-              
-          </div>
-                
-          
-        
-
-
-            
+          </div>             
           
         </div>
       </div>

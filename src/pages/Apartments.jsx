@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { axiosInstance } from "../api/axios";
 import BookingBannerForm from '../components/BookingBannerForm';
 import HotelFilters from "../components/HotelFilters";
 import Breadcrumbs from '../components/Breadcrumbs';
-import { getUserFavorites  } from "../api/favoriteApi";
 import countriesList from "../utils/countriesList";
 import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
-import { toggleApartmentFavorite } from "../utils/favoriteUtils";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
+import { fetchApartments } from "../api/apartmentApi";
+import { getAllEstablishments } from "../api/establishmentsApi";
+import { getUserFavorites } from "../api/favoriteApi";
+import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
+
 
 const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 
@@ -29,18 +31,29 @@ export default function Apartments() {
   const [favorites, setFavorites] = useState([]);
   const [establishments, setEstablishments] = useState([]);
   const FACILITIES = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
+  const [favoriteEstablishments, setFavoriteEstablishments] = useState([]);
 
   useEffect(() => {
-    axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
-    axiosInstance.get("/api/establishments").then(res => setEstablishments(res.data));
+    fetchApartments()
+      .then(setApartments)
+      .catch(err => console.error("Load apartments error:", err));
+
+    getAllEstablishments()
+      .then(setEstablishments)
+      .catch(err => console.error("Load establishments error:", err));
+
     if (user?.id) {
-    getUserFavorites().then(setFavorites);
-  }
+      getUserFavorites()
+        .then(setFavorites)
+        .catch(err => console.error("Load favorites error:", err));
+    }
   }, [user?.id]);
+
 
   // фільтрація по отелю
   const filteredEstablishments = useMemo(() => {
-    return establishments.filter(est => {
+    const list = Array.isArray(establishments) ? establishments : [];
+    return list.filter(est => {
       const geo = est.geolocation || {};
       const country = (geo.country || "").trim().toLowerCase();
 
@@ -66,7 +79,8 @@ export default function Apartments() {
 
   // фільтрація по номерам
   const filteredApartments = useMemo(() => {
-    return apartments.filter(apt => {
+    const apts = Array.isArray(apartments) ? apartments : [];
+    return apts.filter(apt => {
       if (!allowedHotelIds.has(apt.establishment?.id)) return false;
 
       const price = typeof apt.price === "number" ? apt.price : null;
@@ -153,9 +167,9 @@ export default function Apartments() {
 
 
 
-        {/* Filters by + типи — в тій самій сітці 3/9, що й список апартаментів */}
+        {/* Filters by + типи*/}
         <div className="row align-items-center mb-3" style={{ marginTop: 30 }}>
-          {/* Ліва колонка під сайдбар фільтрів (3) */}
+          {/* Ліва колонка під сайдбар фільтрів */}
           <div className="col-12 col-md-3 d-none d-md-flex align-items-center">
             <img
               src="/images/filter.png"
@@ -167,7 +181,7 @@ export default function Apartments() {
             </span>
           </div>
 
-          {/* Права колонка під список (9) — кнопки по правому краю */}
+          {/* Права колонка під список */}
           <div className="col-12 col-md-9">
             <div className="filter-types-wrapper d-flex justify-content-md-end justify-content-start overflow-auto pb-2">
               <div className="d-flex flex-nowrap gap-2">
@@ -276,7 +290,7 @@ export default function Apartments() {
                 {filteredApartments.length > 0 ? (
                 filteredApartments.map(apt => {
                   
-                    const isFavorite = favorites?.some(f => f.apartment && f.apartment.id === apt.id);
+                    const isFavorite = isHotelFavorite(favorites, apt.establishment?.id);
 
                     return (
                     <div className="col-12 col-md-4 mb-4 d-flex" key={apt.id}>
@@ -329,12 +343,12 @@ export default function Apartments() {
                                 zIndex: 2,
                                 filter: isFavorite ? "none" : "grayscale(1)"
                             }}
-                            onClick={() => toggleApartmentFavorite({
-                                user,
-                                favorites,
-                                setFavorites,
-                                apartmentId: apt.id,
-                                setFavoriteApartments,
+                            onClick={() => toggleHotelFavorite({
+                              user,
+                              favorites,
+                              setFavorites,
+                              establishmentId: apt.establishment?.id,
+                              setFavoriteEstablishments,
                             })}
                             />
                             {showAuthMsg && (

@@ -15,52 +15,52 @@ import { toast } from 'react-toastify';
 
 const Home = () => {
   const [search, setSearch] = useState("");
-  const [hotels, setHotels] = useState([]);
-  const [apartments, setApartments] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [recentHotels, setRecentHotels] = useState([]);
-  const [sortBy, setSortBy] = useState(""); 
+  // const [hotels, setHotels] = useState([]);
+  // const [apartments, setApartments] = useState([]);
+  // const [bookings, setBookings] = useState([]);
+  // const [recentHotels, setRecentHotels] = useState([]);
+  //const [sortBy, setSortBy] = useState(""); 
   const location = useLocation();
   
 
 
-  useEffect(() => {
-    getAllEstablishments().then(setHotels);
-    axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
-    axiosInstance.get("/api/bookings").then(res => setBookings(res.data));
-  }, []);
+  // useEffect(() => {
+  //   getAllEstablishments().then(setHotels);
+  //   axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
+  //   axiosInstance.get("/api/bookings").then(res => setBookings(res.data));
+  // }, []);
 
   
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getAllEstablishments();
-        setHotels(data);
-      } catch (err) {
-        console.error("❌ Помилка при завантаженні готелів:", err);
-      }
-    };
-    fetchData();
-  }, []);  
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const data = await getAllEstablishments();
+  //       setHotels(data);
+  //     } catch (err) {
+  //       console.error("❌ Помилка при завантаженні готелів:", err);
+  //     }
+  //   };
+  //   fetchData();
+  // }, []);  
 
-  const hotelsWithPrice = useMemo(() => {
-      return hotels.map(hotel => {
-        const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
-        const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
-        let price = null;
-        if (prices.length > 0) {
-          price = Math.min(...prices);
-        }
-        return { ...hotel, price }; 
-      });
-    }, [hotels, apartments]);
+  // const hotelsWithPrice = useMemo(() => {
+  //     return hotels.map(hotel => {
+  //       const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
+  //       const prices = hotelApartments.map(a => a.price).filter(p => typeof p === "number" && !isNaN(p));
+  //       let price = null;
+  //       if (prices.length > 0) {
+  //         price = Math.min(...prices);
+  //       }
+  //       return { ...hotel, price }; 
+  //     });
+  //   }, [hotels, apartments]);
 
-    useEffect(() => {
-    const ids = JSON.parse(localStorage.getItem("recentHotels") || "[]");
-    if (ids.length > 0) {
-      setRecentHotels(hotelsWithPrice.filter(h => ids.includes(h.id)));
-    }
-  }, [hotelsWithPrice]);
+  // useEffect(() => {
+  //   const ids = JSON.parse(localStorage.getItem("recentHotels") || "[]");
+  //   if (ids.length > 0) {
+  //     setRecentHotels(hotelsWithPrice.filter(h => ids.includes(h.id)));
+  //   }
+  // }, [hotelsWithPrice]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);

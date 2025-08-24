@@ -5,6 +5,7 @@ import { createBooking, getApartmentAvailability, checkApartmentAvailability } f
 import { getAllReviews } from "../api/reviewApi";
 import BookingBannerForm from '../components/BookingBannerForm';
 import { getUserFavorites } from "../api/favoriteApi";
+import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import {
   ESTABLISHMENT_FEATURE_LABELS,
   APARTMENT_FEATURE_LABELS,
@@ -12,7 +13,6 @@ import {
 } from '../utils/enums';
 import { toast } from 'react-toastify';
 import { createUniversalPayment } from "../api/paymentApi";
-import { toggleApartmentFavorite } from "../utils/favoriteUtils";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { getApiErrorMessage } from "../utils/apiError";
@@ -38,6 +38,7 @@ const HotelDetails = () => {
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const finalizeOnceRef = useRef(false);
   const [favorites, setFavorites] = useState([]);
+  const hotelIsFavorite = isHotelFavorite(favorites, Number(id));
   const [photoIndex, setPhotoIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("about");
   const [previewIndexes, setPreviewIndexes] = useState({});
@@ -536,6 +537,7 @@ const HotelDetails = () => {
               </span>
             </span>
 
+
             {/* Кнопки перемикання фото */}
             <div
               className="position-absolute"
@@ -547,6 +549,30 @@ const HotelDetails = () => {
                 gap: 10
               }}
             >
+              {/* подивитись, куди перенести обране */}
+               <button
+                style={{
+                  position: "absolute", top: 18, right: 18, zIndex: 4,
+                  background: "rgba(255,255,255,0.95)", borderRadius: "50%",
+                  border: "none", width: 40, height: 40, display: "flex",
+                  alignItems: "center", justifyContent: "center", boxShadow: "0 0 12px #eee"
+                }}
+                onClick={() => toggleHotelFavorite({
+                  user,
+                  favorites,
+                  setFavorites,
+                  establishmentId: Number(id),
+                })}
+                title={hotelIsFavorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                <img
+                  src="/images/favorite.png"
+                  alt="favorite"
+                  style={{ width: 26, filter: hotelIsFavorite ? "none" : "grayscale(1)" }}
+                />
+              </button>
+              {/* подивитись, куди перенести обране */}
+
               <button
                 className="btn  btn-sm"
                 style={{
@@ -862,34 +888,7 @@ const HotelDetails = () => {
                           margin: "20px 0 10px 10px",
                         }}
                       />
-                      {/* favorite поверх фото */}
-                      <button
-                        style={{
-                          position: "absolute",
-                          top: 30,
-                          right: 20,
-                          background: "rgba(255,255,255,1)", borderRadius: "50%",
-                          border: "none", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center",
-                          boxShadow: "0 0 12px #eee", color: "#BF9D78", zIndex: 5
-                        }}
-                        onClick={() => toggleApartmentFavorite({
-                          user, favorites, setFavorites,
-                          apartmentId: apt.id,
-                        })}
-                        title={favorites.find(f => f.apartment && f.apartment.id === apt.id)
-                          ? "Remove from favorites"
-                          : "Add to favorites"
-                        }
-                      >
-                        <img
-                          src="/images/favorite.png"
-                          alt="favorite"
-                          style={{
-                            width: 28,
-                            filter: favorites.find(f => f.apartment && f.apartment.id === apt.id) ? "none" : "grayscale(1)"
-                          }}
-                        />
-                      </button>
+                      
                       {/* Мініатюри */}
                       <div className="d-flex" style={{ gap: 2, marginLeft: 10 }}>
                         {thumbnails.map((photo, idx) => {

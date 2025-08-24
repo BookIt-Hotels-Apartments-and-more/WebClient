@@ -1,58 +1,65 @@
-import { addFavorite, removeFavorite, getUserFavorites } from "../api/favoriteApi";
+import {
+  addFavorite,
+  removeFavorite,
+  getUserFavorites,
+} from "../api/favoriteApi";
 import { toast } from "react-toastify";
 
-// Додає/видаляє favorite для апартаменту
-export async function toggleApartmentFavorite({ user, favorites, setFavorites, apartmentId, setFavoriteApartments }) {
+/** Перевірка: чи є готель у фаворитах */
+export function isHotelFavorite(favorites, establishmentId) {
+  return favorites?.some(
+    (f) =>
+      f.establishmentId === establishmentId ||
+      f.establishment?.id === establishmentId
+  );
+}
+
+/** Знайти id фаворита за готелем (щоб видалити) */
+function getFavoriteIdByHotel(favorites, establishmentId) {
+  const fav =
+    favorites?.find(
+      (f) =>
+        f.establishmentId === establishmentId ||
+        f.establishment?.id === establishmentId
+    ) || null;
+  return fav?.id;
+}
+
+export async function toggleHotelFavorite({
+  user,
+  favorites,
+  setFavorites,
+  establishmentId,
+  setFavoriteEstablishments,
+}) {
   if (!user?.id) {
     toast.info("Log in to add to favorites!");
     return;
   }
 
   try {
-    const favorite = favorites.find(f => f.apartment && f.apartment.id === apartmentId);
-    if (favorite) {
-      await removeFavorite(favorite.id);
+    const existingId = getFavoriteIdByHotel(favorites, establishmentId);
+
+    if (existingId) {
+      await removeFavorite(existingId);
       toast("Removed from favorites.");
     } else {
-      await addFavorite({ userId: user.id, apartmentId });
+      await addFavorite({ userId: user.id, establishmentId });
       toast.success("Added to favorites!");
     }
 
+    // Перечитуємо власні фаворити з бека
     const updated = await getUserFavorites();
     setFavorites(updated);
-    setFavoriteApartments && setFavoriteApartments(updated.map(f => f.apartmentId));
-  } catch (err) {
-    console.error("Error toggling apartment favorite:", err);
-    toast.error("Something went wrong while updating favorites. Please try again.");
-  }
-}
-
-// Додає/видаляє favorite для готелю
-export async function toggleHotelFavorite({ user, favorites, setFavorites, hotel, apartments, setFavoriteApartments }) {
-  if (!user?.id) {
-    toast.info("Log in to add to favorites!");
-    return;
-  }
-
-  try {
-    const hotelApts = (apartments || []).filter(a => a.establishment?.id === hotel.id);
-    let apt = null;
-
-    if (hotel?.minApartmentPrice != null) {
-      apt = hotelApts.find(a => Number(a.price) === Number(hotel.minApartmentPrice)) || null;
+    if (setFavoriteEstablishments) {
+      setFavoriteEstablishments(
+        updated.map((f) => f.establishmentId ?? f.establishment?.id).filter(Boolean)
+      );
     }
-    if (!apt) apt = hotelApts[0];
-
-    if (!apt) {
-      toast.warn("No available rooms in this hotel!");
-      return;
-    }
-
-    await toggleApartmentFavorite({
-      user, favorites, setFavorites, apartmentId: apt.id, setFavoriteApartments
-    });
   } catch (err) {
     console.error("Error toggling hotel favorite:", err);
-    toast.error("Something went wrong while updating hotel favorites. Please try again.");
+    toast.error(
+      "Something went wrong while updating favorites. Please try again."
+    );
   }
 }

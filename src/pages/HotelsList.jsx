@@ -9,7 +9,7 @@ import { getUserFavorites, addFavorite } from "../api/favoriteApi";
 import { toast } from "react-toastify";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 import { getAllReviews } from "../api/reviewApi";
-import { toggleHotelFavorite } from "../utils/favoriteUtils";
+import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 
 const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "");
@@ -46,6 +46,7 @@ export default function HotelsList() {
   const [reviews, setReviews] = useState([]);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [modalReviews, setModalReviews] = useState([]);
+ 
 
   useEffect(() => {
     if (trendingFlag === "1") {
@@ -249,7 +250,7 @@ export default function HotelsList() {
                 const apartmentId =
                   hotelApartments.find(a => Number(a.price) === minPrice)?.id
                   ?? hotelApartments[0]?.id;
-                const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
+                const isFavorite = isHotelFavorite(favorites, hotel.id);
                 const priceText = minPrice;
 
                 return (
@@ -285,8 +286,7 @@ export default function HotelsList() {
                               user,
                               favorites,
                               setFavorites,
-                              hotel,
-                              apartments,
+                              establishmentId: hotel.id,
                             });
                           }}
                         >

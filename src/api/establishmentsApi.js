@@ -1,8 +1,14 @@
 import {axiosInstance} from "./axios";
 
 export const getAllEstablishments = async () => {
-  const res = await axiosInstance.get("/api/Establishments");
-  return res.data;
+  try {
+    const res = await axiosInstance.get("/api/Establishments");
+    const data = res.data;
+    return Array.isArray(data) ? data : (data?.items || []);
+  } catch (err) {
+    console.error("Error getAllEstablishments:", err);
+    return [];
+  }
 };
 
 export const createEstablishment = async (data) => {

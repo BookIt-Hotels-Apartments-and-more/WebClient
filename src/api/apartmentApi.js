@@ -2,7 +2,7 @@ import { axiosInstance } from "./axios";
 
 export const fetchApartments = async () => {
   const res = await axiosInstance.get("/api/apartments");
-  return res.data;
+  return Array.isArray(res.data) ? res.data : (res.data?.items || []);
 };
 
 export const fetchApartmentById = async (id) => {

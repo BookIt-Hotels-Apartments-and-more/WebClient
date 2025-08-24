@@ -24,10 +24,12 @@ const TopTrendingHotels = ({ search = "" }) => {
       userId ? getUserFavorites() : Promise.resolve([]),
     ])
       .then(([trendingData, apartmentsData, favoritesData]) => {
-        setHotels(trendingData);
+        const list = Array.isArray(trendingData) ? trendingData : trendingData?.items || [];
+        setHotels(list);
         setApartments(apartmentsData.data);
         setFavorites(favoritesData);
       })
+      .catch(err => console.error("Download error:", err))
       .finally(() => setLoading(false));
   }, [userId]);
 
