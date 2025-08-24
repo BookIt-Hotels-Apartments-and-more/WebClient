@@ -3,7 +3,7 @@ import { getTrendingEstablishments } from "../api/establishmentsApi";
 import { useNavigate } from "react-router-dom";
 import { getUserFavorites } from "../api/favoriteApi";
 import { axiosInstance } from "../api/axios";
-import { toggleHotelFavorite } from "../utils/favoriteUtils";
+import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 
 const cardStyles = {
   borderRadius: 18,
@@ -59,7 +59,7 @@ const PopularDestinations = ({ search = "" }) => {
         city.includes(searchLower)
       );
     });
-    return filtered.length ? filtered : hotels; // fallback якщо пошук нічого не дав
+    return filtered.length ? filtered : hotels;
   }, [hotels, searchLower]);
 
   const displayHotels = hotelsToShow.slice(0, 5);
@@ -85,12 +85,7 @@ const PopularDestinations = ({ search = "" }) => {
   }
 
   const firstHotel = displayHotels[0];
-  const firstHotelApartmentId = apartments.find(
-    a => a.establishment?.id === firstHotel?.id
-  )?.id;
-  const isFavoriteFirst = !!favorites.find(
-    f => f.apartment && f.apartment.id === firstHotelApartmentId
-  );
+  const isFavoriteFirst = isHotelFavorite(favorites, firstHotel?.id);
 
   return (
     <section className="my-5">
@@ -189,8 +184,7 @@ const PopularDestinations = ({ search = "" }) => {
                     user,
                     favorites,
                     setFavorites,
-                    hotel: firstHotel,
-                    apartments,
+                    establishmentId: firstHotel?.id,
                   });
                 }}
               >
@@ -256,12 +250,8 @@ const PopularDestinations = ({ search = "" }) => {
 
           {/* Решта 4 */}
           {displayHotels.slice(1).map((hotel, idx) => {
-            const hotelApartmentId = apartments.find(
-              a => a.establishment?.id === hotel.id
-            )?.id;
-            const isFavorite = !!favorites.find(
-              f => f.apartment && f.apartment.id === hotelApartmentId
-            );
+
+            const isFavorite = isHotelFavorite(favorites, hotel.id);
 
             return (
               <div
@@ -319,8 +309,7 @@ const PopularDestinations = ({ search = "" }) => {
                         user,
                         favorites,
                         setFavorites,
-                        hotel,
-                        apartments,
+                        establishmentId: hotel.id,
                       });
                     }}
                   >

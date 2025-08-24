@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../api/axios";
 import HotelCard from "./HotelCard ";
 import { getUserFavorites } from "../api/favoriteApi";
-import { toggleHotelFavorite } from "../utils/favoriteUtils";
+import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 
 
 const TopTrendingHotels = ({ search = "" }) => {
@@ -14,6 +14,7 @@ const TopTrendingHotels = ({ search = "" }) => {
   const navigate = useNavigate();
   const [apartments, setApartments] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const isFavorite = isHotelFavorite(favorites, hotel.id);
   const userId = JSON.parse(localStorage.getItem("user"))?.id;
 
   useEffect(() => {
@@ -156,8 +157,7 @@ const TopTrendingHotels = ({ search = "" }) => {
                       user,
                       favorites,
                       setFavorites,
-                      hotel,
-                      apartments,
+                      establishmentId: hotel.id,
                     });
                   }}
                   showLimitedOffer={true}
