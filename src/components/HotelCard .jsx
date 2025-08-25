@@ -24,16 +24,21 @@ const HotelCard = ({
     )}
     {/* Favorite (Heart) */}
     <button
-      style={{
-        position: "absolute", right: 20, top: 16,
-        background: "rgba(255,255,255,0.95)", borderRadius: "50%",
-        border: "none", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2,
-        boxShadow: "0 0 12px #eee", color: "#BF9D78"
-      }}
-      onClick={() => onToggleFavorite?.(hotel.id)}
-    >
-      <img src="/images/favorite.png" alt="favorite" style={{ width: 38, filter: isFavorite ? "none" : "grayscale(1)" }} />
-    </button>
+        type="button"
+        aria-pressed={!!isFavorite}
+        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        style={{
+          position: "absolute", right: 20, top: 16,
+          background: "rgba(255,255,255,0.95)", borderRadius: "50%",
+          border: "none", width: 38, height: 38, display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 2,
+          boxShadow: "0 0 12px #eee", color: "#BF9D78"
+        }}
+        onClick={() => onToggleFavorite?.(hotel.id)}
+      >
+        <img src="/images/favorite.png" alt="favorite" style={{ width: 38, filter: isFavorite ? "none" : "grayscale(1)" }} />
+      </button>
 
     {/* Фонова картинка */}
     <img

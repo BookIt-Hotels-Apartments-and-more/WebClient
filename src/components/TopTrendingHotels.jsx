@@ -14,20 +14,15 @@ const TopTrendingHotels = ({ search = "" }) => {
   const navigate = useNavigate();
   const [apartments, setApartments] = useState([]);
   const [favorites, setFavorites] = useState([]);
-  const isFavorite = isHotelFavorite(favorites, hotel.id);
   const userId = JSON.parse(localStorage.getItem("user"))?.id;
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      getTrendingEstablishments(12, 30),
-      axiosInstance.get("/api/apartments"),
-      userId ? getUserFavorites() : Promise.resolve([]),
-    ])
-      .then(([trendingData, apartmentsData, favoritesData]) => {
+    Promise.all([ getTrendingEstablishments(12, 30),
+      userId ? getUserFavorites() : Promise.resolve([]) ])
+      .then(([trendingData, favoritesData]) => {
         const list = Array.isArray(trendingData) ? trendingData : trendingData?.items || [];
         setHotels(list);
-        setApartments(apartmentsData.data);
         setFavorites(favoritesData);
       })
       .catch(err => console.error("Download error:", err))
@@ -135,15 +130,8 @@ const TopTrendingHotels = ({ search = "" }) => {
             }}
             >
             {displayTopHotels.map((hotel) => {
-                const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
-                const minPrice = Number.isFinite(Number(hotel.minApartmentPrice))
-                  ? Number(hotel.minApartmentPrice)
-                  : null;
-                const apartmentId =
-                  hotelApartments.find(a => Number(a.price) === minPrice)?.id
-                  ?? hotelApartments[0]?.id;
-                // Перевірка, чи є вже у favorites
-                const isFavorite = !!favorites.find(f => f.apartment && f.apartment.id === apartmentId);
+              const minPrice = Number.isFinite(Number(hotel.minApartmentPrice)) ? Number(hotel.minApartmentPrice) : null;
+              const isFavorite = isHotelFavorite(favorites, hotel.id);
 
                 return (
                 <HotelCard
