@@ -55,11 +55,25 @@ export const getEstablishmentsByOwnerFiltered = async (ownerId, filters = {}) =>
 };
 
 export const getTrendingEstablishments = async (count = 5, pastDays = 30) => {
-  const res = await axiosInstance.get("/api/Establishments/trending", {
-    params: { count, pastDays },
-  });
-  return res.data;
+  try {
+    const res = await axiosInstance.get("/api/Establishments/trending", {
+      params: { count, pastDays },
+    });
+    const data = res.data;
+    return Array.isArray(data) ? data : (data?.items || []);
+  } catch (e) {
+    console.error("Trending failed (fallback to all):", e);
+    try {
+      const all = await axiosInstance.get("/api/Establishments");
+      const list = Array.isArray(all.data) ? all.data : (all.data?.items || []);
+      return list.slice(0, count);
+    } catch (e2) {
+      console.error("Fallback to all establishments also failed:", e2);
+      return [];
+    }
+  }
 };
+
 
 
 

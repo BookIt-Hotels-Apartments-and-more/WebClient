@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { getTrendingEstablishments } from "../api/establishmentsApi";
 import { useNavigate } from "react-router-dom";
-import { axiosInstance } from "../api/axios";
-import HotelCard from "./HotelCard ";
+import HotelCard from "./HotelCard";
 import { getUserFavorites } from "../api/favoriteApi";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
+import { toast } from "react-toastify";
+
 
 
 const TopTrendingHotels = ({ search = "" }) => {
@@ -12,14 +13,16 @@ const TopTrendingHotels = ({ search = "" }) => {
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState("All");
   const navigate = useNavigate();
-  const [apartments, setApartments] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const userId = JSON.parse(localStorage.getItem("user"))?.id;
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([ getTrendingEstablishments(12, 30),
-      userId ? getUserFavorites() : Promise.resolve([]) ])
+    Promise.all([
+      getTrendingEstablishments(12, 30),
+      (userId && token) ? getUserFavorites() : Promise.resolve([]), // ← змінили
+    ])
       .then(([trendingData, favoritesData]) => {
         const list = Array.isArray(trendingData) ? trendingData : trendingData?.items || [];
         setHotels(list);
@@ -27,7 +30,7 @@ const TopTrendingHotels = ({ search = "" }) => {
       })
       .catch(err => console.error("Download error:", err))
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [userId, token]);
 
   // Унікальні країни з готелів
   const countries = useMemo(() => {
@@ -141,6 +144,14 @@ const TopTrendingHotels = ({ search = "" }) => {
                   isFavorite={isFavorite}
                   onToggleFavorite={() => {
                     const user = JSON.parse(localStorage.getItem("user"));
+                    const token = localStorage.getItem("token");
+
+                    if (!(user?.id && token)) {
+                      console.warn("User not authorized – cannot toggle favorite.");
+                        toast.info("Please log in to add to favorites");
+                      return;
+                    }
+
                     toggleHotelFavorite({
                       user,
                       favorites,
@@ -150,6 +161,7 @@ const TopTrendingHotels = ({ search = "" }) => {
                   }}
                   showLimitedOffer={true}
                 />
+
                 );
             })}
             </div>

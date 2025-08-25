@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { getUserFavorites } from "../api/favoriteApi";
 import { axiosInstance } from "../api/axios";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
+import { toast } from "react-toastify";
+
 
 const cardStyles = {
   borderRadius: 18,
@@ -28,13 +30,14 @@ const PopularDestinations = ({ search = "" }) => {
   const [favorites, setFavorites] = useState([]);
   const navigate = useNavigate();
   const userId = JSON.parse(localStorage.getItem("user"))?.id;
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       getTrendingEstablishments(12, 365),
       axiosInstance.get("/api/apartments"),
-      userId ? getUserFavorites() : Promise.resolve([]),
+      (userId && token) ? getUserFavorites() : Promise.resolve([]), // ← змінили
     ])
       .then(([trending, apartmentsData, favoritesData]) => {
         const list = Array.isArray(trending) ? trending : trending?.items || [];
@@ -44,7 +47,7 @@ const PopularDestinations = ({ search = "" }) => {
       })
       .catch(err => console.error("Download error:", err))
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [userId, token]);
 
   const searchLower = (search || "").trim().toLowerCase();
 
@@ -179,7 +182,16 @@ const PopularDestinations = ({ search = "" }) => {
                 }}
                 onClick={e => {
                   e.stopPropagation();
+
                   const user = JSON.parse(localStorage.getItem("user"));
+                  const token = localStorage.getItem("token");
+
+                  if (!(user?.id && token)) {
+                    console.warn("User not authorized – cannot toggle favorite");
+                       toast.info("Please log in to add to favorites");
+                    return;
+                  }
+
                   toggleHotelFavorite({
                     user,
                     favorites,
@@ -197,6 +209,7 @@ const PopularDestinations = ({ search = "" }) => {
                   }}
                 />
               </button>
+
 
               {/* Текст */}
               <div
@@ -305,6 +318,12 @@ const PopularDestinations = ({ search = "" }) => {
                     onClick={e => {
                       e.stopPropagation();
                       const user = JSON.parse(localStorage.getItem("user"));
+                      const token = localStorage.getItem("token");
+                      if (!(user?.id && token)) {
+                        console.warn("User not authorized – cannot toggle favorite");
+                        toast.info("Please log in to add to favorites");
+                        return;
+                      }
                       toggleHotelFavorite({
                         user,
                         favorites,
