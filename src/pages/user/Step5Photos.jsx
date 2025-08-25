@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEstWizard } from "../../features/establishment/WizardContext";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 
 function WizardProgress({ current, labels }) {
@@ -25,39 +25,54 @@ function WizardProgress({ current, labels }) {
 
 export default function Step5Photos() {
   const navigate = useNavigate();
-  const { photos, setPhotos, setStep } = useEstWizard();
+  const {
+    photoFiles = [],
+    setPhotoFiles,
+    photoPreviews = [],
+    setPhotoPreviews,
+    setStep,
+  } = useEstWizard();
 
   const handleFiles = useCallback((fileList) => {
     const files = Array.from(fileList || []);
-    if (files.length === 0) return;
+    if (!files.length) return;
 
-    files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-        const dataUrl = ev.target.result;
-        setPhotos(prev => [...prev, dataUrl]);
-        };
-        reader.readAsDataURL(file);
-    });
-    }, [setPhotos]);
+    setPhotoFiles(prev => [...prev, ...files]);
+    const urls = files.map(f => URL.createObjectURL(f));
+    setPhotoPreviews(prev => [...prev, ...urls]);
 
+    try {
+      const meta = files.map(f => ({ name: f.name, size: f.size, type: f.type }));
+      localStorage.setItem("estWizard_photos_meta", JSON.stringify(meta));
+    } catch {}
+  }, [setPhotoFiles, setPhotoPreviews]);
 
   const onInputChange = (e) => handleFiles(e.target.files);
 
   const onDrop = (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
   const onDragOver = (e) => e.preventDefault();
 
-  const removeAt = (idx) =>
-    setPhotos(prev => prev.filter((_, i) => i !== idx));
+  const removeAt = (idx) => {
+    setPhotoFiles(prev => prev.filter((_, i) => i !== idx));
+    setPhotoPreviews(prev => {
+      const toRevoke = prev[idx];
+      if (toRevoke) URL.revokeObjectURL(toRevoke);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
 
-  // для прев'ю будуємо dataURL назад:
-  const dataUrls = useMemo(() => photos.map(p => `data:image/*;base64,${p}`), [photos]);
+  useEffect(() => {
+    return () => {
+      (photoPreviews || []).forEach(u => { try { URL.revokeObjectURL(u); } catch {} });
+    };
+  }, [photoPreviews]);
+
 
   const onBack = () => { setStep(4); navigate("/add-establishment/step-4"); };
 
   const onNext = () => {
-    if (photos.length < 5) {
-      toast.error("Завантажте щонайменше 5 фотографій.");
+    if ((photoFiles?.length ?? 0) < 5) {
+      toast.error("Upload at least 5 photos.");
       return;
     }
     setStep(6);
@@ -128,23 +143,12 @@ export default function Step5Photos() {
                 </div>
 
                 {/* Прев'ю */}
-                {dataUrls.length > 0 && (
+                {(photoPreviews?.length ?? 0) > 0 && (
                   <div className="d-flex flex-wrap gap-2">
-                    {dataUrls.map((src, idx) => (
+                    {photoPreviews.map((src, idx) => (
                       <div key={idx} className="position-relative" style={{ width: 110, height: 110 }}>
-                        <img
-                          src={src}
-                          alt={`photo-${idx}`}
-                          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8, border: "1px solid #e6eef4" }}
-                        />
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-danger position-absolute top-0 end-0"
-                          onClick={() => removeAt(idx)}
-                          title="Видалити"
-                        >
-                          ×
-                        </button>
+                        <img src={src} alt={`photo-${idx}`} style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:8, border:"1px solid #e6eef4" }} />
+                        <button type="button" className="btn btn-sm btn-danger position-absolute top-0 end-0" onClick={() => removeAt(idx)}>×</button>
                       </div>
                     ))}
                   </div>

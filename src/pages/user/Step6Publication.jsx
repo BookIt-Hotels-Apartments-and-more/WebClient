@@ -32,6 +32,7 @@ function WizardProgress({ current, labels }) {
   );
 }
 
+
 export default function Step6Publication() {
   const navigate = useNavigate();
   const {
@@ -43,19 +44,19 @@ export default function Step6Publication() {
     description,
     checkIn,
     checkOut,
-    photos,
+    photoFiles,
+    photoPreviews,
+    ownerId,
     reset,
   } = useEstWizard();
 
   const [submitting, setSubmitting] = useState(false);
 
-  // Допоміжне: мапа типів інверсна (value->label)
   const typeName = useMemo(() => {
     const entry = Object.entries(ESTABLISHMENT_TYPE_LABELS).find(([, v]) => v === propertyType);
     return entry ? entry[0] : "—";
   }, [propertyType]);
 
-  // Розшифровка feature-маски у список назв
   const featureList = useMemo(() => {
     const list = [];
     for (const [key, bitIndex] of Object.entries(ESTABLISHMENT_FEATURE_LABELS)) {
@@ -77,25 +78,29 @@ export default function Step6Publication() {
     if (!name || name.trim().length < 2) return "Enter property name on Step 1.";
     if (!Array.isArray(geolocation) || geolocation.length !== 2) return "Pick location on Step 2.";
     if (!description || description.trim().length < 10) return "Add a description on Step 4 (min 10 chars).";
-    if (!Array.isArray(photos) || photos.length < 1) return "Upload at least 1 photo on Step 5.";
+    if (!Array.isArray(photoFiles) || photoFiles.length < 1) return "Upload at least 1 photo on Step 5.";
     return null;
   };
 
+  const filesToBase64 = (files) =>
+    Promise.all(
+      (files || []).map(file => 
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        })
+      )
+    );
+
   const onSubmit = async (redirectTo) => {
     const err = validate();
-    if (err) {
-      toast.error(err);
-      return;
-    }
+    if (err) { toast.error(err); return; }
     try {
-      setSubmitting(true);
+      setSubmitting(true);    
 
-      let ownerId = undefined;
-      try {
-        const u = JSON.parse(localStorage.getItem("user") || "null");
-        if (u?.id) ownerId = u.id;
-      } catch {}
-
+      const newPhotosBase64 = await filesToBase64(photoFiles);
       const payload = {
         name,
         description,
@@ -107,30 +112,20 @@ export default function Step6Publication() {
         longitude: geolocation[1],
         ownerId,
         existingPhotosIds: [],
-        newPhotosBase64: photos,
+        newPhotosBase64
       };
-
       const res = await createEstablishment(payload);
-        
-      const estId =
-        res?.id ??
-        res?.data?.id ??
-        res?.data?.establishmentId ??
-        res?.establishmentId;
-      if (!estId) {
-        toast.error("Can't determine created establishment id");
-        return;
-      }
-      toast.success("Property registered successfully!");
+      const id = res?.id;
 
-      reset?.();
-
-      if (redirectTo === "add-apartments") {
-        navigate(`/add-establishment/step-7/${estId}`);
-      } else if (redirectTo === "account") {
+      if (redirectTo === "add-apartments" && id) {
+        reset();
+        navigate(`/add-establishment/step-7/${id}`);
+      } else {
+        reset();
         navigate("/accounthome");
       }
-    } catch (e) {
+
+    } catch(e) {
       console.error(e);
       toast.error("Failed to register property. Please try again.");
     } finally {
@@ -211,20 +206,14 @@ export default function Step6Publication() {
 
                 <div className="mb-3">
                   <div className="fw-semibold">Photos</div>
-                  {Array.isArray(photos) && photos.length > 0 ? (
+                  {Array.isArray(photoPreviews) && photoPreviews.length > 0 ? (
                     <div className="d-flex flex-wrap gap-2">
-                      {photos.map((p, i) => (
-                        <img
-                          key={i}
-                          src={`data:image/*;base64,${p}`}
-                          alt={`photo-${i}`}
-                          style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8, border: "1px solid #e6eef4" }}
-                        />
+                      {photoPreviews.map((src, i) => (
+                        <img key={i} src={src} alt={`photo-${i}`}
+                              style={{ width:96, height:96, objectFit:"cover", borderRadius:8, border:"1px solid #e6eef4" }}/>
                       ))}
                     </div>
-                  ) : (
-                    <div className="text-muted">—</div>
-                  )}
+                  ) : (<div className="text-muted">—</div>)}
                 </div>
               </div>
 
@@ -255,7 +244,7 @@ export default function Step6Publication() {
                 {submitting ? "Publishing..." : "Publish and proceed to adding apartments"}
               </button>
               <button type="button" className="btn btn-primary" style={{ marginLeft: 10, minWidth: 400 }} 
-                onClick={() => onSubmit("account")} disabled={submitting}>
+                onClick={() => onSubmit("accounthome")} disabled={submitting}>
                 {submitting ? "Publishing..." : "Publish and go to personal page"}
               </button>
             </div>

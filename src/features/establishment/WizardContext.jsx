@@ -11,7 +11,11 @@ export function WizardProvider({ children }) {
   const [description, setDescription] = useState("");
   const [checkIn, setCheckIn] = useState({ hour: 15, minute: 0 });
   const [checkOut, setCheckOut] = useState({ hour: 11, minute: 0 });
-  const [photos, setPhotos] = useState([]);
+  const [photoFiles, setPhotoFiles] = useState([]);         // File[]
+  const [photoPreviews, setPhotoPreviews] = useState([]);   // string[] (ObjectURL)
+  const [ownerId, setOwnerId] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("user") || "null")?.id ?? null; } catch { return null; }
+  });
 
 
   // опційна стійкість між перезавантаженнями
@@ -26,19 +30,16 @@ export function WizardProvider({ children }) {
         setGeolocation(data.geolocation ?? null);
         setFeatures(data.features ?? 0);
         setDescription(data.description?? "");
-        setCheckIn(data.setCheckIn ?? {hour: 15, minute: 0});
-        setCheckOut(data.setCheckOut ?? {hour: 11, minute: 0});
-        setPhotos(data.photos ?? []);
+        setCheckIn(data.checkIn ?? { hour: 15, minute: 0 });
+        setCheckOut(data.checkOut ?? { hour: 11, minute: 0 });
       } catch {}
     }
   }, []);
   
   useEffect(() => {
-    sessionStorage.setItem(
-      "estWizard",
-      JSON.stringify({ step, propertyType, name, geolocation, features, description, checkIn, checkOut, photos  })
-    );
-  }, [step, propertyType, name, geolocation, features, description, checkIn, checkOut, photos]);
+    const toSave = { step, propertyType, name, geolocation, features, description, checkIn, checkOut, ownerId };
+      sessionStorage.setItem("estWizard", JSON.stringify(toSave));
+    }, [step, propertyType, name, geolocation, features, description, checkIn, checkOut, ownerId]);
 
   const value = useMemo(() => ({
     step, setStep,
@@ -49,11 +50,22 @@ export function WizardProvider({ children }) {
     description, setDescription,
     checkIn, setCheckIn,
     checkOut, setCheckOut,
-    photos, setPhotos,
-    reset: () => { setStep(1); setPropertyType(null); setName(""); 
-      setGeolocation(null); setFeatures(0); setDescription(""), 
-      setCheckIn(null), setCheckOut(null), setPhotos([]) }
-  }), [step, propertyType, name, geolocation, features, description, checkIn, checkOut, photos]);
+    photoFiles, setPhotoFiles,
+    photoPreviews, setPhotoPreviews,
+    ownerId, setOwnerId,
+    reset: () => {
+      setStep(1);
+      setPropertyType(null);
+      setName("");
+      setGeolocation(null);
+      setFeatures(0);
+      setDescription("");
+      setCheckIn({ hour: 15, minute: 0 });
+      setCheckOut({ hour: 11, minute: 0 });
+      setPhotoFiles([]);
+      setPhotoPreviews([]);
+    }
+  }), [step, propertyType, name, geolocation, features, description, checkIn, checkOut, photoFiles, photoPreviews, ownerId]);
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;
 }

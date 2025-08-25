@@ -48,15 +48,18 @@ export default function Step4Description() {
   } = useEstWizard();
 
   // локальні стейти
-  const [checkInHour, setCheckInHour] = useState(checkIn.hour ?? 15);
-  const [checkInMinute, setCheckInMinute] = useState(checkIn.minute ?? 0);
-  const [checkOutHour, setCheckOutHour] = useState(checkOut.hour ?? 11);
-  const [checkOutMinute, setCheckOutMinute] = useState(checkOut.minute ?? 0);
+  const [checkInHour, setCheckInHour] = useState(checkIn?.hour ?? 15);
+  const [checkInMinute, setCheckInMinute] = useState(checkIn?.minute ?? 0);
+  const [checkOutHour, setCheckOutHour] = useState(checkOut?.hour ?? 11);
+  const [checkOutMinute, setCheckOutMinute] = useState(checkOut?.minute ?? 0);
 
   useEffect(() => {
+    if (!checkIn)  setCheckIn({ hour: 15, minute: 0 });
+    if (!checkOut) setCheckOut({ hour: 11, minute: 0 });
     setCheckIn({ hour: checkInHour, minute: checkInMinute });
     setCheckOut({ hour: checkOutHour, minute: checkOutMinute });
   }, [checkInHour, checkInMinute, checkOutHour, checkOutMinute]);
+
 
   const onBack = () => {
     setStep(3);

@@ -143,7 +143,7 @@ const Header = () => {
                   className="btn btn-primary btn-sm w-100"
                   onClick={() => {
                     setShowRolePicker(false);
-                    navigate("/landlordpanel");
+                    navigate("/accounthome");
                   }}
                 >
                   Landlord
@@ -153,7 +153,7 @@ const Header = () => {
                   className="btn btn-outline-primary btn-sm w-100 mt-2"
                   onClick={() => {
                     setShowRolePicker(false);
-                    navigate("/userpanel");
+                    navigate("/accounthome");
                   }}
                 >
                   Traveler

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllBookings, deleteBooking, updateBooking } from "../../api/bookingApi";
+import { getBookingById, deleteBooking, updateBooking } from "../../api/bookingApi";
 import { getUserFavorites, removeFavorite  } from "../../api/favoriteApi";
 import { getApartmentById } from "../../api/apartmentApi";
 import { toast } from 'react-toastify';
@@ -53,10 +53,16 @@ const UserPanel = () => {
     if (!user?.id) return;
     const fetchData = async () => {
       try {
-        const [bookData, favData] = await Promise.all([
-          getAllBookings(),
+        const [fullUser, favData] = await Promise.all([
+          getUserById(user.id),
           getUserFavorites(user.id),
         ]);
+        const bookingIds = (fullUser?.bookings || [])
+          .map(b => (typeof b === "number" ? b : b?.id))
+          .filter(Boolean);
+        const bookData = bookingIds.length
+          ? await Promise.all(bookingIds.map(id => getBookingById(id)))
+          : [];
         setBookings(bookData);
         setFavorites(favData);
         const ids = [

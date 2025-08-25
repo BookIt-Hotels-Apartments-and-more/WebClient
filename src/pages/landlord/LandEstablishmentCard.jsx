@@ -4,7 +4,6 @@ import {
   deleteApartment,
 } from "../../api/apartmentApi";
 import {
-  getAllBookings,
   deleteBooking,
   checkInBooking,
 } from "../../api/bookingApi";
@@ -31,11 +30,11 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
       const allApts = await getApartmentsByEstablishment(est.id);
       setApartments(Array.isArray(allApts) ? allApts : []);
 
-      const bookingsData = await getAllBookings();
-      const filteredBookings = bookingsData.filter(
-      b => b.apartment && b.apartment.establishment.id === est.id
-      );
-      setBookings(filteredBookings);
+      const aggregated = (allApts ?? [])
+        .flatMap(a => Array.isArray(a.bookings) ? a.bookings.map(b => {
+          return b?.apartment ? b : { ...b, apartment: a };
+        }) : []);
+      setBookings(aggregated);
 
       const reviewsData = await getAllReviews();
       const filteredReviews = reviewsData.filter(
