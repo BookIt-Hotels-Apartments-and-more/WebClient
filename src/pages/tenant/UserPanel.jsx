@@ -36,7 +36,6 @@ const UserPanel = () => {
     dateTo: ""
   });
   const [addReviewModal, setAddReviewModal] = useState({ show: false, booking: null });
-  const [activeStep] = useState(2);
   const [pwModal, setPwModal] = useState({
    show: false,
    current: "",
@@ -338,9 +337,7 @@ const UserPanel = () => {
           marginTop: "60px",
         }}
       >
-        {/* --- ПРОГРЕС-БАР --- */}
-        <ProgressBar activeStep={activeStep} />
-
+        
         {/* --- ДВІ КОЛОНКИ --- */}
         <div className="row mt-4" style={{ minHeight: 400 }}>
 
