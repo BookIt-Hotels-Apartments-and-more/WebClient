@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate  } from "react-router-dom";
 import { toast } from "react-toastify";
-
-import { getAllBookings, updateBooking } from "../api/bookingApi";
+import { createBooking, checkApartmentAvailability, updateBooking } from "../api/bookingApi";
 import { getApartmentById } from "../api/apartmentApi";
 import { updateUserDetails } from "../api/userApi";
+import { createUniversalPayment } from "../api/paymentApi";
 
 import {
   decodeFlagsUser,
@@ -24,6 +24,7 @@ export default function Booking() {
   const [booking, setBooking] = useState(null);
   const [apartmentMap, setApartmentMap] = useState({});
   const [isPreview, setIsPreview] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const KNOWN_CODES = ["+380", "+49", "+48", "+1"];
 
@@ -57,50 +58,16 @@ export default function Booking() {
       specialRequests: "",
     };
   });
-
   // блок “Add to your booking”
   const [extras, setExtras] = useState({
     airfare: false,
     carHire: false,
     airportTaxi: false,
   });
-
   // edit booking modal
   const [editModal, setEditModal] = useState({ show: false, booking: null, dateFrom: "", dateTo: "" });
-
-  const rowRefs = useRef({});
-
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      try {
-        const bookData = await getAllBookings();
-        const my = bookData.filter(b => b.customer?.email === user.email);
-        setBookings(my);
-
-        const ids = [...new Set(my.map(b => b.apartmentId).filter(Boolean))];
-        const map = {};
-        for (const id of ids) {
-          try { map[id] = await getApartmentById(id); } catch {}
-        }
-
-        setApartmentMap(map);
-
-        let selected = null;
-        if (focusBookingId) {
-          selected = my.find(b => String(b.id) === String(focusBookingId)) || null;
-        }
-        if (!selected && my.length) {
-          selected = [...my].sort((a,b) => new Date(b?.createdAt || b?.dateFrom || 0) - new Date(a?.createdAt || a?.dateFrom || 0))[0];
-        }
-        setBooking(selected);
-
-      } catch (e) {
-        console.error(e);
-        toast.error("Failed to load booking data");
-      }
-    })();
-  }, [user?.id, user?.email, focusBookingId]);
+  const [paymentType, setPaymentType] = useState("Cash");
+  const rowRefs = useRef({});  
 
   useEffect(() => {
     const pend = JSON.parse(localStorage.getItem("pendingBooking") || "null");
@@ -158,11 +125,11 @@ export default function Booking() {
     return Math.max(1, Math.ceil((to - from) / 86400000));
   };
 
-  const getTotalPrice = (b) => {
-    if (!b?.dateFrom || !b?.dateTo) return "—";
-    const price = b.apartment?.price || apartmentMap[b.apartmentId]?.price || 0;
-    const n = getNights(b.dateFrom, b.dateTo);
-    return price && n ? price * n : "—";
+  const computeAmount = (bOrPend) => {
+    const apt = apartmentMap[bOrPend.apartmentId] || booking?.apartment;
+    const price = apt?.price || 0;
+    const n = getNights(bOrPend.dateFrom, bOrPend.dateTo);
+    return price && n ? price * n : 0;
   };
 
   const openEditModal = (b) => setEditModal({
@@ -205,6 +172,54 @@ export default function Booking() {
       toast.error("Failed to update booking");
     }
   };    
+
+  const handlePayAndFinalise = async () => {
+    if (submitting) return;
+    try {
+      setSubmitting(true);
+      // 1) опційно зберігаємо деталі акаунта
+      if (details.saveToAccount) {
+        await updateUserDetails({
+          username: `${details.firstName} ${details.lastName}`.trim(),
+          email: details.email,
+          phoneNumber: `${details.phoneCode}${details.phoneNumber}`.trim(),
+          bio: ""
+        });
+      }
+      // 2) читаємо прев’ю з LS
+      const pend = JSON.parse(localStorage.getItem("pendingBooking") || "null");
+      if (!pend) { toast.error("Nothing to finalise."); return; }
+      // 3) фінальна перевірка доступності
+      await checkApartmentAvailability(pend.apartmentId, pend.dateFrom, pend.dateTo);
+      // 4) створюємо бронювання
+      const created = await createBooking({
+        dateFrom: pend.dateFrom,
+        dateTo: pend.dateTo,
+        customerId: user.id,
+        apartmentId: pend.apartmentId,
+        paymentType
+      });
+      const bookingId = created?.id ?? created?.data?.id;
+      // 5) оплата (за потреби)
+      if (paymentType === "Mono") {
+        const amount = computeAmount(pend);
+        const payRes = await createUniversalPayment({ type: "Mono", amount, bookingId });
+        const url = payRes?.data?.invoiceUrl || payRes?.data?.url;
+        if (url) window.open(url, "_blank");
+        toast.success("Payment created! Complete it in the opened tab.");
+      } else {
+        toast.success("Booking created!");
+      }
+      // 6) прибирання та редирект
+      localStorage.removeItem("pendingBooking");
+      navigate("/");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to finalise booking");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (!user) return null;
   if (!booking) {
@@ -278,7 +293,7 @@ export default function Booking() {
                 </div>
               </div>
 
-              {/* Telephone — ширина як у First name + розділено на код і номер */}
+              {/* Telephone */}
               <div className="row">
                 <div className="col-12 col-md-6 mb-2">
                   <label className="form-label" style={{color: "#22614D", fontSize:22}}>Telephone number</label>
@@ -440,13 +455,10 @@ export default function Booking() {
             const apt = b?.apartment || apartmentMap[b?.apartmentId];
             const hotel = apt?.establishment;
 
-            // totals (знижка як на макеті)
-            const totalRaw = getTotalPrice(b);
-            const total = typeof totalRaw === "number" ? totalRaw : Number(totalRaw) || 0;
-            const discount = 90;
-            const finalPrice = Math.max(0, total - discount);
+            // загальна сума 
+            const totalRaw = computeAmount(b);         
 
-            // коротка адреса як у UserPanel
+            // коротка адреса 
             const fullAddr = hotel?.geolocation?.address || "";
             const shortAddr = fullAddr
             .split(",")
@@ -635,59 +647,31 @@ export default function Booking() {
                 }}
                 >
                 <div style={{ fontWeight: 700, fontSize: 20, color: "#001B48" }}>Your booking details</div>
+
+                <div className="mt-3">
+                  <label className="form-label" style={{color:"#22614D"}}>Payment method</label>
+                  <select className="form-select" value={paymentType} onChange={e=>setPaymentType(e.target.value)}>
+                    <option value="Cash">Cash</option>
+                    <option value="Mono">Mono</option>
+                    <option value="BankTransfer">Bank Transfer</option>
+                  </select>
+                </div>
+
                 <div className="d-flex justify-content-between mt-2">
-                    <div>
-                    <div style={{color: "#22614D"}}>Initial price:</div>
-                    <div style={{color: "#22614D"}}>Limited supply:</div>
+                  <div>                 
                     <div style={{color: "#22614D"}}>Total price:</div>
                     </div>
-                    <div className="text-end">
-                    <div style={{color: "#22614D"}}>
-                        {total}
-                        {b.currency ? ` ${b.currency}` : "$"}
-                    </div>
-                    <div style={{ color: "#e85d04" }}>-90$</div>
+                    <div className="text-end">                   
                     <div className="fw-bold" style={{color: "#22614D"}}>
-                        {finalPrice}
+                        {totalRaw}
                         {b.currency ? ` ${b.currency}` : "$"}
                     </div>
-                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-3 d-flex justify-content-center">
                     <button
-                        onClick={async () => {
-                        try {
-                            if (details.saveToAccount) {
-                            await updateUserDetails({
-                                username: `${details.firstName} ${details.lastName}`.trim(),
-                                email: details.email,
-                                phoneNumber: `${details.phoneCode}${details.phoneNumber}`.trim(),
-                                bio: ""
-                            });
-                            }
-                            if (isPreview) {
-                            const pend = JSON.parse(localStorage.getItem("pendingBooking") || "null");
-                            if (!pend) { toast.error("Nothing to finalise."); return; }
-                            const apt = apartmentMap[pend.apartmentId] || booking?.apartment;
-                            const nights = Math.max(1, Math.ceil((new Date(pend.dateTo) - new Date(pend.dateFrom)) / 86400000));
-                            const amount = (apt?.price || 0) * nights;
-                            const hotelId = apt?.establishment?.id;
-                            // передаємо фіналізацію назад у HotelDetails
-                            localStorage.setItem("finalizeBooking", JSON.stringify({
-                                ...pend,
-                                amount,
-                                hotelId
-                            }));
-                            localStorage.removeItem("pendingBooking");
-                            navigate(`/hotels/${hotelId}`);
-                            return;
-                            }
-                            toast.success("Data saved. You can proceed.");
-                        } catch {
-                            toast.error("Failed to save details");
-                        }
-                        }}  
+                        onClick={handlePayAndFinalise}
                         className="btn"
                         style={{
                         background: "#001B48",

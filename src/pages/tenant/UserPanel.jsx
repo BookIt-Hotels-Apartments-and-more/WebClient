@@ -4,7 +4,7 @@ import { getBookingById, deleteBooking, updateBooking } from "../../api/bookingA
 import { getUserFavorites, removeFavorite  } from "../../api/favoriteApi";
 import { getApartmentById } from "../../api/apartmentApi";
 import { toast } from 'react-toastify';
-import { uploadUserPhoto, updateUserPassword, updateUserDetails  } from "../../api/userApi";
+import { uploadUserPhoto, updateUserPassword, updateUserDetails } from "../../api/userApi";
 import AddComment from "../../components/AddComment";
 import { decodeFlagsUser, 
   ESTABLISHMENT_FEATURE_LABELS,  
@@ -25,7 +25,7 @@ const UserPanel = () => {
   const [editedUser, setEditedUser] = useState({
     username: user?.username || "",
     email: user?.email || "",
-    phoneNumber: user?.phoneNumber,
+    phoneNumber: user?.phoneNumber || "",
     photoBase64: "",
     photoPreview: user?.photoUrl || "",
   });
@@ -52,12 +52,10 @@ const UserPanel = () => {
     setLoading(true);
     if (!user?.id) return;
     const fetchData = async () => {
-      try {
-        const [fullUser, favData] = await Promise.all([
-          getUserById(user.id),
-          getUserFavorites(user.id),
-        ]);
-        const bookingIds = (fullUser?.bookings || [])
+      try {        
+        const favData = await getUserFavorites();
+        const localUser = JSON.parse(localStorage.getItem("user") || "null");
+        const bookingIds = (localUser?.bookings || [])
           .map(b => (typeof b === "number" ? b : b?.id))
           .filter(Boolean);
         const bookData = bookingIds.length
@@ -134,7 +132,6 @@ const UserPanel = () => {
       setLoading(false);
     }
   };
-
 
   const handleCancel = () => {
     setEditedUser({
@@ -459,6 +456,7 @@ const UserPanel = () => {
                         type="file"
                         accept="image/*"
                         className="form-control"
+                        style={{borderRadius:16}}
                         onChange={handlePhotoChange}
                       />
                       {editedUser.photoPreview && (
@@ -490,8 +488,9 @@ const UserPanel = () => {
                         </div>
                       )}
 
-                      <button className="btn btn-outline-primary btn-sm" style={{ minWidth: 80, marginTop: 20 }}                        
-                        onClick={() => setPwModal(m => ({ ...m, show: true, error: "" }))}
+                      <button className="btn btn-outline-primary btn-sm" 
+                      style={{ minWidth: 280, marginTop: 20, minHeight:50, fontSize: 18, borderRadius: 16 }}                        
+                      onClick={() => setPwModal(m => ({ ...m, show: true, error: "" }))}
                       >
                         Change password
                       </button>
@@ -554,10 +553,10 @@ const UserPanel = () => {
 
                   {/* Buttons */}
                   <div className="d-flex gap-2" style={{ marginTop: 12 }}>
-                    <button className="btn btn-sm" style={{ minWidth: 80, background: '#02457A', color: 'white' }} onClick={handleSave}>
+                    <button className="btn btn-sm" style={{ minWidth: "49%", background: '#02457A', color: 'white' }} onClick={handleSave}>
                       Save
                     </button>
-                    <button className="btn btn-outline-primary btn-sm" style={{ minWidth: 80 }} onClick={handleCancel}>
+                    <button className="btn btn-outline-primary btn-sm" style={{ minWidth: "49%" }} onClick={handleCancel}>
                       Cancel
                     </button>
                   </div>
@@ -580,10 +579,10 @@ const UserPanel = () => {
                       
                       <button
                         className="btn btn-outline-primary btn-sm mt-4"
-                        style={{ borderRadius: 12, fontWeight: 600, minWidth: 80 }}
+                        style={{ borderRadius: 12, fontWeight: 600, minWidth: "50%" }}
                         onClick={() => setIsEditing(true)}
                       >
-                        Edit
+                        Edit personal information
                       </button>
                     </>
                   )}
@@ -825,9 +824,7 @@ const UserPanel = () => {
                             </div>
                           ));
                         })()}
-                      </div>
-
-                      
+                      </div>                      
                       <div className="mt-2 text-muted" style={{ fontSize: 13}}>Your apartment: {apt?.name}</div>
                       {/* Вивід зручностей апартамента з іконками */}
                       {apt?.features && (
@@ -871,9 +868,6 @@ const UserPanel = () => {
                           })()}
                         </div>
                       )}
-
-
-
 
                       <hr></hr>
                       {/* --- Booking details --- */}
@@ -932,7 +926,7 @@ const UserPanel = () => {
                       >
                         <button
                           className="btn btn-outline-primary btn-sm"
-                          style={{ borderRadius: 10, minWidth: 110, fontWeight: 600 }}
+                          style={{ borderRadius: 10, minWidth: "30%", fontWeight: 600 }}
                           onClick={() => openEditModal(booking)}
                         >
                           Edit
@@ -940,7 +934,7 @@ const UserPanel = () => {
 
                         <button
                           className="btn btn-outline-danger btn-sm"
-                          style={{ borderRadius: 10, minWidth: 110, fontWeight: 600 }}
+                          style={{ borderRadius: 10, minWidth: "30%", fontWeight: 600 }}
                           onClick={() => handleCancelBooking(booking.id)}
                         >
                           Cancel booking
@@ -949,7 +943,7 @@ const UserPanel = () => {
                         {canAddReview && (
                           <button
                             className="btn btn-success btn-sm"
-                            style={{ borderRadius: 10, minWidth: 110, fontWeight: 600 }}
+                            style={{ borderRadius: 10, minWidth: "30%", fontWeight: 600 }}
                             onClick={() => setAddReviewModal({ show: true, booking })}
                           >
                             Add Review

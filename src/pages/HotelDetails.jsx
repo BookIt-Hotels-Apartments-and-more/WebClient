@@ -1,18 +1,16 @@
 import { useParams, useNavigate } from "react-router-dom";
 import React, { useEffect, useState, useRef  } from "react";
 import { axiosInstance } from "../api/axios";
-import { createBooking, getApartmentAvailability, checkApartmentAvailability } from "../api/bookingApi";
+import { getApartmentAvailability } from "../api/bookingApi"
 import { getAllReviews } from "../api/reviewApi";
 import BookingBannerForm from '../components/BookingBannerForm';
 import { getUserFavorites } from "../api/favoriteApi";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import {
   ESTABLISHMENT_FEATURE_LABELS,
-  APARTMENT_FEATURE_LABELS,
-  PAYMENT_TYPE, decodeFlagsUser 
+  APARTMENT_FEATURE_LABELS, decodeFlagsUser 
 } from '../utils/enums';
 import { toast } from 'react-toastify';
-import { createUniversalPayment } from "../api/paymentApi";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { getApiErrorMessage } from "../utils/apiError";
@@ -27,8 +25,7 @@ const HotelDetails = () => {
   const { id } = useParams();
   const [hotel, setHotel] = useState(null);
   const [apartments, setApartments] = useState([]);
-  const [search, setSearch] = useState("");  
-  const [bookings, setBookings] = useState([]);
+  const [search, setSearch] = useState("");
   const [bookingApartmentId, setBookingApartmentId] = useState(null);
   const [bookingForm, setBookingForm] = useState({
     dateFrom: "",
@@ -36,13 +33,11 @@ const HotelDetails = () => {
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "null");
-  const finalizeOnceRef = useRef(false);
   const [favorites, setFavorites] = useState([]);
   const hotelIsFavorite = isHotelFavorite(favorites, Number(id));
   const [photoIndex, setPhotoIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("about");
   const [previewIndexes, setPreviewIndexes] = useState({});
-  const [paymentType, setPaymentType] = useState("Cash");
   const [unavailableDates, setUnavailableDates] = useState([]);
   const disabledDates = unavailableDates.map((d) => {
     const nd = new Date(d);
@@ -195,7 +190,6 @@ const HotelDetails = () => {
     try {
       const isoFrom = `${df}T00:00:00`;
       const isoTo   = `${dt}T00:00:00`;
-      await checkApartmentAvailability(apartmentId, isoFrom, isoTo);
 
       const apt = apartments.find(a => a.id === apartmentId);
       const nights = Math.max(1, Math.ceil((new Date(isoTo) - new Date(isoFrom)) / 86400000));
@@ -206,7 +200,6 @@ const HotelDetails = () => {
         apartmentId,
         dateFrom: isoFrom,
         dateTo: isoTo,
-        paymentType,
         amount
       }));
 
@@ -216,52 +209,7 @@ const HotelDetails = () => {
       const msg = getApiErrorMessage(err);
       toast.error(<div style={{ whiteSpace: "pre-wrap" }}>{msg}</div>, { autoClose: 12000 });
     }
-  };
-
-  useEffect(() => {
-    if (!apartments?.length) return;
-    if (finalizeOnceRef.current) return;
-
-    const finStr = localStorage.getItem("finalizeBooking");
-    if (!finStr) return;
-    const fin = JSON.parse(finStr);
-    if (String(fin.hotelId) !== String(id)) return;
-
-    finalizeOnceRef.current = true;
-    localStorage.removeItem("finalizeBooking");
-
-    (async () => {
-      try {
-        setBookingLoading(true);
-        await checkApartmentAvailability(fin.apartmentId, fin.dateFrom, fin.dateTo);
-        // створення бронювання
-        const created = await createBooking({
-          dateFrom: fin.dateFrom,
-          dateTo: fin.dateTo,
-          customerId: JSON.parse(localStorage.getItem("user") || "{}").id,
-          apartmentId: fin.apartmentId,
-          paymentType: fin.paymentType,
-        });
-        const bookingId = created?.id ?? created?.data?.id;
-        // платіж
-        const nights = Math.max(1, Math.ceil((new Date(fin.dateTo) - new Date(fin.dateFrom)) / 86400000));
-        const apt = apartments.find(a => a.id === fin.apartmentId);
-        const amount = fin.amount ?? ((apt?.price || 0) * nights);
-        const payRes = await createUniversalPayment({ type: PAYMENT_TYPE[fin.paymentType], amount, bookingId });
-        if (fin.paymentType === "Mono") {
-          const url = payRes?.data?.invoiceUrl || payRes?.data?.url;
-          if (url) window.open(url, "_blank");
-          toast.success("Payment created! Complete it in the opened tab.", { autoClose: 10000 });
-        } else {
-          toast.success("Booking successful! Details in your profile.", { autoClose: 9000 });
-        }
-      } catch {
-        toast.error("Failed to finalise booking.", { autoClose: 10000 });
-      } finally {
-        setBookingLoading(false);
-      }
-    })();
-  }, [id, apartments?.length]);
+  };  
 
   const RatingCategory = ({ label, value }) => (
     <div className="mb-3">
@@ -338,120 +286,7 @@ const HotelDetails = () => {
         >
           TRAVEL WITH US
         </span>
-      </div>
-
-      {/* Модалка для бронювання */}
-      {bookingApartmentId && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(36, 67, 96, 0.29)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "20 20 15px 13px #D6E7EE"
-          }}
-          onClick={() => setBookingApartmentId(null)}
-        >
-          <div
-            className="card px-4 py-3"
-            style={{
-              minWidth: 370,
-              maxWidth: 460,
-              width: "90vw",
-              borderRadius: 20,
-              boxShadow: "0 0 24px 3px #03467244",
-              position: "relative",
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setBookingApartmentId(null)}
-              style={{
-                position: "absolute",
-                right: 14,
-                top: 10,
-                border: "none",
-                background: "transparent",
-                fontSize: 26,
-                color: "#bbb",
-                cursor: "pointer",
-                zIndex: 10,
-              }}
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <h5 className="fw-bold mb-3">
-              Book this room{" "}
-              <span style={{ fontWeight: 400, color: "#0c5799" }}>
-                ({apartments.find(a => a.id === bookingApartmentId)?.name || ""})
-              </span>
-            </h5>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                handleBooking(bookingApartmentId, bookingForm, paymentType);
-              }}
-            >
-              <div className="row mb-2">
-                <div className="col">
-                  <label className="form-label">Date from</label>
-                  <DatePicker
-                    selected={parseLocalDate(bookingForm.dateFrom)}
-                    onChange={date => setBookingForm(f => ({ ...f, dateFrom: date ? toLocalDateString(date) : "" }))}
-                    excludeDates={disabledDates}
-                    minDate={new Date()}
-                    placeholderText="Select start date"
-                    dateFormat="yyyy-MM-dd"
-                    className="form-control"
-                  />
-                </div>
-                <div className="col">
-                  <label className="form-label">Date to</label>
-                  <DatePicker
-                    selected={parseLocalDate(bookingForm.dateTo)}
-                    onChange={date => setBookingForm(f => ({ ...f, dateTo: date ? toLocalDateString(date) : "" }))}
-                    excludeDates={disabledDates}
-                    minDate={bookingForm.dateFrom ? parseLocalDate(bookingForm.dateFrom) : new Date()}
-                    placeholderText="Select end date"
-                    dateFormat="yyyy-MM-dd"
-                    className="form-control"
-                  />
-                </div>
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Payment method:</label>
-                <select
-                  className="form-select"
-                  value={paymentType}
-                  onChange={e => setPaymentType(e.target.value)}
-                >
-                  <option value="Cash">Cash</option>
-                  <option value="Mono">Mono</option>
-                  <option value="BankTransfer">Bank Transfer</option>
-                </select>
-              </div>
-              <div className="d-flex justify-content-end gap-3">
-                <button className="btn btn-success" disabled={bookingLoading}>Confirm booking</button>
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary"
-                  onClick={() => setBookingApartmentId(null)}
-                  disabled={bookingLoading}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      </div>      
 
       <div className="container py-4">    
       {/* 1. БАНЕР ІНФО (загальне фото + назва + рейтинг + ціна) */}
@@ -971,7 +806,105 @@ const HotelDetails = () => {
       </div>
     </div>
 
-          {/* модалка виводу відгуку */}
+    {/* Модалка для бронювання */}
+      {bookingApartmentId && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(36, 67, 96, 0.29)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "20 20 15px 13px #D6E7EE"
+          }}
+          onClick={() => setBookingApartmentId(null)}
+        >
+          <div
+            className="card px-4 py-3"
+            style={{
+              minWidth: 370,
+              maxWidth: 460,
+              width: "90vw",
+              borderRadius: 20,
+              boxShadow: "0 0 24px 3px #03467244",
+              position: "relative",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setBookingApartmentId(null)}
+              style={{
+                position: "absolute",
+                right: 14,
+                top: 10,
+                border: "none",
+                background: "transparent",
+                fontSize: 26,
+                color: "#bbb",
+                cursor: "pointer",
+                zIndex: 10,
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h5 className="fw-bold mb-3">
+              Book this room{" "}
+              <span style={{ fontWeight: 400, color: "#0c5799" }}>
+                ({apartments.find(a => a.id === bookingApartmentId)?.name || ""})
+              </span>
+            </h5>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                handleBooking(bookingApartmentId, bookingForm);
+              }}
+            >
+              <div className="row mb-2">
+                <div className="col">
+                  <label className="form-label">Date from</label>
+                  <DatePicker
+                    selected={parseLocalDate(bookingForm.dateFrom)}
+                    onChange={date => setBookingForm(f => ({ ...f, dateFrom: date ? toLocalDateString(date) : "" }))}
+                    excludeDates={disabledDates}
+                    minDate={new Date()}
+                    placeholderText="Select start date"
+                    dateFormat="yyyy-MM-dd"
+                    className="form-control"
+                  />
+                </div>
+                <div className="col">
+                  <label className="form-label">Date to</label>
+                  <DatePicker
+                    selected={parseLocalDate(bookingForm.dateTo)}
+                    onChange={date => setBookingForm(f => ({ ...f, dateTo: date ? toLocalDateString(date) : "" }))}
+                    excludeDates={disabledDates}
+                    minDate={bookingForm.dateFrom ? parseLocalDate(bookingForm.dateFrom) : new Date()}
+                    placeholderText="Select end date"
+                    dateFormat="yyyy-MM-dd"
+                    className="form-control"
+                  />
+                </div>
+              </div>              
+              <div className="d-flex justify-content-center gap-3">
+                <button className="btn btn-success" disabled={bookingLoading}>Confirm booking</button>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setBookingApartmentId(null)}
+                  disabled={bookingLoading}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* модалка виводу відгуку */}
       {showReviewsModal && (
       <div
         style={{
