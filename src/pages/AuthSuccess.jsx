@@ -10,7 +10,11 @@ const AuthSuccess = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    axiosInstance.defaults.withCredentials = true;
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get("token");
+
+    localStorage.setItem("token", token);
+    axiosInstance.defaults.headers["Authorization"] = `Bearer ${token}`;
 
     getCurrentUser()
       .then((user) => {
