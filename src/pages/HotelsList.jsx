@@ -257,7 +257,7 @@ export default function HotelsList() {
                   <div className="col-12 mb-4" key={hotel.id}>
                     <div className="card flex-row h-100 " style={{ minHeight: 220, borderRadius: 12, overflow: 'hidden', boxShadow: "0 0 3px 2px #9ad8ef" }}>
                       <div className="d-flex align-items-center" style={{
-                        minWidth: 220, minHeight: 220, maxHeight: 220, background: "#f8f9fa",
+                        minWidth: 320, minHeight: 220, maxHeight: 220, background: "#f8f9fa",
                         position: "relative", overflow: "hidden"
                       }}>
                         <img

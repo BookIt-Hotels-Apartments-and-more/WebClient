@@ -98,97 +98,113 @@ const EditApartment = () => {
   if (loading) return <div className="container mt-4">Loading...</div>;
 
   return (
-    <div className="container mt-4">
-      <h3>✏️ Edit apartment</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="mb-3">
-          <label className="form-label">Name apartment</label>
-          <input
-            type="text"
-            name="name"
-            className="form-control"
-            value={apartment.name}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="mb-3">
-          <label className="form-label">Area</label>
-          <input
-            type="number"
-            name="area"
-            className="form-control"
-            value={apartment.area}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="mb-3">
-          <label className="form-label">Price</label>
-          <input
-            type="number"
-            name="price"
-            className="form-control"
-            value={apartment.price}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Features</label>
-          <div className="d-flex flex-wrap gap-3 mt-1">
-            {Object.keys(APARTMENT_FEATURE_LABELS).map(key => (
-              <label key={key} style={{ fontWeight: 400, marginRight: 16 }}>
-                <input
-                  type="checkbox"
-                  checked={!!apartment.features[key]}
-                  onChange={() =>
-                    setApartment(ap => ({
-                      ...ap,
-                      features: { ...ap.features, [key]: !ap.features[key] }
-                    }))
-                  }
-                /> {key}
-              </label>
-            ))}
-
-          </div>
-        </div>
-
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          className="form-control mb-3"
-          onChange={handleFileChange}
-        />
-
-        <div className="mb-3 d-flex flex-wrap">
-          {existingPhotos.map((p, idx) => (
-            <div key={p.id} className="me-2 mb-2 position-relative">
-              <img src={p.blobUrl} alt="apartment" width={80} height={80} style={{ objectFit: "cover", borderRadius: 8, border: '1px solid #eee' }} />
-              <button type="button" className="btn btn-sm btn-danger position-absolute top-0 end-0" style={{zIndex:1}} onClick={() => handleDeletePhoto(idx, true)}>×</button>
+    <div style={{ position: "relative", minHeight: "100vh", zIndex: 2, paddingBottom: 40, marginTop: -110 }}>
+      <div
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          paddingTop: 32,
+          paddingBottom: 20,
+          background:
+            "linear-gradient(180deg, rgba(3,173,179,0.18) 0%, rgba(214,231,238,1) 30%, rgba(214,231,238,0) 50%)",
+        }}
+      >
+        <div className="container mt-4">
+          <h3 style={{marginTop: 100}}>✏️ Edit apartment</h3>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <label className="form-label">Name apartment</label>
+              <input
+                type="text"
+                name="name"
+                className="form-control"
+                value={apartment.name}
+                onChange={handleChange}
+                required
+              />
             </div>
-          ))}
-          {newPhotos.map((p, idx) => (
-            <div key={`new_${idx}`} className="me-2 mb-2 position-relative">
-              <img src={p} alt="new apartment" width={80} height={80} style={{ objectFit: "cover", borderRadius: 8, border: '1px solid #eee' }} />
-              <button type="button" className="btn btn-sm btn-danger position-absolute top-0 end-0" style={{zIndex:1}} onClick={() => handleDeletePhoto(idx, false)}>×</button>
+            <div className="mb-3">
+              <label className="form-label">Area</label>
+              <input
+                type="number"
+                name="area"
+                className="form-control"
+                value={apartment.area}
+                onChange={handleChange}
+                required
+              />
             </div>
-          ))}
+            <div className="mb-3">
+              <label className="form-label">Price</label>
+              <input
+                type="number"
+                name="price"
+                className="form-control"
+                value={apartment.price}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label">Features</label>
+              <div className="d-flex flex-wrap gap-3 mt-1">
+                {Object.keys(APARTMENT_FEATURE_LABELS).map(key => (
+                  <label key={key} style={{ fontWeight: 400, marginRight: 16 }}>
+                    <input
+                      type="checkbox"
+                      style={{marginRight: 6}}
+                      checked={!!apartment.features[key]}
+                      onChange={() =>
+                        setApartment(ap => ({
+                          ...ap,
+                          features: { ...ap.features, [key]: !ap.features[key] }
+                        }))
+                      }
+                    /> {key}
+                  </label>
+                ))}
+
+              </div>
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="form-control mb-3"
+              onChange={handleFileChange}
+            />
+
+            <div className="mb-3 d-flex flex-wrap">
+              {existingPhotos.map((p, idx) => (
+                <div key={p.id} className="me-2 mb-2 position-relative">
+                  <img src={p.blobUrl} alt="apartment" width={80} height={80} style={{ objectFit: "cover", borderRadius: 8, border: '1px solid #eee' }} />
+                  <button type="button" className="btn btn-sm btn-danger position-absolute top-0 end-0" style={{zIndex:1}} onClick={() => handleDeletePhoto(idx, true)}>×</button>
+                </div>
+              ))}
+              {newPhotos.map((p, idx) => (
+                <div key={`new_${idx}`} className="me-2 mb-2 position-relative">
+                  <img src={p} alt="new apartment" width={80} height={80} style={{ objectFit: "cover", borderRadius: 8, border: '1px solid #eee' }} />
+                  <button type="button" className="btn btn-sm btn-danger position-absolute top-0 end-0" style={{zIndex:1}} onClick={() => handleDeletePhoto(idx, false)}>×</button>
+                </div>
+              ))}
+            </div>
+
+            <button className="btn btn-success">Save</button>
+            <button
+              type="button"
+              className="btn btn-secondary ms-2"
+              onClick={() => navigate(-1)}
+            >
+              Back
+            </button>
+          </form>
         </div>
 
-        <button className="btn btn-success">Save</button>
-        <button
-          type="button"
-          className="btn btn-secondary ms-2"
-          onClick={() => navigate(-1)}
-        >
-          Back
-        </button>
-      </form>
+      </div>
     </div>
+    
   );
 };
 

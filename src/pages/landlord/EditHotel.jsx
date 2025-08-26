@@ -5,9 +5,10 @@ import { getEstablishmentById, updateEstablishment } from "../../api/establishme
 import GeoPicker from "../../components/GeoPicker";
 import {
   ESTABLISHMENT_TYPE_LABELS,
-  ESTABLISHMENT_FEATURE_LABELS
+  ESTABLISHMENT_FEATURE_LABELS,
+  normalizeFeaturesForCheckboxes,
+  featuresObjectToBitmask,
 } from '../../utils/enums';
-import { APARTMENT_FEATURE_LABELS, normalizeFeaturesForCheckboxes } from "../../utils/enums";
 
 const EditHotel = () => {
   const { id } = useParams();
@@ -22,14 +23,13 @@ const EditHotel = () => {
   const [checkInMinute, setCheckInMinute] = useState(0);
   const [checkOutHour, setCheckOutHour] = useState(12);
   const [checkOutMinute, setCheckOutMinute] = useState(0);
-  const featuresEnumKeys = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
 
 
   const [hotel, setHotel] = useState({
     name: "",
     description: "",
     type: 0, 
-    features: 0, 
+    features: {},
     checkInTime: { hour: 14, minute: 0 },
     checkOutTime: { hour: 12, minute: 0 },
     ownerId: user?.id || null,
@@ -40,28 +40,18 @@ const EditHotel = () => {
     value
   }));
 
-  const ESTABLISHMENT_FEATURES = Object.entries(ESTABLISHMENT_FEATURE_LABELS).map(([label, idx]) => ({
-    label,
-    value: 1 << idx
-  }));
-
   useEffect(() => {
     getEstablishmentById(id)
       .then((data) => {
-        let featuresValue = 0;
-        const enumKeys = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
-        if (typeof data.features === 'object' && data.features !== null) {
-          enumKeys.forEach((key, idx) => {
-            if (data.features[key]) featuresValue |= (1 << idx);
-          });
-        } else {
-          featuresValue = data.features ?? 0;
-        }
+        
         setHotel({
           name: data.name || "",
           description: data.description || "",
-          type: data.type ?? 0,           
-          features: featuresValue,  
+          type: data.type ?? 0,
+          features: normalizeFeaturesForCheckboxes(
+          data.features,
+          ESTABLISHMENT_FEATURE_LABELS
+        ),
           ownerId: data.ownerId || user?.id,
           createdAt: data.createdAt,
           rating: data.rating || null,
@@ -112,12 +102,16 @@ const EditHotel = () => {
         .map(p => p.id)
         .filter(id => typeof id === "number" && !isNaN(id));
 
+      const featuresBitmask = featuresObjectToBitmask(
+        hotel.features,
+        ESTABLISHMENT_FEATURE_LABELS
+      );
 
       const payload = {
         name: hotel.name,
         description: hotel.description,
         type: hotel.type,
-        features: hotel.features,
+        features: featuresBitmask,
         checkInTime: `${checkInHour.toString().padStart(2, '0')}:${checkInMinute.toString().padStart(2, '0')}:00`,
         checkOutTime: `${checkOutHour.toString().padStart(2, '0')}:${checkOutMinute.toString().padStart(2, '0')}:00`,
         ownerId: hotel.ownerId || user?.id,
@@ -141,8 +135,19 @@ const EditHotel = () => {
   };
 
   return (
-    <div className="container mt-4">
-      <h3>✏️ Edit hotel</h3>
+    <div style={{ position: "relative", minHeight: "100vh", zIndex: 2, paddingBottom: 40, marginTop: -110 }}>
+      <div
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          paddingTop: 32,
+          paddingBottom: 20,
+          background:
+            "linear-gradient(180deg, rgba(3,173,179,0.18) 0%, rgba(214,231,238,1) 30%, rgba(214,231,238,0) 50%)",
+        }}
+      >
+        <div className="container mt-4">
+      <h3 style={{marginTop: 120}}>✏️ Edit Hotel</h3>
       <div style={{marginTop: 40}}>
         <b style={{fontWeight: 200}}>Name Hotel:</b>
       </div>
@@ -248,23 +253,22 @@ const EditHotel = () => {
         <div className="mb-2">
           <label style={{ fontWeight: 500, marginTop: 20, marginBlockEnd: 10 }}>Features:</label>
           <div className="d-flex flex-wrap gap-2">
-            {ESTABLISHMENT_FEATURES.map(opt => (
-              <label key={opt.value} className="d-flex align-items-center" style={{ minWidth: 160 }}>
+            {Object.keys(ESTABLISHMENT_FEATURE_LABELS).map(label => (
+              <label key={label} className="d-flex align-items-center" style={{ minWidth: 160 }}>
                 <input
                   type="checkbox"
-                  checked={(hotel.features & opt.value) !== 0}
-                  onChange={e => {
-                    setHotel(hotel => ({
-                      ...hotel,
-                      features: e.target.checked
-                        ? hotel.features | opt.value
-                        : hotel.features & ~opt.value
-                    }));
-                  }}
+                  checked={!!hotel.features[label]}
+                  onChange={() =>
+                    setHotel(prev => ({
+                      ...prev,
+                      features: { ...prev.features, [label]: !prev.features[label] }
+                    }))
+                  }
                 />
-                <span className="ms-2">{opt.label}</span>
+                <span className="ms-2">{label}</span>
               </label>
             ))}
+
           </div>
         </div>
 
@@ -273,10 +277,6 @@ const EditHotel = () => {
           <b style={{fontWeight: 200}}>Description:</b>
         </div>
         <textarea name="description" style={{marginTop: 10}} value={hotel.description} onChange={handleChange} className="form-control mb-3" />
-
-        
-        
-
 
         <input
           type="file"
@@ -309,6 +309,11 @@ const EditHotel = () => {
         </button>
       </form>
     </div>
+
+      </div>
+    </div>
+
+    
   );
 };
 

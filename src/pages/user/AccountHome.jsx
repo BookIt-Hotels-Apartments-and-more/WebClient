@@ -35,7 +35,7 @@ const Card = ({ children, className = "", style = {} }) => (
 
 const CURRENT_LVL = 3;
 const MAX_LVL = 7;
-const pct = (CURRENT_LVL / MAX_LVL) * 100; // позиція прапорця/лейбла
+const pct = (CURRENT_LVL / MAX_LVL) * 100;
 
 
 export default function AccountHome() {

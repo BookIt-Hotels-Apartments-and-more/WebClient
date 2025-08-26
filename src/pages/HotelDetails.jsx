@@ -85,17 +85,6 @@ const HotelDetails = () => {
   }, [id]);
 
   useEffect(() => {
-  axiosInstance.get("/api/bookings")
-    .then((res) => {
-      const filtered = res.data.filter(
-        b => b.apartment?.establishment?.id == id
-      );
-      setBookings(filtered);
-    })
-    .catch(() => setBookings([]));
-}, [id]);
-
-  useEffect(() => {
     const fetchReviews = async () => {
       try {
         const all = await getAllReviews();
@@ -185,10 +174,10 @@ const HotelDetails = () => {
       toast.warn("To book a room, log in to your account!", { autoClose: 10000 });
       return;
     }
-     const stored = JSON.parse(localStorage.getItem("bookingForm") || "{}");
+    const stored = JSON.parse(localStorage.getItem("bookingForm") || "{}");
     const rawFrom = bookingForm.dateFrom || stored.checkIn || "";
     const rawTo   = bookingForm.dateTo   || stored.checkOut || "";
-     const df = rawFrom.slice(0, 10);
+    const df = rawFrom.slice(0, 10);
     const dt = rawTo.slice(0, 10);
      if (!df || !dt) {
       toast.warn("Please select dates for booking.", { autoClose: 10000 });
@@ -203,7 +192,6 @@ const HotelDetails = () => {
       return;
     }
 
-    // НІЧОГО НЕ СТВОРЮЄМО. Лише перевіряємо доступність та зберігаємо "чернетку".
     try {
       const isoFrom = `${df}T00:00:00`;
       const isoTo   = `${dt}T00:00:00`;
@@ -480,7 +468,7 @@ const HotelDetails = () => {
             {/* Вивід Services з іконками */}
             <div
               className="position-absolute top-0 start-0 w-100 px-3 pt-3 d-flex flex-wrap gap-2"
-              style={{ zIndex: 2 }}
+              style={{ zIndex: 2, marginRight: 20 }}
             >
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                 {(() => {
@@ -519,6 +507,36 @@ const HotelDetails = () => {
               </div>
             </div>
 
+            {/* Кнопка favorite */}
+               <button
+                style={{
+                  position: "absolute", top: 18, right: 18, zIndex: 4,
+                  background: "rgba(255,255,255,0.95)", borderRadius: "50%",
+                  border: "none", width: 40, height: 40, display: "flex",
+                  alignItems: "center", justifyContent: "center", boxShadow: "0 0 12px #eee",
+                }}
+                onClick={() => {
+                    const token = localStorage.getItem("token");
+                    if (!user?.id || !token) {
+                      toast.info("Sign in to manage favorites.");
+                      return;
+                    }
+                    toggleHotelFavorite({
+                      user,
+                      favorites,
+                      setFavorites,
+                      establishmentId: Number(id),
+                    });
+                  }}
+                title={hotelIsFavorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                <img
+                  src="/images/favorite.png"
+                  alt="favorite"
+                  style={{ width: 40, filter: hotelIsFavorite ? "none" : "grayscale(1)" }}
+                />
+              </button>
+
             {/* Назва, рейтинг та ціна поверх фото */}
             <div className="position-absolute bottom-0 start-0 w-100 p-4" style={{ background: "rgba(0,0,0,0.05)" }}>
               <div className="d-flex align-items-center mb-2">
@@ -549,29 +567,7 @@ const HotelDetails = () => {
                 gap: 10
               }}
             >
-              {/* подивитись, куди перенести обране */}
-               <button
-                style={{
-                  position: "absolute", top: 18, right: 18, zIndex: 4,
-                  background: "rgba(255,255,255,0.95)", borderRadius: "50%",
-                  border: "none", width: 40, height: 40, display: "flex",
-                  alignItems: "center", justifyContent: "center", boxShadow: "0 0 12px #eee"
-                }}
-                onClick={() => toggleHotelFavorite({
-                  user,
-                  favorites,
-                  setFavorites,
-                  establishmentId: Number(id),
-                })}
-                title={hotelIsFavorite ? "Remove from favorites" : "Add to favorites"}
-              >
-                <img
-                  src="/images/favorite.png"
-                  alt="favorite"
-                  style={{ width: 26, filter: hotelIsFavorite ? "none" : "grayscale(1)" }}
-                />
-              </button>
-              {/* подивитись, куди перенести обране */}
+              
 
               <button
                 className="btn  btn-sm"
@@ -708,7 +704,6 @@ const HotelDetails = () => {
         </div>
       </div>
 
-      
       <div className="row mb-4">
 
         {/* 3. ОПИС */}
@@ -750,7 +745,7 @@ const HotelDetails = () => {
                   <i className="bi bi-geo-alt" style={{color: "#22614D"}} />{" "}
                   {hotel.geolocation?.address
                     ?.split(",")
-                    ?.filter((_, i) => [0, 1, 3, 6].includes(i)) // 0 - номер, 1 - вулиця, 3 - місто, 6 - країна
+                    ?.filter((_, i) => [0, 1, 3, 6].includes(i))
                     ?.join(", ")}
                 </div>
                 <div style={{ fontSize: 24 }}>{hotel.description}</div>
@@ -834,7 +829,7 @@ const HotelDetails = () => {
             return (
               <React.Fragment key={apt.id}>
                 <div className="card mb-4" style={{ borderRadius: 16, overflow: "hidden", padding: 0, boxShadow: "0 0 5px 3px #D6E7EE" }}>
-                  {/* Apartment features with icons */}
+                  {/* Apartment зручності */}
                   {apt.features && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "10px 10px 8px" }}>
                       {(() => {

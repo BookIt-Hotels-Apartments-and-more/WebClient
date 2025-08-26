@@ -4,6 +4,7 @@ import { getEstablishmentsByOwnerFiltered } from "../../api/establishmentsApi";
 import LandEstablishmentCard from "./LandEstablishmentCard";
 import { Link } from "react-router-dom";
 import { ESTABLISHMENT_TYPE_LABELS } from "../../utils/enums";
+import { uploadUserPhoto, updateUserDetails } from "../../api/userApi";
 
 // --- Прогрес-бар ---
 function ProgressBar({ activeStep }) {
@@ -62,10 +63,11 @@ const LandPanel = () => {
     username: user?.username || "",
     email: user?.email || "",
     phoneNumber: user?.phoneNumber || "",
+    photoBase64: "",
+    photoPreview: user?.photoUrl || "",
   });
   const [selectedType, setSelectedType] = useState("");
 
-  // --- Основний useEffect для отримання готелів ---
   useEffect(() => {
     if (user?.id) {
       const filter = {};
@@ -76,7 +78,6 @@ const LandPanel = () => {
     }
   }, [user, selectedType]);
 
-  // --- Оновлення статистики (наприклад, після видалення) ---
   const reloadStats = () => {
     if (user?.id) {
       const filter = {};
@@ -87,16 +88,10 @@ const LandPanel = () => {
     }
   };
 
-  // --- Редагування юзера ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditedUser((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = () => {
-    // TODO: PATCH to backend
-    setIsEditing(false);
-  };
+  };  
 
   const handleCancel = () => {
     setEditedUser({
@@ -106,6 +101,51 @@ const LandPanel = () => {
     });
     setIsEditing(false);
   };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setEditedUser(prev => ({
+        ...prev,
+        photoBase64: ev.target.result,
+        photoPreview: ev.target.result
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    try {
+      const payload = {
+        username: (editedUser.username || "").trim(),
+        email: (editedUser.email || "").trim(),
+        phoneNumber: (editedUser.phoneNumber || "").trim(),
+        bio: (editedUser.bio || "").trim?.() || ""
+      };
+      await updateUserDetails(payload);
+
+      if (editedUser.photoBase64) {
+        await uploadUserPhoto(editedUser.photoBase64);
+      }
+
+      const current = JSON.parse(localStorage.getItem("user") || "{}");
+      const nextUser = {
+        ...current,
+        username: payload.username,
+        email: payload.email,
+        phoneNumber: payload.phoneNumber,
+        photoUrl: editedUser.photoPreview || current.photoUrl
+      };
+      localStorage.setItem("user", JSON.stringify(nextUser));
+
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Error saving profile:", err?.response || err);
+    }
+  };
+
 
   return (
     <div
@@ -156,6 +196,47 @@ const LandPanel = () => {
               <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 18 }}>Your details</div>
               {isEditing ? (
                 <>
+                  {/* Аватар + завантаження фото */}
+                <div style={{ marginBottom: 24 }}>
+                  {editedUser.photoPreview && (
+                    <img
+                      src={editedUser.photoPreview}
+                      alt="User avatar"
+                      width={90}
+                      height={90}
+                      style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", marginBottom: 12 }}
+                    />
+                  )}
+                  <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
+                    Profile photo
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="form-control"
+                    onChange={handlePhotoChange}
+                  />
+                  {editedUser.photoPreview && (
+                    <button
+                      className="btn btn-primary btn-sm mt-2"
+                      style={{ borderRadius: 10, fontWeight: 600, minWidth: 110 }}
+                      disabled={!editedUser.photoBase64}
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        try {
+                          await uploadUserPhoto(editedUser.photoBase64);
+                          // за бажанням: toast.success("Profile photo updated!")
+                        } catch (err) {
+                          console.error("Failed to upload photo", err);
+                          // за бажанням: toast.error("Failed to upload photo")
+                        }
+                      }}
+                    >
+                      Save photo
+                    </button>
+                  )}
+                </div>
+
                   {/* Full name */}
                   <div style={{ marginBottom: 24 }}>
                     <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
