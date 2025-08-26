@@ -711,7 +711,8 @@ export default function CountrySelect() {
                           </span>
                         </div>
                         <div className="d-flex align-items-end justify-content-between" style={{ gap: 8 }}>
-                          {hotelApartments.some(a => a.features?.breakfast) ? (
+                          {apartments.filter(a => a.establishment?.id === hotel.id)
+                           .some(a => a.features?.breakfast) ? (
                             <span style={{ color: "#FE7C2C", fontWeight: 300, fontSize: 13 }}>Breakfast is included</span>
                           ) : (
                             <span style={{ color: "#FE7C2C", fontWeight: 300, fontSize: 13 }}>Breakfast is paid separately</span>
