@@ -10,21 +10,18 @@ const AuthSuccess = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const token = url.searchParams.get("token");
+    axiosInstance.defaults.withCredentials = true;
 
-    if (token) {
-      localStorage.setItem("token", token);
-      axiosInstance.defaults.headers["Authorization"] = `Bearer ${token}`;
-      console.log("TOKEN from Google:", token);
-
-      getCurrentUser().then(user => {
-        console.log("USER from /auth/me:", user);
-        localStorage.setItem("user", JSON.stringify(user));
+    getCurrentUser()
+      .then((user) => {
+        localStorage.setItem('user', JSON.stringify(user));
         dispatch(setUser(user));
-        navigate("/");
+        navigate('/');
+      })
+      .catch(() => {
+        console.error('Auth error.');
+        navigate('/login');
       });
-    }
   }, [dispatch, navigate]);
 
   return <div>Logging in...</div>;
