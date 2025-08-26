@@ -1,20 +1,22 @@
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from "react-redux";
 import { FaUserCircle } from "react-icons/fa";
-import { setUser } from "../store/slices/userSlice";
 import { useNavigate } from "react-router-dom";
-import UserPanel from "../pages/tenant/UserPanel";
 import { useState, useEffect, useRef } from 'react';
 import "../styles/HeaderStyle.css";
+import { motion } from "framer-motion";
+
+
+
 
 
 const Header = () => {
   const user = useSelector((state) => state.user.user);
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [showPanel, setShowPanel] = useState(false);
   const [showRolePicker, setShowRolePicker] = useState(false);
   const rolePickerRef = useRef(null);
+  const MotionLink = motion.create(Link);
+  
 
 
   // const handleLogout = () => {
@@ -45,9 +47,28 @@ const Header = () => {
     <nav className="navbar header-absolute navbar-expand-lg" style={{ width: '100%', maxWidth: 1955, margin: '0 auto', left: 0 }}>
         <div className="d-flex justify-content-between align-items-center" style={{ width: '100%', padding: '0 40px', minHeight: 88 }}>
 
-          <Link to="/" className="navbar-brand fw-bold fs-3">
-            <img src="/images/logobookit.png" alt="Logo"/>
-          </Link>
+          <motion.div
+            initial={{ y: -8, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            whileHover={{ scale: 1.06, rotate: -2 }}
+            whileTap={{ scale: 0.96, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          >
+            <Link to="/" className="navbar-brand fw-bold fs-3">
+              <motion.img
+                src="/images/logobookit.png"
+                alt="Logo"
+                initial={{ filter: "saturate(0.7)", rotate: 0 }}
+                whileHover={{
+                  rotate: 360,
+                  transition: { type: "spring", stiffness: 200, damping: 15 },
+                }}
+                whileTap={{ rotate: 0 }}
+                animate={{ rotate: 0 }}
+                transition={{ duration: 0.3 }}
+              />
+            </Link>
+          </motion.div>
 
           <div className="d-flex align-items-center gap-4">    
             <Link to="/" className="btn main-btn">Main</Link>        
