@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { updateUser } from "../store/slices/userSlice";
 import { useLocation, useNavigate  } from "react-router-dom";
 import { toast } from "react-toastify";
 import { createBooking, checkApartmentAvailability, updateBooking } from "../api/bookingApi";
@@ -15,7 +17,8 @@ import {
 const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 
 export default function Booking() {
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const dispatch = useDispatch();
+  const user = useSelector(s => s.user.user);
   const { search } = useLocation();
   const navigate = useNavigate();
   const focusBookingId = new URLSearchParams(search).get("focus");
@@ -138,17 +141,21 @@ export default function Booking() {
     dateFrom: (b.dateFrom || "").slice(0,10),
     dateTo: (b.dateTo || "").slice(0,10),
   });
+  
 
   const closeEditModal = () => setEditModal({ show: false, booking: null, dateFrom: "", dateTo: "" });
 
   const handleEditBooking = async () => {
     const b = editModal.booking;
     if (!b) return;
-    // Якщо це попередній перегляд (ще без id) — просто міняємо локально + зберігаємо у LS
     if (!b.id) {
-        const isoFrom = `${editModal.dateFrom}T00:00:00`;
-        const isoTo   = `${editModal.dateTo}T00:00:00`;
+        const checkIn  = b?.apartment?.establishment?.checkInTime  || "15:00:00";
+        const checkOut = b?.apartment?.establishment?.checkOutTime || "11:00:00";
+        const isoFrom = `${editModal.dateFrom}T${checkIn}`;
+        const isoTo   = `${editModal.dateTo}T${checkOut}`;
+
         setBooking(prev => prev ? { ...prev, dateFrom: isoFrom, dateTo: isoTo } : prev);
+
         const pend = JSON.parse(localStorage.getItem("pendingBooking") || "{}");
         localStorage.setItem("pendingBooking", JSON.stringify({ ...pend, dateFrom: isoFrom, dateTo: isoTo }));
         toast.success("Dates updated.");
@@ -200,10 +207,14 @@ export default function Booking() {
         paymentType
       });
       const bookingId = created?.id ?? created?.data?.id;
+      if (bookingId) {
+        const nextIds = [...(user.bookings || []), bookingId];
+        dispatch(updateUser({ bookings: nextIds }));
+      }
       // 5) оплата (за потреби)
       if (paymentType === "Mono") {
-        const amount = computeAmount(pend);
-        const payRes = await createUniversalPayment({ type: "Mono", amount, bookingId });
+        const amount = computeAmount(pend);       
+        const payRes = await createUniversalPayment({ type: 1, amount, bookingId });
         const url = payRes?.data?.invoiceUrl || payRes?.data?.url;
         if (url) window.open(url, "_blank");
         toast.success("Payment created! Complete it in the opened tab.");
@@ -215,11 +226,20 @@ export default function Booking() {
       navigate("/");
     } catch (e) {
       console.error(e);
-      toast.error("Failed to finalise booking");
+      const m = e?.response?.data?.message || e?.message;
+      const details = e?.response?.data?.details;
+      if (e?.response?.status === 409 && details?.Rule === "BOOKING_CONFLICT") {
+        toast.error(
+          `Ці дати вже зайняті: ${details.DateFrom.slice(0,10)}–${details.DateTo.slice(0,10)}. ` +
+          `Конфлікт: ${details.ConflictingBookings?.join(", ")}`
+        );
+      } else {
+        toast.error(m || "Failed to finalise booking");
+      }
     } finally {
-      setSubmitting(false);
-    }
-  };
+          setSubmitting(false);
+        }
+      };
 
   if (!user) return null;
   if (!booking) {

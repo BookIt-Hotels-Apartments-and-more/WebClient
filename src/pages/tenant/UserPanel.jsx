@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { setUser, updateUser, logout  } from "../../store/slices/userSlice";
 import { getBookingById, deleteBooking, updateBooking } from "../../api/bookingApi";
 import { getUserFavorites, removeFavorite  } from "../../api/favoriteApi";
 import { getApartmentById } from "../../api/apartmentApi";
@@ -13,7 +15,8 @@ import { decodeFlagsUser,
 
 
 const UserPanel = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = useSelector(s => s.user.user);
+  const dispatch = useDispatch();
   if (!user) return null;
 
   const navigate = useNavigate();
@@ -53,8 +56,7 @@ const UserPanel = () => {
     const fetchData = async () => {
       try {        
         const favData = await getUserFavorites();
-        const localUser = JSON.parse(localStorage.getItem("user") || "null");
-        const bookingIds = (localUser?.bookings || [])
+        const bookingIds = (user?.bookings || [])
           .map(b => (typeof b === "number" ? b : b?.id))
           .filter(Boolean);
         const bookData = bookingIds.length
@@ -62,12 +64,7 @@ const UserPanel = () => {
           : [];
         setBookings(bookData);
         setFavorites(favData);
-        const ids = [
-          ...new Set([
-            ...bookData.map((b) => b.apartmentId),
-            ...favData.map((f) => f.apartmentId),
-          ]),
-        ].filter(Boolean);
+        const ids = [...new Set(bookData.map(b => b.apartmentId))].filter(Boolean);
         await loadApartments(ids);
       } catch (err) {
         console.error("Loading error:", err);
@@ -76,7 +73,7 @@ const UserPanel = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [user?.id, user?.bookings]);
 
   const loadApartments = async (ids) => {
     const newMap = {};
@@ -111,8 +108,7 @@ const UserPanel = () => {
       if (editedUser.photoBase64) {
         await uploadUserPhoto(editedUser.photoBase64);
       }
-
-      const current = JSON.parse(localStorage.getItem("user") || "{}");
+      
       const nextUser = {
         ...current,
         username: payload.username,
@@ -120,8 +116,7 @@ const UserPanel = () => {
         phoneNumber: payload.phoneNumber,
         photoUrl: editedUser.photoPreview || current.photoUrl
       };
-      localStorage.setItem("user", JSON.stringify(nextUser));
-
+      dispatch(setUser(nextUser));
       setIsEditing(false);
       toast.success("Profile saved!", { autoClose: 3000 });
     } catch (err) {
@@ -144,6 +139,9 @@ const UserPanel = () => {
   const handleDeleteFavorite = async (favoriteId) => {
     await removeFavorite(favoriteId);
     setFavorites(favorites.filter((f) => f.id !== favoriteId));
+    dispatch(updateUser({
+      favorites: (user.favorites || []).filter(id => id !== favoriteId)
+    }));
     toast.success("Removed from favorites", { autoClose: 4000 });
   };
 
@@ -182,6 +180,9 @@ const UserPanel = () => {
     try {
       await deleteBooking(bookingId);
       setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+      dispatch(updateUser({
+        bookings: (user.bookings || []).filter(id => id !== bookingId)
+      }));
       toast.success("Booking cancelled successfully!", { autoClose: 4000 });
     } catch (err) {
       toast.error("Unable to cancel reservation!", { autoClose: 4000 });
@@ -284,6 +285,13 @@ const UserPanel = () => {
         setPwModal(m => ({ ...m, loading: false, error: msg }));
         toast.error(msg, { autoClose: 4000 });
       }
+    };
+
+  const handleLogout = () => {
+      dispatch(logout());
+      localStorage.removeItem("user");
+      toast.success("You have been logged out", { autoClose: 2000 });
+      navigate("/");
     };
 
   // --- Розбивка бронювань
@@ -576,11 +584,21 @@ const UserPanel = () => {
                       
                       <button
                         className="btn btn-outline-primary btn-sm mt-4"
-                        style={{ borderRadius: 12, fontWeight: 600, minWidth: "50%" }}
+                        style={{ borderRadius: 12, fontWeight: 600, minWidth: 250 }}
                         onClick={() => setIsEditing(true)}
                       >
                         Edit personal information
                       </button>
+
+                      <button
+                        className="btn btn-danger btn-sm mt-4"
+                        style={{ borderRadius: 12, fontWeight: 600, minWidth: 250, marginLeft: 20 }}
+                        onClick={handleLogout}
+                      >
+                        Log Out
+                      </button>
+
+                      
                     </>
                   )}
                 </div>
@@ -607,8 +625,7 @@ const UserPanel = () => {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {favorites.map((f) => {
-                      const apt = f.apartment;
-                      const hotel = apt?.establishment;
+                      const hotel = f.establishment;
                       return (
                         <div
                           key={f.id}
@@ -627,10 +644,10 @@ const UserPanel = () => {
                         >
                           <div>
                             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                              {apt?.photos?.[0]?.blobUrl ? (
+                              {hotel?.photos?.[0]?.blobUrl ? (
                                 <img
-                                  src={apt.photos[0].blobUrl}
-                                  alt={apt.name}
+                                  src={hotel.photos[0].blobUrl}
+                                  alt={hotel.name}
                                   style={{
                                     width: 120,
                                     height: 100,
@@ -645,17 +662,12 @@ const UserPanel = () => {
                                 <span style={{ fontSize: 34, marginRight: 10 }}>🏨</span>
                               )}
                               <span style={{ fontWeight: 600, color: "#02457A", fontSize: 24 }}>
-                                {hotel?.name || "Hotel " + (hotel?.id || "?")}
+                                {hotel?.name || `Hotel ${hotel?.id ?? ""}`}
                               </span>
                             </div>
 
-                            {apt?.id && (
-                              <div style={{ color: "#555", fontSize: 15 }}>
-                                Room: <span style={{ fontWeight: 500 }}>{apt.name}</span>
-                              </div>
-                            )}
                             <div className="text-muted" style={{ fontSize: 13 }}>
-                              {hotel?.address}
+                              {hotel?.geolocation?.address || hotel?.address || ""}
                             </div>
                           </div>
                           <button
