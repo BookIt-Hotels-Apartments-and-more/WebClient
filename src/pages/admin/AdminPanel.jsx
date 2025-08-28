@@ -30,6 +30,11 @@ export default function AdminPanel() {
   const dispatch = useDispatch();
   const [active, setActive] = useState("payments");
   const [sortDesc, setSortDesc] = useState(true);
+  const [userSortDesc, setUserSortDesc] = useState(true);
+  const [hotelSortDesc, setHotelSortDesc] = useState(true);
+  const [aptSortDesc, setAptSortDesc] = useState(true);
+  const [bookingSortDesc, setBookingSortDesc] = useState(true);
+  const [reviewSortDesc, setReviewSortDesc] = useState(true);
 
   const [users, setUsers] = useState([]);
   const [hotels, setHotels] = useState([]);
@@ -43,11 +48,45 @@ export default function AdminPanel() {
   
   useEffect(() => { loadAll(); }, []);
 
+  const sortedUsers = useMemo(() => {
+    const copy = [...users];
+    copy.sort((a, b) => (userSortDesc ? b.id - a.id : a.id - b.id));
+    return copy;
+  }, [users, userSortDesc]);
+
+  const sortedHotels = useMemo(() => {
+    const arr = Array.isArray(hotels) ? [...hotels] : [];
+    arr.sort((a, b) => (hotelSortDesc ? b.id - a.id : a.id - b.id));
+    return arr;
+  }, [hotels, hotelSortDesc]);
+
+  const sortedApts = useMemo(() => {
+    const arr = Array.isArray(apartments) ? [...apartments] : [];
+    arr.sort((a, b) => (aptSortDesc ? b.id - a.id : a.id - b.id));
+    return arr;
+  }, [apartments, aptSortDesc]);
+
+  const sortedBookings = useMemo(() => {
+    const arr = Array.isArray(bookings) ? [...bookings] : [];
+    arr.sort((a, b) => (bookingSortDesc ? b.id - a.id : a.id - b.id));
+    return arr;
+  }, [bookings, bookingSortDesc]);
+
+  const fmtDate = (iso) => iso?.split("T")[0] ?? "—";
+
   const sortedPayments = useMemo(() => {
     const copy = [...payments];
     copy.sort((a,b) => sortDesc ? (b.id - a.id) : (a.id - b.id));
     return copy;
   }, [payments, sortDesc]);
+
+  const sortedReviews = useMemo(() => {
+    const arr = Array.isArray(reviews) ? [...reviews] : [];
+    arr.sort((a, b) => (reviewSortDesc ? b.id - a.id : a.id - b.id));
+    return arr;
+  }, [reviews, reviewSortDesc]);
+
+  const fmt1 = (v) => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 
   const handleLogout = () => {
     dispatch(setUser(null));
@@ -158,96 +197,247 @@ export default function AdminPanel() {
           
 
           {/* Pane: Users */}
-          {active==="users" && (
-            <div className="table-responsive">
-              <table className="table table-striped align-middle">
-                <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th></tr></thead>
-                <tbody>
-                  {users.map(u=>(
-                    <tr key={u.id}>
-                      <td>{u.id}</td>
-                      <td>{u.username}</td>
-                      <td>{u.email}</td>
-                      <td>{u.role}</td>
-                    </tr>
-                  ))}
-                  {users.length===0 && <tr><td colSpan={4} className="text-muted">There are no users</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          )}
+            {active === "users" && (
+              <div className="card">
+                <div className="card-body">
+
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <label className="form-label mb-0 me-2">Sorted ID</label>
+                    <div className="btn-group">
+                      <button
+                        className={`btn btn-sm ${userSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setUserSortDesc(true)}
+                      >
+                        Descending (9 → 1)
+                      </button>
+                      <button
+                        className={`btn btn-sm ${!userSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setUserSortDesc(false)}
+                      >
+                        Ascending (1 → 9)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle">
+                      <thead>
+                        <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th></tr>
+                      </thead>
+                      <tbody>
+                        {sortedUsers.map(u => (
+                          <tr key={u.id}>
+                            <td>{u.id}</td>
+                            <td>{u.username}</td>
+                            <td>{u.email}</td>
+                            <td>{u.role}</td>
+                          </tr>
+                        ))}
+                        {sortedUsers.length === 0 && (
+                          <tr><td colSpan={4} className="text-muted">There are no users</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="text-end">
+                    <button className="btn btn-outline-primary" onClick={loadAll}>Update</button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
 
           {/* Pane: Hotels */}
-          {active==="hotels" && (
-          <div className="table-responsive">
-            <table className="table table-striped align-middle">
-              <thead>
-                <tr><th>ID</th><th>Name</th><th>Address</th><th>Landlord</th><th>Rating</th></tr>
-                </thead>
-                  <tbody>
-                    {(hotels ?? []).map(h => (
-                      <tr key={h.id}>
-                        <td>{h.id}</td>
-                        <td>{h.name}</td>
-                        <td>{h.geolocation?.address || "—"}</td>
-                        <td>{h.owner?.username || "—"}</td>
-                        <td>{h.rating?.generalRating != null ? Number(h.rating.generalRating).toFixed(1) : "—"}</td>
-                      </tr>
-                    ))}
-                    {(!hotels || hotels.length===0) && (
-                      <tr><td colSpan={5} className="text-muted">There are no hotels</td></tr>
-                    )}
-                  </tbody>
-            </table>
-          </div>
-          )}
+            {active === "hotels" && (
+              <div className="card">
+                <div className="card-body">
+
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <label className="form-label mb-0 me-2">Sorted ID</label>
+                    <div className="btn-group">
+                      <button
+                        className={`btn btn-sm ${hotelSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setHotelSortDesc(true)}
+                      >
+                        Descending (9 → 1)
+                      </button>
+                      <button
+                        className={`btn btn-sm ${!hotelSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setHotelSortDesc(false)}
+                      >
+                        Ascending (1 → 9)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Name</th>
+                          <th>Address</th>
+                          <th>Landlord</th>
+                          <th>Rating</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedHotels.map((h) => (
+                          <tr key={h.id}>
+                            <td>{h.id}</td>
+                            <td>{h.name}</td>
+                            <td>{h.geolocation?.address || "—"}</td>
+                            <td>{h.owner?.username || "—"}</td>
+                            <td>{fmt1(h.rating?.generalRating)}</td>
+                          </tr>
+                        ))}
+                        {sortedHotels.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="text-muted">There are no hotels</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="text-end">
+                    <button className="btn btn-outline-primary" onClick={loadAll}>Update</button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
 
           {/* Pane: Apartments */}
-          {active==="apartments" && (
-            <div className="table-responsive">
-              <table className="table table-striped align-middle">
-                <thead><tr><th>ID</th><th>Name</th><th>Apartments</th><th>Price</th></tr></thead>
-                <tbody>
-                  {apartments.map(a=>(
-                    <tr key={a.id}>
-                      <td>{a.id}</td>
-                      <td>{a.name}</td>
-                      <td>{a.establishment?.name || "—"}</td>
-                      <td>{a.price != null ? `${a.price} UAH` : "—"}</td>
-                    </tr>
-                  ))}
-                  {apartments.length===0 && <tr><td colSpan={4} className="text-muted">There are no numbers</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          )}
+            {active === "apartments" && (
+              <div className="card">
+                <div className="card-body">
+
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <label className="form-label mb-0 me-2">Sorted ID</label>
+                    <div className="btn-group">
+                      <button
+                        className={`btn btn-sm ${aptSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setAptSortDesc(true)}
+                      >
+                        Descending (9 → 1)
+                      </button>
+                      <button
+                        className={`btn btn-sm ${!aptSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setAptSortDesc(false)}
+                      >
+                        Ascending (1 → 9)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle">
+                      <thead>
+                        <tr><th>ID</th><th>Name</th><th>Establishment</th><th>Price</th></tr>
+                      </thead>
+                      <tbody>
+                        {sortedApts.map(a => (
+                          <tr key={a.id}>
+                            <td>{a.id}</td>
+                            <td>{a.name}</td>
+                            <td>{a.establishment?.name ?? "—"}</td>
+                            <td>{a.price != null ? `${a.price} EUR` : "—"}</td>
+                          </tr>
+                        ))}
+                        {sortedApts.length === 0 && (
+                          <tr><td colSpan={4} className="text-muted">There are no apartments</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="text-end">
+                    <button className="btn btn-outline-primary" onClick={loadAll}>Update</button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
 
           {/* Pane: Bookings */}
-          {active==="bookings" && (
-            <div className="table-responsive">
-              <table className="table table-striped align-middle">
-                <thead><tr><th>ID</th><th>Tenant</th><th>Apartment</th><th>To</th><th>Out</th><th>Check-in</th><th></th></tr></thead>
-                <tbody>
-                  {bookings.map(b=>(
-                    <tr key={b.id}>
-                      <td>{b.id}</td>
-                      <td>{b.customer?.username || "—"}</td>
-                      <td>{b.apartment?.name || "—"}</td>
-                      <td>{b.dateFrom?.split("T")[0]}</td>
-                      <td>{b.dateTo?.split("T")[0]}</td>
-                      <td>{b.isCheckedIn ? <span className="badge bg-success">Yes</span> : <span className="badge bg-secondary">ні</span>}</td>
-                      <td className="text-end">
-                        <button className="btn btn-sm btn-outline-danger" onClick={()=>deleteBooking(b.id).then(loadAll)}>
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {bookings.length===0 && <tr><td colSpan={7} className="text-muted">No reservations</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          )}
+            {active === "bookings" && (
+              <div className="card">
+                <div className="card-body">
+
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <label className="form-label mb-0 me-2">Sorted ID</label>
+                    <div className="btn-group">
+                      <button
+                        className={`btn btn-sm ${bookingSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setBookingSortDesc(true)}
+                      >
+                        Descending (9 → 1)
+                      </button>
+                      <button
+                        className={`btn btn-sm ${!bookingSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setBookingSortDesc(false)}
+                      >
+                        Ascending (1 → 9)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Tenant</th>
+                          <th>Apartment</th>
+                          <th>To</th>
+                          <th>Out</th>
+                          <th>Check-in</th>
+                          <th className="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedBookings.map(b => (
+                          <tr key={b.id}>
+                            <td>{b.id}</td>
+                            <td>{b.customer?.username || "—"}</td>
+                            <td>{b.apartment?.name || "—"}</td>
+                            <td>{fmtDate(b.dateFrom)}</td>
+                            <td>{fmtDate(b.dateTo)}</td>
+                            <td>
+                              {b.isCheckedIn
+                                ? <span className="badge bg-success">Yes</span>
+                                : <span className="badge bg-secondary">ні</span>}
+                            </td>
+                            <td className="text-end">
+                              <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => deleteBooking(b.id).then(loadAll)}
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {sortedBookings.length === 0 && (
+                          <tr><td colSpan={7} className="text-muted">No reservations</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="text-end">
+                    <button className="btn btn-outline-primary" onClick={loadAll}>Update</button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
 
           {/* Pane: Payments */}
           {active==="payments" && (
@@ -311,29 +501,65 @@ export default function AdminPanel() {
 
 
           {/* Pane: Reviews */}
-          {active==="reviews" && (
-            <div className="table-responsive">
-              <table className="table table-striped align-middle">
-                <thead>
-                  <tr><th>ID</th><th>Tenant</th><th>Apartment</th><th>Rating</th><th>Created</th></tr>
-                </thead>
-                <tbody>
-                  {(reviews ?? []).map(r => (
-                    <tr key={r.id}>
-                      <td>{r.id}</td>
-                      <td>{r.booking?.customer?.username || r.author?.username || "—"}</td>
-                      <td>{r.booking?.apartment?.name || "—"}</td>
-                      <td>{typeof r.rating === "number" ? r.rating.toFixed(1) : "—"}</td>
-                      <td>{r.createdAt?.replace("T", " ").slice(0,19) || "—"}</td>
-                    </tr>
-                  ))}
-                  {(!reviews || reviews.length === 0) && (
-                    <tr><td colSpan={5} className="text-muted">There are no reviews</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+            {active === "reviews" && (
+              <div className="card">
+                <div className="card-body">
+
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <label className="form-label mb-0 me-2">Sorted ID</label>
+                    <div className="btn-group">
+                      <button
+                        className={`btn btn-sm ${reviewSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setReviewSortDesc(true)}
+                      >
+                        Descending (9 → 1)
+                      </button>
+                      <button
+                        className={`btn btn-sm ${!reviewSortDesc ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setReviewSortDesc(false)}
+                      >
+                        Ascending (1 → 9)
+                      </button>
+                    </div>
+                  </div>
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Tenant</th>
+                          <th>Apartment</th>
+                          <th>Rating</th>
+                          <th>Created</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedReviews.map((r) => (
+                          <tr key={r.id}>
+                            <td>{r.id}</td>
+                            <td>{r.booking?.customer?.username || r.author?.username || "—"}</td>
+                            <td>{r.booking?.apartment?.name || "—"}</td>
+                            <td>{typeof r.rating === "number" ? r.rating.toFixed(1) : "—"}</td>
+                            <td>{r.createdAt?.replace("T", " ").slice(0, 19) || "—"}</td>
+                          </tr>
+                        ))}
+                        {sortedReviews.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="text-muted">There are no reviews</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="text-end">
+                    <button className="btn btn-outline-primary" onClick={loadAll}>Update</button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
 
         </div>
       </div>   
