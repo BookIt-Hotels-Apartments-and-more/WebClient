@@ -58,7 +58,7 @@ const Register = () => {
     const apiCall = selectedRole === "Landlord" ? registerLandlord : registerUser;
     apiCall(payload)
       .then(() => {
-        toast.error("You have successfully registered in our service!", { autoClose: 4000 });
+        toast.success("You were registered successfully!", { autoClose: 4000 });
         localStorage.removeItem("registerRole");
         navigate("/login");
       })

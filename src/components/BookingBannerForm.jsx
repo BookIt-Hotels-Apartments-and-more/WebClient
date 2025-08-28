@@ -87,7 +87,7 @@ const BookingBannerForm = ({ search, setSearch }) => {
         <input
           type="text"
           className="form-control search-input"
-          placeholder="Enter directly, or name..."
+          placeholder="Enter direction, or name..."
           style={{
             maxWidth: '100%',
             minWidth: 150,
@@ -177,9 +177,9 @@ const BookingBannerForm = ({ search, setSearch }) => {
           placeholder="Peoples"
           style={{
             maxWidth: 180,
-            height: 44,
+            height: 35,
             fontSize: 16,
-            borderRadius: 11,
+            borderRadius: '0.375rem',
             border: "1.5px solid #cce2ec",
             background: "#fff",
             paddingLeft: 18,
