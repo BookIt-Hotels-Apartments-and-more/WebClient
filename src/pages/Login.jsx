@@ -5,6 +5,7 @@ import { useDispatch } from "react-redux";
 import { setUser } from "../store/slices/userSlice";
 import { axiosInstance } from "../api/axios";
 import { useLocation } from "react-router-dom";
+import { USER_ROLE } from "../utils/enums";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -51,6 +52,10 @@ const Login = () => {
       dispatch(setUser(fullUser));
 
       const whoAreYou = localStorage.getItem("whoareyou");
+
+      if (fullUser?.role === USER_ROLE.Admin) {
+        return navigate("/adminpanel");
+      }
 
       if (loginSource === "partner") {
         sessionStorage.removeItem('loginSource');

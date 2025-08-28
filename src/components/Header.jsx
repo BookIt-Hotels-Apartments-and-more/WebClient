@@ -179,6 +179,16 @@ const Header = () => {
                 >
                   Traveler
                 </button>
+
+                <button
+                  className="btn btn-outline-primary btn-sm w-100 mt-2"
+                  onClick={() => {
+                    setShowRolePicker(false);
+                    navigate("/adminpanel");
+                  }}
+                >
+                  Admin
+                </button>
               </div>
             </div>
           )}

@@ -2,7 +2,7 @@ import {axiosInstance} from "./axios";
 
 export const getAllReviews = async () => {
   const res = await axiosInstance.get("/api/reviews");
-  return res.data;
+  return Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
 };
 
 export const getReviewById = async (id) => {
