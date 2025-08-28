@@ -7,7 +7,7 @@ const GoogleCallback = () => {
     const code = params.get("code");
 
     if (code) {
-      window.location.href = `${axiosInstance.baseUrl}google-auth/callback?code=${code}`;
+      window.location.href = `${axiosInstance.defaults.baseURL}google-auth/callback?code=${code}`;
     } else {
       alert("Authorization code not found");
     }

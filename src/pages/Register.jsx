@@ -58,7 +58,7 @@ const Register = () => {
     const apiCall = selectedRole === "Landlord" ? registerLandlord : registerUser;
     apiCall(payload)
       .then((data) => {
-        toast.error("EYou have successfully registered in our service!", { autoClose: 4000 });
+        toast.error("You have successfully registered in our service!", { autoClose: 4000 });
         localStorage.removeItem("registerRole");
         navigate("/login");
       })
@@ -330,7 +330,7 @@ const Register = () => {
               fontFamily: "'Sora', Arial, sans-serif",
               transition: "box-shadow 0.2s",
             }}
-            onClick={() => window.location.href = axiosInstance.baseUrl + "google-auth/login"}
+            onClick={() => window.location.href = axiosInstance.defaults.baseURL + "google-auth/login"}
           >
             <img
               src="/images/Google.png"

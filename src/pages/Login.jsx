@@ -300,7 +300,7 @@ const Login = () => {
             fontFamily: "'Sora', Arial, sans-serif",
             transition: "box-shadow 0.2s",
           }}
-          onClick={() => (window.location.href = axiosInstance.baseUrl + "google-auth/login")}
+          onClick={() => (window.location.href = axiosInstance.defaults.baseURL + "google-auth/login")}
         >
           <img src="/images/Google.png" alt="google" style={{ width: 30, height: 30, marginRight: 10, marginLeft: -6 }} />
           Sign in with Google

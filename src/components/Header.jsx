@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import { FaUserCircle } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from 'react';
