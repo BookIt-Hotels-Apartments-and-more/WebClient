@@ -57,7 +57,7 @@ const Register = () => {
     };
     const apiCall = selectedRole === "Landlord" ? registerLandlord : registerUser;
     apiCall(payload)
-      .then((data) => {
+      .then(() => {
         toast.error("You have successfully registered in our service!", { autoClose: 4000 });
         localStorage.removeItem("registerRole");
         navigate("/login");
@@ -169,7 +169,7 @@ const Register = () => {
               type="text"
               name="fullName"
               className="form-control"
-              placeholder="User name"
+              placeholder="Username"
               value={formData.fullName}
               required
               style={{
@@ -196,7 +196,7 @@ const Register = () => {
                 top: "50%",
                 transform: "translateY(-50%)",
                 width: 22,
-                height: 22,
+                height: 16,
                 opacity: 0.7,
               }}
             />
@@ -220,12 +220,7 @@ const Register = () => {
               }}
               onChange={handleChange}
             />
-          </div>
-          <div>
-            <p style={{fontSize: 12, textAlign: 'center'}}>
-              Password must contain uppercase and lowercase letters, a number, a special character (!@#$%^&amp;*()_+-=[]{'{'}{'}'}|;:,.&lt;&gt;?), no more than 2 identical characters in a row, and must not contain your username.
-            </p>
-          </div>          
+          </div>         
 
           <div style={{ position: "relative", marginBottom: 24 }}>
             <img
@@ -237,7 +232,7 @@ const Register = () => {
                 top: "50%",
                 transform: "translateY(-50%)",
                 width: 22,
-                height: 22,
+                height: 16,
                 opacity: 0.7,
               }}
             />

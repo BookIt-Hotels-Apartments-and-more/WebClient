@@ -225,7 +225,7 @@ const Login = () => {
           <input
             type="password"
             className="form-control"
-            placeholder="password"
+            placeholder="Password"
             value={password}
             style={{
               fontSize: 16,
@@ -308,7 +308,7 @@ const Login = () => {
 
         <div className="w-100 text-center" style={{ marginTop: 20, color: "#8898b3", fontSize: 16 }}>
           Don’t have an account?
-          <Link to="/register" style={{ color: "#0C63E4", fontWeight: 600, marginLeft: 6 }}>
+          <Link to="/whoareyou" style={{ color: "#0C63E4", fontWeight: 600, marginLeft: 6 }}>
             Create Account
           </Link>
         </div>

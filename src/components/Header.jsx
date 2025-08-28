@@ -80,7 +80,7 @@ const Header = () => {
           <div className="d-flex align-items-center gap-4">
             {!user && (
               <>
-                <Link to="/whoareyou" className="btn signin-btn">Sign In</Link>
+                <Link to="/login" className="btn signin-btn">Sign In</Link>
               </>
             )}
 
