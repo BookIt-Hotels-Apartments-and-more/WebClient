@@ -1,9 +1,8 @@
 import axios from 'axios';
 
-
 export const axiosInstance = axios.create({
   baseURL: "https://bookit.pp.ua/",
-  //baseURL: "http://localhost:5173",
+  //baseURL: "http://localhost:5173/",
   withCredentials: true,
 });
 
