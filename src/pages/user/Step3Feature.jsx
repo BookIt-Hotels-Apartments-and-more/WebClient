@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEstWizard } from "../../features/establishment/WizardContext";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../../utils/enums";
@@ -5,7 +6,7 @@ import { ESTABLISHMENT_FEATURE_LABELS } from "../../utils/enums";
 export default function Step3Feature() {
   const navigate = useNavigate();
 
-  const { features, setFeatures, setStep } = useEstWizard();
+  const { features, setFeatures, setStep, name, setName } = useEstWizard();
 
   // Масив опцій з бітовими значеннями
   const FEATURE_OPTIONS = Object.entries(ESTABLISHMENT_FEATURE_LABELS).map(
@@ -14,6 +15,13 @@ export default function Step3Feature() {
       value: 1 << idx,
     })
   );
+
+    useEffect(() => {
+        if (setName && !name) {
+            setStep(1);
+            navigate("/add-establishment/step-1");
+        }
+    }, [setName, name, setStep, navigate]);
 
   const onBack = () => {
     setStep(2);

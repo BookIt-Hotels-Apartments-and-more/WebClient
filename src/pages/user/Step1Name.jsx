@@ -2,12 +2,18 @@ import { useNavigate } from "react-router-dom";
 import { useEstWizard } from "../../features/establishment/WizardContext";
 import { ESTABLISHMENT_TYPE_LABELS } from "../../utils/enums";
 import { toast } from "react-toastify";
+import { useEffect } from "react";
 
 export default function Step1Name() {
     const navigate = useNavigate();
     const { name, setName, setStep, propertyType, setPropertyType  } = useEstWizard();
 
-    const canNext = name.trim().length >= 2 && Number.isInteger(propertyType);
+    useEffect(() => {
+      if (setName && !name) {
+        setStep(1);
+        navigate("/add-establishment/step-1");
+      }
+    }, [setName, name, setStep]);
 
     const onNext = () => {
         if (!Number.isInteger(propertyType)) {

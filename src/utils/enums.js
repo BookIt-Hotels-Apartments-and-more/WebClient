@@ -85,12 +85,6 @@ export function getEstablishmentTypeName(typeId) {
   return entry ? entry[0] : "";
 }
 
-/**
- * Преобразує об'єкт features з бекенду (маленькі букви) у фронтовий енам-об'єкт (великі).
- * @param {object} backendFeatures
- * @param {object} LABELS — твій enum
- * @returns {object} — об'єкт для чекбоксів з правильними ключами
- */
 export function normalizeFeaturesForCheckboxes(backendFeatures, LABELS) {
   const result = {};
   Object.keys(LABELS).forEach(enumKey => {

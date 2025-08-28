@@ -31,7 +31,16 @@ export default function Step5Photos() {
     photoPreviews = [],
     setPhotoPreviews,
     setStep,
+    name,
+    setName,
   } = useEstWizard();
+
+    useEffect(() => {
+        if (setName && !name) {
+            setStep(1);
+            navigate("/add-establishment/step-1");
+        }
+    }, [setName, name, setStep, navigate]);
 
   const handleFiles = useCallback((fileList) => {
     const files = Array.from(fileList || []);

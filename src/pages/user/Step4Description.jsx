@@ -45,6 +45,8 @@ export default function Step4Description() {
     setCheckIn,
     checkOut,
     setCheckOut,
+    name,
+    setName,
   } = useEstWizard();
 
   // локальні стейти
@@ -60,6 +62,12 @@ export default function Step4Description() {
     setCheckOut({ hour: checkOutHour, minute: checkOutMinute });
   }, [checkInHour, checkInMinute, checkOutHour, checkOutMinute]);
 
+    useEffect(() => {
+        if (setName && !name) {
+            setStep(1);
+            navigate("/add-establishment/step-1");
+        }
+    }, [setName, name, setStep, navigate]);
 
   const onBack = () => {
     setStep(3);

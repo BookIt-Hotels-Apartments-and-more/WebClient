@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import React, { useEffect, useState, useRef  } from "react";
+import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../api/axios";
 import { getApartmentAvailability } from "../api/bookingApi"
 import { getAllReviews } from "../api/reviewApi";
@@ -626,7 +626,7 @@ const HotelDetails = () => {
             {activeTab === "terms" && (
               <div style={{ fontSize: 15 }}>
                 {apartments.length === 0 && <div className="text-muted">No apartments available.</div>}
-                {apartments.map((apt, i) => (
+                {apartments.map((apt) => (
                   <div key={apt.id} className="mb-4 p-3" style={{ borderBottom: "1px solid #ccc" }}>
                     <div style={{fontSize: 20}}>🛏 {apt.name}</div>
                     <div><strong>Capacity:</strong> {apt.capacity} persons</div>

@@ -1,5 +1,5 @@
 // src/pages/establishment/Step6Publication.jsx
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEstWizard } from "../../features/establishment/WizardContext";
 import { createEstablishment } from "../../api/establishmentsApi";
@@ -39,6 +39,7 @@ export default function Step6Publication() {
     setStep,
     propertyType,
     name,
+    setName,
     geolocation,
     features,
     description,
@@ -51,6 +52,13 @@ export default function Step6Publication() {
   } = useEstWizard();
 
   const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (setName && !name) {
+            setStep(1);
+            navigate("/add-establishment/step-1");
+        }
+    }, [setName, name, setStep, navigate]);
 
   const typeName = useMemo(() => {
     const entry = Object.entries(ESTABLISHMENT_TYPE_LABELS).find(([, v]) => v === propertyType);

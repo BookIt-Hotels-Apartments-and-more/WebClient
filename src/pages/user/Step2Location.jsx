@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEstWizard } from "../../features/establishment/WizardContext";
 import GeoPicker from "../../components/GeoPicker";
@@ -5,7 +6,7 @@ import { toast } from "react-toastify";
 
 export default function Step2Location() {
   const navigate = useNavigate();
-  const { setStep, geolocation, setGeolocation, name, propertyType } = useEstWizard();
+  const { setStep, geolocation, setGeolocation, name, setName } = useEstWizard();
 
   const canNext = Array.isArray(geolocation) && geolocation.length === 2;
 
@@ -18,7 +19,12 @@ export default function Step2Location() {
     navigate("/add-establishment/step-3");
     };
 
-
+    useEffect(() => {
+        if (setName && !name) {
+            setStep(1);
+            navigate("/add-establishment/step-1");
+        }
+    }, [setName, name, setStep, navigate]);
 
   const back = () => {
     setStep(1);
