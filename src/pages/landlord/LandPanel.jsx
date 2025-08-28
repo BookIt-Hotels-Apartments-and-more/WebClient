@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch  } from "react-redux";
+import { setUser } from "../../store/slices/userSlice";
 import { getEstablishmentsByOwnerFiltered } from "../../api/establishmentsApi";
 import LandEstablishmentCard from "./LandEstablishmentCard";
 import { Link } from "react-router-dom";
@@ -57,6 +58,7 @@ function ProgressBar({ activeStep }) {
 
 const LandPanel = () => {
   const user = useSelector((state) => state.user.user);
+  const dispatch = useDispatch();
   const [establishments, setEstablishments] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState({
@@ -139,7 +141,7 @@ const LandPanel = () => {
         photoUrl: editedUser.photoPreview || current.photoUrl
       };
       localStorage.setItem("user", JSON.stringify(nextUser));
-
+      dispatch(setUser(nextUser));
       setIsEditing(false);
     } catch (err) {
       console.error("Error saving profile:", err?.response || err);
