@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { axiosInstance } from "../api/axios";
 
 const GoogleCallback = () => {
   useEffect(() => {
@@ -6,7 +7,7 @@ const GoogleCallback = () => {
     const code = params.get("code");
 
     if (code) {
-      window.location.href = `https://localhost:7065/google-auth/callback?code=${code}`;
+      window.location.href = `${axiosInstance.baseUrl}google-auth/callback?code=${code}`;
     } else {
       alert("Authorization code not found");
     }
