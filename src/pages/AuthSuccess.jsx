@@ -28,7 +28,17 @@ const AuthSuccess = () => {
       });
   }, [dispatch, navigate]);
 
-  return <div>Logging in...</div>;
+  return <div style={{
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "end",
+      alignContent: "center",
+      padding: "20px",
+      height: "40dvh",
+      textAlign: "center"
+    }}>
+      Logging in...
+    </div>;
 };
 
 export default AuthSuccess;
