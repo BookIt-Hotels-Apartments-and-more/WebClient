@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { axiosInstance } from "../api/axios";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { registerUser, registerLandlord } from "../api/authApi";
 import { toast } from 'react-toastify';
@@ -329,7 +330,7 @@ const Register = () => {
               fontFamily: "'Sora', Arial, sans-serif",
               transition: "box-shadow 0.2s",
             }}
-            onClick={() => window.location.href = "https://localhost:7065/google-auth/login"}
+            onClick={() => window.location.href = axiosInstance.baseUrl + "google-auth/login"}
           >
             <img
               src="/images/Google.png"
