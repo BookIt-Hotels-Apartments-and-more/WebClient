@@ -1,10 +1,11 @@
-import { useState, useEffect  } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { loginUser, getCurrentUser, generateResetToken, resetPassword  } from "../api/authApi";
+import { loginUser, getCurrentUser, generateResetToken } from "../api/authApi";
 import { useDispatch } from "react-redux";
 import { setUser } from "../store/slices/userSlice";
 import { axiosInstance } from "../api/axios";
 import { useLocation } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -17,22 +18,10 @@ const Login = () => {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotStep, setForgotStep] = useState(1);
   const [recoveryEmail, setRecoveryEmail] = useState("");
-  const [resetToken, setResetToken] = useState("");
-  const [newPwd, setNewPwd] = useState("");
   const [loadingReset, setLoadingReset] = useState(false);
   const [message, setMessage] = useState("");  
 
   const loginSource = location.state?.source || sessionStorage.getItem('loginSource') || null;
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const token = params.get("token");
-
-    if (location.pathname === "/auth/reset-token" && token) {
-      setShowReset(true);
-      setResetForm(prev => ({ ...prev, token }));
-    }
-  }, [location]);
 
   const handleEmailLogin = async () => {
     if (!email.includes("@")) {
@@ -66,7 +55,15 @@ const Login = () => {
         navigate("/");
       }
     } catch (err) {
-      alert(err.message || "Invalid email or password");
+      const violationRule = err?.response?.data?.details?.Rule;
+      if (violationRule?.includes("USER_RESTRICTED") ?? false)
+        navigate("/auth/error?error=Your account was restricted. Please contact support.");
+      else if (violationRule?.includes("EMAIL_NOT_CONFIRMED") ?? false)
+        navigate("/auth/error?error=Please confirm your email before logging in.");
+      else if (err?.response?.data?.statusCode === 403)
+        toast.error("Invalid email or password");
+      else
+        toast.error("Login failed. Please try again.");
     }
   };
 
@@ -78,9 +75,8 @@ const Login = () => {
     setLoadingReset(true);
     setMessage("");
     try {
-      const res = await generateResetToken(recoveryEmail);
-      if (res?.token) setResetToken(res.token);
-      setMessage(res?.message || `If this email exists, we sent a reset link/token to ${recoveryEmail}.`);
+      await generateResetToken(recoveryEmail);
+      setMessage(`If email ${recoveryEmail} exists, we sent a reset link to it.`);
       setForgotStep(2);
     } catch (err) {
       setMessage(err?.response?.data?.message || "Error while generating reset token.");
@@ -88,32 +84,6 @@ const Login = () => {
       setLoadingReset(false);
     }
   };
-
-  const handleResetPassword = async () => {
-    if (!resetToken || !newPwd || newPwd.length < 6) {
-      alert("Enter token and a new password (min 6 chars).");
-      return;
-    }
-    setLoadingReset(true);
-    setMessage("");
-    try {
-      const res = await resetPassword({ token: resetToken, newPassword: newPwd });
-      setMessage(res?.message || "Password was successfully changed. Please login with the new password.");
-      setTimeout(() => {
-        setShowForgot(false);
-        setForgotStep(1);
-        setRecoveryEmail("");
-        setResetToken("");
-        setNewPwd("");
-        setMessage("");
-      }, 1200);
-    } catch (err) {
-      setMessage(err?.response?.data?.message || "Failed to reset password. Check token and try again.");
-    } finally {
-      setLoadingReset(false);
-    }
-  };
-
 
   return (
     <div
@@ -321,7 +291,7 @@ const Login = () => {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {forgotStep === 1 ? "Password Recovery" : "Set a New Password"}
+                  {"Password Recovery"}
                 </h5>
                 <button
                   type="button"
@@ -330,15 +300,13 @@ const Login = () => {
                     setShowForgot(false);
                     setForgotStep(1);
                     setRecoveryEmail("");
-                    setResetToken("");
-                    setNewPwd("");
                     setMessage("");
                   }}
                 />
               </div>
 
               <div className="modal-body">
-                {forgotStep === 1 ? (
+                {forgotStep === 1 && (
                   <>
                     <label className="form-label">Email</label>
                     <input
@@ -349,39 +317,15 @@ const Login = () => {
                       onChange={(e) => setRecoveryEmail(e.target.value)}
                     />
                   </>
-                ) : (
-                  <>
-                    <label className="form-label">Token</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      placeholder="Paste token from email"
-                      value={resetToken}
-                      onChange={(e) => setResetToken(e.target.value)}
-                    />
-                    <label className="form-label">New password</label>
-                    <input
-                      type="password"
-                      className="form-control"
-                      placeholder="New password"
-                      value={newPwd}
-                      onChange={(e) => setNewPwd(e.target.value)}
-                    />
-                    <div className="form-text">Min length: 6 characters</div>
-                  </>
                 )}
 
                 {message && <div className="alert alert-info mt-3">{message}</div>}
               </div>
 
               <div className="modal-footer">
-                {forgotStep === 1 ? (
+                {forgotStep === 1 && (
                   <button className="btn btn-primary w-100" disabled={loadingReset} onClick={handleGenerateToken}>
                     {loadingReset ? "Sending..." : "Send reset email"}
-                  </button>
-                ) : (
-                  <button className="btn btn-success w-100" disabled={loadingReset} onClick={handleResetPassword}>
-                    {loadingReset ? "Saving..." : "Set new password"}
                   </button>
                 )}
               </div>

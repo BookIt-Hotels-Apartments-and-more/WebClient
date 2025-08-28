@@ -37,8 +37,8 @@ import Account from "../pages/user/AccountHome";
 import RegisterLanding from "../pages/user/RegisterLanding";
 import AddProperty from "../pages/user/AddProperty";
 import Booking from "../pages/Booking";
-
-
+import EmailVerified from '../pages/EmailVerified';
+import PasswordReset from '../pages/PasswordReset';
 
 const AppRouter = () => {
   return (
@@ -83,6 +83,8 @@ const AppRouter = () => {
           <Route path="/auth/success" element={<AuthSuccess />} />  
           <Route path="/google-auth/callback" element={<GoogleCallback />} /> 
           <Route path="/auth/error" element={<AuthError />} />
+          <Route path="/email-confirmed" element={<EmailVerified />} />
+          <Route path="/auth/reset-password" element={<PasswordReset />} />
           <Route path="/apartments" element={<Apartments />} />         
         </Route>
       </Routes>
