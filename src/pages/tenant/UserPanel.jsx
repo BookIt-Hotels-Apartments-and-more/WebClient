@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { axiosInstance } from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { setUser, updateUser, logout  } from "../../store/slices/userSlice";
@@ -51,10 +52,20 @@ const UserPanel = () => {
 
 
   useEffect(() => {
+    let cancelled = false;
+    const token = localStorage.getItem("token");
     setLoading(true);
-    if (!user?.id) return;
-    const fetchData = async () => {
-      try {        
+
+    if (!user?.id || !token) {
+      setBookings([]);
+      setFavorites([]);
+      setApartmentMap({});
+      setLoading(false);
+      return () => { cancelled = true; };
+    }
+
+    (async () => {
+      try {
         const favData = await getUserFavorites();
         const bookingIds = (user?.bookings || [])
           .map(b => (typeof b === "number" ? b : b?.id))
@@ -62,17 +73,19 @@ const UserPanel = () => {
         const bookData = bookingIds.length
           ? await Promise.all(bookingIds.map(id => getBookingById(id)))
           : [];
+        if (cancelled) return;
         setBookings(bookData);
         setFavorites(favData);
         const ids = [...new Set(bookData.map(b => b.apartmentId))].filter(Boolean);
         await loadApartments(ids);
       } catch (err) {
-        console.error("Loading error:", err);
+        console.warn("Loading error:", err?.response?.status || err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-    fetchData();
+    })();
+
+    return () => { cancelled = true; };
   }, [user?.id, user?.bookings]);
 
   const loadApartments = async (ids) => {
@@ -110,11 +123,11 @@ const UserPanel = () => {
       }
       
       const nextUser = {
-        ...current,
+        ...user,
         username: payload.username,
         email: payload.email,
         phoneNumber: payload.phoneNumber,
-        photoUrl: editedUser.photoPreview || current.photoUrl
+        photoUrl: editedUser.photoPreview || user.photoUrl
       };
       dispatch(setUser(nextUser));
       setIsEditing(false);
@@ -289,7 +302,14 @@ const UserPanel = () => {
 
   const handleLogout = () => {
       dispatch(logout());
+      localStorage.removeItem("token");
       localStorage.removeItem("user");
+      if (axiosInstance?.defaults?.headers?.common?.Authorization) {
+        delete axiosInstance.defaults.headers.common.Authorization;
+      }
+      setBookings([]);
+      setFavorites([]);
+      setApartmentMap({});
       toast.success("You have been logged out", { autoClose: 2000 });
       navigate("/");
     };

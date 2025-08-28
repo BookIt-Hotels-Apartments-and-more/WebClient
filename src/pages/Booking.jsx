@@ -23,7 +23,6 @@ export default function Booking() {
   const navigate = useNavigate();
   const focusBookingId = new URLSearchParams(search).get("focus");
 
-  const [bookings, setBookings] = useState([]);
   const [booking, setBooking] = useState(null);
   const [apartmentMap, setApartmentMap] = useState({});
   const [isPreview, setIsPreview] = useState(false);
@@ -67,6 +66,7 @@ export default function Booking() {
     carHire: false,
     airportTaxi: false,
   });
+
   // edit booking modal
   const [editModal, setEditModal] = useState({ show: false, booking: null, dateFrom: "", dateTo: "" });
   const [paymentType, setPaymentType] = useState("Cash");
@@ -140,8 +140,7 @@ export default function Booking() {
     booking: b,
     dateFrom: (b.dateFrom || "").slice(0,10),
     dateTo: (b.dateTo || "").slice(0,10),
-  });
-  
+  });  
 
   const closeEditModal = () => setEditModal({ show: false, booking: null, dateFrom: "", dateTo: "" });
 
@@ -179,6 +178,8 @@ export default function Booking() {
       toast.error("Failed to update booking");
     }
   };    
+
+
 
   const handlePayAndFinalise = async () => {
     if (submitting) return;
@@ -224,22 +225,25 @@ export default function Booking() {
       // 6) прибирання та редирект
       localStorage.removeItem("pendingBooking");
       navigate("/");
-    } catch (e) {
-      console.error(e);
-      const m = e?.response?.data?.message || e?.message;
-      const details = e?.response?.data?.details;
-      if (e?.response?.status === 409 && details?.Rule === "BOOKING_CONFLICT") {
-        toast.error(
-          `Ці дати вже зайняті: ${details.DateFrom.slice(0,10)}–${details.DateTo.slice(0,10)}. ` +
-          `Конфлікт: ${details.ConflictingBookings?.join(", ")}`
-        );
-      } else {
-        toast.error(m || "Failed to finalise booking");
-      }
-    } finally {
+
+      } catch (e) {
+        console.error(e);
+        const m = e?.response?.data?.message || e?.message;
+        const details = e?.response?.data?.details;
+        if (e?.response?.status === 409 && details?.Rule === "BOOKING_CONFLICT") {
+          toast.error(
+            `Ці дати вже зайняті: ${details.DateFrom.slice(0,10)}–${details.DateTo.slice(0,10)}. ` +
+            `Конфлікт: ${details.ConflictingBookings?.join(", ")}`
+          );
+        } else {
+          toast.error(m || "Failed to finalise booking");
+        }
+      } finally {
           setSubmitting(false);
         }
-      };
+    };
+
+
 
   if (!user) return null;
   if (!booking) {

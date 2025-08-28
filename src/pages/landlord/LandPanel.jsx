@@ -1,64 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch  } from "react-redux";
+import { axiosInstance } from "../../api/axios";
 import { setUser } from "../../store/slices/userSlice";
 import { getEstablishmentsByOwnerFiltered } from "../../api/establishmentsApi";
 import LandEstablishmentCard from "./LandEstablishmentCard";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ESTABLISHMENT_TYPE_LABELS } from "../../utils/enums";
 import { uploadUserPhoto, updateUserDetails } from "../../api/userApi";
+import { toast } from "react-toastify";
 
-// --- Прогрес-бар ---
-function ProgressBar({ activeStep }) {
-  return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      borderBottom: "2px solid #d5e3f7",
-      paddingBottom: 8,
-      marginBottom: 14
-    }}>
-      {["Dashboard", "Your Hotels", "Editing"].map((step, i) => (
-        <div key={i} style={{
-          display: "flex",
-          alignItems: "center",
-          flex: 1,
-          color: i < activeStep ? "#24ac70" : "#555",
-          fontWeight: i === activeStep - 1 ? 700 : 500,
-          fontSize: 17,
-        }}>
-          <span style={{
-            display: "inline-block",
-            width: 22,
-            height: 22,
-            borderRadius: "50%",
-            background: i < activeStep ? "#24ac70" : "#e9e9e9",
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: 14,
-            lineHeight: "22px",
-            textAlign: "center",
-            marginRight: 8,
-            border: i === activeStep - 1 ? "2px solid #2ca377" : "2px solid #e9e9e9"
-          }}>{i + 1}</span>
-          {step}
-          {i !== 2 && <span style={{
-            display: "inline-block",
-            width: 70,
-            height: 3,
-            background: i < activeStep - 1 ? "#24ac70" : "#e9e9e9",
-            margin: "0 16px",
-            borderRadius: 2
-          }} />}
-        </div>
-      ))}
-    </div>
-  );
-}
+
 
 const LandPanel = () => {
   const user = useSelector((state) => state.user.user);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [establishments, setEstablishments] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState({
@@ -148,6 +104,20 @@ const LandPanel = () => {
     }
   };
 
+  const handleLogout = () => {
+    dispatch(setUser(null));
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    if (axiosInstance?.defaults?.headers?.common?.Authorization) {
+      delete axiosInstance.defaults.headers.common.Authorization;
+    }
+    toast.success("You have been logged out", { autoClose: 2000 });
+
+    navigate("/");
+  };
+
 
   return (
     <div
@@ -182,9 +152,7 @@ const LandPanel = () => {
           marginTop: "60px",
         }}
       >
-        {/* --- ПРОГРЕС-БАР --- */}
-        <ProgressBar activeStep={2} />
-
+       
         <div className="row mt-4" style={{ minHeight: 500 }}>
           {/* ЛІВА КОЛОНКА */}
           <div className="col-12 col-md-8 mb-4 mb-md-0" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -398,6 +366,14 @@ const LandPanel = () => {
                     onClick={() => setIsEditing(true)}
                   >
                     Edit
+                  </button>
+
+                  <button
+                      className="btn btn-danger btn-sm mt-4"
+                      style={{ borderRadius: 12, fontWeight: 600, minWidth: 250, marginLeft: 20 }}
+                      onClick={handleLogout}
+                    >
+                      Log Out
                   </button>
                 </>
               )}
