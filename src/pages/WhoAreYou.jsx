@@ -101,7 +101,7 @@ const WhoAreYou = () => {
             className="btn"
               onClick={() => {
                 localStorage.setItem("registerRole", "Tenant");
-                localStorage.setItem("whoareyou", "traveler");
+                localStorage.setItem("whoareyou", "traveller");
                 navigate("/register", { state: { role: "Tenant" } });
               }}
             style={{
@@ -116,7 +116,7 @@ const WhoAreYou = () => {
               boxShadow: "0 4px 18px 0 rgba(31, 38, 135, 0.08)",
             }}
           >
-            TRAVELER
+            TRAVELLER
           </button>
           <span style={{ fontWeight: 500, color: "#8a99b3", fontSize: 22 }}>
             or

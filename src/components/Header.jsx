@@ -1,30 +1,27 @@
 import { Link } from 'react-router-dom';
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { FaUserCircle } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from 'react';
+import { setUser } from "../store/slices/userSlice";
 import "../styles/HeaderStyle.css";
 import { motion } from "framer-motion";
-
-
-
-
+import { displayableRole } from "../utils/roles";
 
 const Header = () => {
   const user = useSelector((state) => state.user.user);
   const navigate = useNavigate();
   const [showRolePicker, setShowRolePicker] = useState(false);
   const rolePickerRef = useRef(null);
-  const MotionLink = motion.create(Link);
-  
+  const dispatch = useDispatch();
 
-
-  // const handleLogout = () => {
-  //   localStorage.removeItem("token");
-  //   localStorage.removeItem("user");
-  //   dispatch(setUser(null));
-  //   navigate("/");
-  // };
+  const handleLogout = () => {
+    setShowRolePicker(false);
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    dispatch(setUser(null));
+    navigate("/");
+  };
 
   useEffect(() => {
       if (!showRolePicker) return;
@@ -91,11 +88,12 @@ const Header = () => {
                   background: "#E3F2FD",         
                   borderRadius: 16,
                   padding: "6px 18px",
-                  boxShadow: "0 2px 8px 0 rgba(2, 69, 122, 0.08)", 
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px 0 rgba(2, 69, 122, 0.08)",
                 }}
+                onClick={() => setShowRolePicker(true)}
               >
                 <button
-                  onClick={() => setShowRolePicker(true)}
                   aria-haspopup="dialog"
                   aria-expanded={showRolePicker ? "true" : "false"}
                   style={{ background: "transparent", border: "none", padding: 0, color: "#02457A" }}
@@ -121,9 +119,6 @@ const Header = () => {
                 </button>
 
                 <span>Hello, {user?.username}</span>
-                {/* <button className="btn btn-outline-danger btn-sm" onClick={handleLogout}>
-                  Logout
-                </button> */}
               </div>
 
             )}
@@ -154,40 +149,24 @@ const Header = () => {
                 }}
               >
                 <div style={{ fontWeight: 700, marginBottom: 6, color: "#1b3966" }}>
-                  Who are you?
+                  You are logged in as {displayableRole(user?.role)}
                 </div>
                 <div className="text-muted" style={{ fontSize: 13, marginBottom: 12 }}>
                   Choose where to go
                 </div>
-
+                
                 <button
-                  className="btn btn-primary btn-sm w-100"
+                  className="btn btn-outline-primary btn-sm w-100"
                   onClick={() => {
                     setShowRolePicker(false);
-                    navigate("/accounthome");
+                    navigate(user?.role === 0 ? "/adminpanel" : user?.role === 1 ? "/landlordpanel" : "/accounthome");
                   }}
                 >
-                  Landlord
+                  {user?.role === 0 ? "Admin panel" : user?.role === 1 ? "Landlord panel" : "User panel"}
                 </button>
 
-                <button
-                  className="btn btn-outline-primary btn-sm w-100 mt-2"
-                  onClick={() => {
-                    setShowRolePicker(false);
-                    navigate("/accounthome");
-                  }}
-                >
-                  Traveler
-                </button>
-
-                <button
-                  className="btn btn-outline-primary btn-sm w-100 mt-2"
-                  onClick={() => {
-                    setShowRolePicker(false);
-                    navigate("/adminpanel");
-                  }}
-                >
-                  Admin
+                <button className="btn btn-outline-danger btn-sm w-100 mt-2" onClick={handleLogout}>
+                  Logout
                 </button>
               </div>
             </div>

@@ -54,7 +54,7 @@ const Login = () => {
         navigate("/adminpanel");
       } else if (whoAreYou === "landlord") {
         navigate("/accounthome");
-      } else if (whoAreYou === "user" || whoAreYou === "traveler") {
+      } else if (whoAreYou === "user" || whoAreYou === "traveller") {
         navigate("/accounthome");
       } else {
         navigate("/");

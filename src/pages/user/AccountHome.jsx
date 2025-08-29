@@ -50,7 +50,7 @@ export default function AccountHome() {
   const roles = user?.roles || [];
   const whoLS = (localStorage.getItem("whoareyou") || "").toLowerCase();
   const isLandlord = roles.includes("Landlord") || whoLS === "landlord" || whoLS === "partner";
-  const isTenant   = roles.includes("Tenant")   || whoLS === "user"     || whoLS === "traveler";
+  const isTenant   = roles.includes("Tenant")   || whoLS === "user"     || whoLS === "traveller";
 
   const [establishments, setEstablishments] = useState([]);
   const [type, setType] = useState("");
@@ -102,7 +102,7 @@ export default function AccountHome() {
     if (user?.role === "Tenant" || user?.role === 2) {
       navigate("/userpanel");
     } else {
-      toast.info("This is a section for travelers");
+      toast.info("This is a section for travellers");
     }
   };
 
@@ -184,7 +184,7 @@ export default function AccountHome() {
                   </div>
                   {isTenant && (
                     <div style={{ color: "#FE7C2C", fontSize: 18 }}>
-                      {CURRENT_LVL || 1} level traveler
+                      {CURRENT_LVL || 1} level traveller
                     </div>
                   )}
                 </div>

@@ -1,6 +1,6 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { WizardProvider } from "../features/establishment/WizardContext";
+import ProtectedRoute from '../components/ProtectedRoute';
 import Step1Name from "../pages/user/Step1Name";
 import Step2Location from "../pages/user/Step2Location";
 import Step3Feature from "../pages/user/Step3Feature";
@@ -69,11 +69,9 @@ const AppRouter = () => {
           <Route path="/hotels/:id" element={<HotelDetails />} />
           <Route path="/hotels" element={<HotelsList />} />
           <Route path="/admin-auth" element={<AdminAuth />} />
-          {/* <Route path="/adminpanel" element={<ProtectedRoute role={0}><AdminPanel /></ProtectedRoute>} />   */}
-          <Route path="/adminpanel" element={<AdminPanel />} />  
+          <Route path="/adminpanel" element={<ProtectedRoute role={0}><AdminPanel /></ProtectedRoute>} />  
+          <Route path="/landlordpanel" element={<ProtectedRoute role={1}><LandPanel /></ProtectedRoute>} />  
           <Route path="/partner-auth" element={<PartnerAuth />} />
-          {/* <Route path="/landlordpanel" element={<ProtectedRoute role={1}><LandPanel /></ProtectedRoute>} />   */}
-          <Route path="/landlordpanel" element={<LandPanel />} />
           <Route path="/add-hotel" element={<AddHotel />} />
           <Route path="/edit-hotel/:id" element={<EditHotel />} />
           <Route path="/add-apartment/:establishmentId" element={<AddApartment />} />
