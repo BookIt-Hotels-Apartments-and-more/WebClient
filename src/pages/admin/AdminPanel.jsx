@@ -999,9 +999,9 @@ export default function AdminPanel() {
       label: 'Role',
       icon: 'bi-shield',
       values: [
-        { value: 'Customer', label: 'Customer' },
+        { value: 'Traveller', label: 'Traveller' },
         { value: 'Landlord', label: 'Landlord' },
-        { value: 'Administrator', label: 'Administrator' }
+        { value: 'Admin', label: 'Administrator' }
       ]
     },
     status: {
