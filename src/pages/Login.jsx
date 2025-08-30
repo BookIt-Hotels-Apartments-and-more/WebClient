@@ -7,6 +7,7 @@ import { axiosInstance } from "../api/axios";
 import { useLocation } from "react-router-dom";
 import { USER_ROLE } from "../utils/enums";
 import { toast } from "react-toastify";
+import { getUserFavorites } from "../api/favoriteApi";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -39,6 +40,11 @@ const Login = () => {
 
       localStorage.setItem("user", JSON.stringify(fullUser));
       dispatch(setUser(fullUser));
+
+      try {
+      const favs = await getUserFavorites();
+      localStorage.setItem("favorites", JSON.stringify(favs || []));
+    } catch { localStorage.setItem("favorites", "[]"); }
 
       const whoAreYou = localStorage.getItem("whoareyou");
 

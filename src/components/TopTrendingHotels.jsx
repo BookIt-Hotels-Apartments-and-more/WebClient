@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from "react";
 import { getTrendingEstablishments } from "../api/establishmentsApi";
 import { useNavigate } from "react-router-dom";
 import HotelCard from "./HotelCard";
-import { getUserFavorites } from "../api/favoriteApi";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import { toast } from "react-toastify";
 
@@ -21,7 +20,9 @@ const TopTrendingHotels = ({ search = "" }) => {
     setLoading(true);
     Promise.all([
       getTrendingEstablishments(12, 30),
-      (userId && token) ? getUserFavorites() : Promise.resolve([]), // ← змінили
+      (userId && token)
+        ? Promise.resolve(JSON.parse(localStorage.getItem("favorites") || "[]"))
+        : Promise.resolve([]),
     ])
       .then(([trendingData, favoritesData]) => {
         const list = Array.isArray(trendingData) ? trendingData : trendingData?.items || [];
@@ -30,6 +31,22 @@ const TopTrendingHotels = ({ search = "" }) => {
       })
       .catch(err => console.error("Download error:", err))
       .finally(() => setLoading(false));
+
+    const onStorage = (e) => {
+      if (e.key === "favorites") {
+        try { setFavorites(JSON.parse(e.newValue || "[]")); } catch {}
+      }
+    };
+    const onLocal = () => {
+      try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); } catch {}
+    };
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("favorites-updated", onLocal);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("favorites-updated", onLocal);
+    };
   }, [userId, token]);
 
   // Унікальні країни з готелів

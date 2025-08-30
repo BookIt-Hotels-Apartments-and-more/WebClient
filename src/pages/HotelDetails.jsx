@@ -4,7 +4,6 @@ import { axiosInstance } from "../api/axios";
 import { getApartmentAvailability } from "../api/bookingApi"
 import { getAllReviews } from "../api/reviewApi";
 import BookingBannerForm from '../components/BookingBannerForm';
-import { getUserFavorites } from "../api/favoriteApi";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import {
   ESTABLISHMENT_FEATURE_LABELS,
@@ -62,14 +61,23 @@ const HotelDetails = () => {
 
   useEffect(() => {
     if (!user?.id) return;
-    (async () => {
-      try {
-        const favs = await getUserFavorites();
-        setFavorites(favs);        
-      } catch (e) {
-        console.error("Failed to load favorites:", e);
-      }
-    })();
+      try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); }
+      catch { setFavorites([]); }
+      const onStorage = (e) => {
+        if (e.key === "favorites") {
+          try { setFavorites(JSON.parse(e.newValue || "[]")); } catch {}
+        }
+      };
+      const onLocal = () => {
+        try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); } catch {}
+      };
+
+      window.addEventListener("storage", onStorage);
+      window.addEventListener("favorites-updated", onLocal);
+      return () => {
+        window.removeEventListener("storage", onStorage);
+        window.removeEventListener("favorites-updated", onLocal);
+      };
   }, [user?.id]);
 
   useEffect(() => {

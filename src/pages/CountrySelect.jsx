@@ -7,7 +7,6 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import HotelFilters from "../components/HotelFilters";
 import countriesList from "../utils/countriesList";
 import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
-import { getUserFavorites  } from "../api/favoriteApi";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import { ESTABLISHMENT_FEATURE_LABELS, VIBE_TYPE } from "../utils/enums";
 
@@ -58,10 +57,24 @@ export default function CountrySelect() {
       .catch(err => console.error("Error loading apartments:", err));
 
     if (user?.id) {
-      getUserFavorites()
-        .then(setFavorites)
-        .catch(err => console.error("Error loading favorites:", err));
+      try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); }
+      catch { setFavorites([]); }
     }
+    const onStorage = (e) => {
+      if (e.key === "favorites") {
+        try { setFavorites(JSON.parse(e.newValue || "[]")); } catch {}
+      }
+    };
+    const onLocal = () => {
+      try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); } catch {}
+    };
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("favorites-updated", onLocal);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("favorites-updated", onLocal);
+    };
   }, [user?.id]);
 
 

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { getTrendingEstablishments } from "../api/establishmentsApi";
 import { useNavigate } from "react-router-dom";
-import { getUserFavorites } from "../api/favoriteApi";
 import { axiosInstance } from "../api/axios";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import { toast } from "react-toastify";
@@ -36,8 +35,9 @@ const PopularDestinations = ({ search = "" }) => {
     setLoading(true);
     Promise.all([
       getTrendingEstablishments(12, 365),
-      axiosInstance.get("/api/apartments"),
-      (userId && token) ? getUserFavorites() : Promise.resolve([]), // ← змінили
+      axiosInstance.get("/api/apartments"),(userId && token)
+        ? Promise.resolve(JSON.parse(localStorage.getItem("favorites") || "[]"))
+        : Promise.resolve([]),
     ])
       .then(([trending, apartmentsData, favoritesData]) => {
         const list = Array.isArray(trending) ? trending : trending?.items || [];
@@ -47,6 +47,22 @@ const PopularDestinations = ({ search = "" }) => {
       })
       .catch(err => console.error("Download error:", err))
       .finally(() => setLoading(false));
+    
+      const onStorage = (e) => {
+        if (e.key === "favorites") {
+          try { setFavorites(JSON.parse(e.newValue || "[]")); } catch {}
+        }
+      };
+      const onLocal = () => {
+        try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); } catch {}
+      };
+      window.addEventListener("storage", onStorage);
+      window.addEventListener("favorites-updated", onLocal);
+      return () => {
+        window.removeEventListener("storage", onStorage);
+        window.removeEventListener("favorites-updated", onLocal);
+      };
+
   }, [userId, token]);
 
   const searchLower = (search || "").trim().toLowerCase();

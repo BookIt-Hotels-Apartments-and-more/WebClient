@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { setUser, updateUser, logout  } from "../../store/slices/userSlice";
 import { getBookingById, deleteBooking, updateBooking } from "../../api/bookingApi";
-import { getUserFavorites, removeFavorite  } from "../../api/favoriteApi";
+import { removeFavorite  } from "../../api/favoriteApi";
 import { getApartmentById } from "../../api/apartmentApi";
 import { toast } from 'react-toastify';
 import { uploadUserPhoto, updateUserPassword, updateUserDetails } from "../../api/userApi";
@@ -66,7 +66,8 @@ const UserPanel = () => {
 
     (async () => {
       try {
-        const favData = await getUserFavorites();
+        let favData = [];
+        try { favData = JSON.parse(localStorage.getItem("favorites") || "[]"); } catch {}
         const bookingIds = (user?.bookings || [])
           .map(b => (typeof b === "number" ? b : b?.id))
           .filter(Boolean);
@@ -85,7 +86,13 @@ const UserPanel = () => {
       }
     })();
 
-    return () => { cancelled = true; };
+    const onStorage = (e) => {
+      if (e.key === "favorites") {
+        try { setFavorites(JSON.parse(e.newValue || "[]")); } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => { cancelled = true; window.removeEventListener("storage", onStorage); };
   }, [user?.id, user?.bookings]);
 
   const loadApartments = async (ids) => {
@@ -151,7 +158,9 @@ const UserPanel = () => {
 
   const handleDeleteFavorite = async (favoriteId) => {
     await removeFavorite(favoriteId);
-    setFavorites(favorites.filter((f) => f.id !== favoriteId));
+    const next = favorites.filter((f) => f.id !== favoriteId);
+    setFavorites(next);
+    localStorage.setItem("favorites", JSON.stringify(next));
     dispatch(updateUser({
       favorites: (user.favorites || []).filter(id => id !== favoriteId)
     }));
@@ -304,6 +313,8 @@ const UserPanel = () => {
       dispatch(logout());
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem("favorites");
+
       if (axiosInstance?.defaults?.headers?.common?.Authorization) {
         delete axiosInstance.defaults.headers.common.Authorization;
       }

@@ -5,7 +5,7 @@ import { axiosInstance } from "../api/axios";
 import BookingBannerForm from '../components/BookingBannerForm';
 import HotelFilters from "../components/HotelFilters";
 import countriesList from "../utils/countriesList";
-import { getUserFavorites, addFavorite } from "../api/favoriteApi";
+import { addFavorite } from "../api/favoriteApi";
 import { toast } from "react-toastify";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 import { getAllReviews } from "../api/reviewApi";
@@ -64,11 +64,28 @@ export default function HotelsList() {
       getAllEstablishments().then(setHotels);
     }
       axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
+      
       if (userId) {
-        getUserFavorites().then(setFavorites);
+        try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); }
+        catch { setFavorites([]); }
       }
+      const onStorage = (e) => {
+        if (e.key === "favorites") {
+          try { setFavorites(JSON.parse(e.newValue || "[]")); } catch {}
+        }
+      };
+      const onLocal = () => {
+        try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); } catch {}
+      };
 
- }, [userId, selectedVibe, trendingFlag, trendingDays]);
+      window.addEventListener("storage", onStorage);
+      window.addEventListener("favorites-updated", onLocal);
+      return () => {
+        window.removeEventListener("storage", onStorage);
+        window.removeEventListener("favorites-updated", onLocal);
+      };
+
+  }, [userId, selectedVibe, trendingFlag, trendingDays]);
 
   useEffect(() => {
     const fetchReviews = async () => {

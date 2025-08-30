@@ -109,6 +109,8 @@ const LandPanel = () => {
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("favorites");
+
 
     if (axiosInstance?.defaults?.headers?.common?.Authorization) {
       delete axiosInstance.defaults.headers.common.Authorization;
