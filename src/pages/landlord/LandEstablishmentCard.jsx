@@ -49,6 +49,12 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
     }
   };
 
+  const fmt1 = (v) =>
+    (typeof v === "number" && !Number.isNaN(v))
+      ? v.toFixed(1)
+      : (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
+
+
   const handleDeleteHotel = async () => {
     if (confirm("Are you sure you want to delete the hotel?")) {
       await deleteEstablishment(est.id);
@@ -290,7 +296,7 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                           }}
                         >
                           <img
-                            src={`/images/features/${name}.png`}  // ВАЖЛИВО: без .toLowerCase()
+                            src={`/images/features/${name}.png`}
                             alt={name}
                             style={{ width: 18, height: 18, marginRight: 6 }}
                             onError={(e) => { e.currentTarget.style.display = "none"; }}
@@ -360,9 +366,7 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                 key={r.id}
                 className="list-group-item d-flex justify-content-between align-items-center"
               >
-                <span>
-                  ⭐ {r.rating}/5: {r.text}
-                </span>
+                <span>⭐ {fmt1(r.rating)}/10: {r.text}</span>
                 <button
                   className="btn btn-sm btn-outline-danger"
                   onClick={() => handleDeleteReview(r.id)}
