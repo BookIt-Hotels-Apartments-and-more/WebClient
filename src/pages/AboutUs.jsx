@@ -46,7 +46,7 @@ const AboutUs = () => {
               Welcome to <b>BOOKIT</b>
             </h2>
             <p className="mb-3" style={{ fontSize: '1.25rem', color: '#3e3e3e' }}>
-              Your trusted partner in creating the perfect getaway!!!!!!!!!
+              Your trusted partner in creating the perfect getaway!
             </p>
             <p className="mb-4" style={{ color: '#666', fontSize: '1.07rem' }}>
               At <b>BookIt</b>, we're passionate about helping you plan unforgettable vacations. Since our founding in 2016, we’ve been committed to making travel simple, affordable, and stress-free. Whether you’re dreaming of a beach escape, a city adventure, or a relaxing retreat, we connect you with the best travel deals and experiences around the globe.
