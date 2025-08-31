@@ -179,13 +179,10 @@ export default function Booking() {
     }
   };    
 
-
-
   const handlePayAndFinalise = async () => {
     if (submitting) return;
     try {
       setSubmitting(true);
-      // 1) опційно зберігаємо деталі акаунта
       if (details.saveToAccount) {
         await updateUserDetails({
           username: `${details.firstName} ${details.lastName}`.trim(),
@@ -194,12 +191,11 @@ export default function Booking() {
           bio: ""
         });
       }
-      // 2) читаємо прев’ю з LS
       const pend = JSON.parse(localStorage.getItem("pendingBooking") || "null");
       if (!pend) { toast.error("Nothing to finalise."); return; }
-      // 3) фінальна перевірка доступності
+    
       await checkApartmentAvailability(pend.apartmentId, pend.dateFrom, pend.dateTo);
-      // 4) створюємо бронювання
+
       const created = await createBooking({
         dateFrom: pend.dateFrom,
         dateTo: pend.dateTo,
@@ -212,17 +208,23 @@ export default function Booking() {
         const nextIds = [...(user.bookings || []), bookingId];
         dispatch(updateUser({ bookings: nextIds }));
       }
-      // 5) оплата (за потреби)
-      if (paymentType === "Mono") {
-        const amount = computeAmount(pend);       
-        const payRes = await createUniversalPayment({ type: 1, amount, bookingId });
-        const url = payRes?.data?.invoiceUrl || payRes?.data?.url;
-        if (url) window.open(url, "_blank");
-        toast.success("Payment created! Complete it in the opened tab.");
-      } else {
-        toast.success("Booking created!");
-      }
-      // 6) прибирання та редирект
+      const amount = computeAmount(pend);
+        if (paymentType === "Mono") {
+          const payRes = await createUniversalPayment({ type: 1, amount, bookingId });
+          const url = payRes?.data?.invoiceUrl || payRes?.data?.url;
+          if (url) window.open(url, "_blank");
+          toast.success("Payment created! Complete it in the opened tab.");
+        } else if (paymentType === "Cash") {
+          await createUniversalPayment({ type: 0, amount, bookingId });
+          toast.info("You have chosen to pay upon check-in at the hotel.");
+        } else if (paymentType === "BankTransfer") {
+          const payRes = await createUniversalPayment({ type: 2, amount, bookingId });
+          const url = payRes?.data?.invoiceUrl || payRes?.data?.url;
+          if (url) window.open(url, "_blank");
+          toast.success("Bank transfer invoice created.");
+        } else {
+          toast.success("Booking created!");
+        }
       localStorage.removeItem("pendingBooking");
       navigate("/");
 
