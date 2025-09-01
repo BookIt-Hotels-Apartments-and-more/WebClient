@@ -255,7 +255,6 @@ const Login = () => {
           Login
         </button>
 
-        {/* ... Google button + register link залишив без змін ... */}
         <div style={{ display: "flex", alignItems: "center", width: 500, maxWidth: "100%", margin: "24px 0" }}>
           <div style={{ flex: 1, height: 1, background: "#888", opacity: 0.5 }}></div>
           <span style={{ color: "#888", fontWeight: 500, fontSize: 16, margin: "0 12px" }}>or</span>

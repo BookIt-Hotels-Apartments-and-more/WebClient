@@ -11,60 +11,161 @@ const Register = () => {
     email: "",
     password: "",
   });
-  const [error, setError] = useState("");
+  const [formErrors, setFormErrors] = useState({});
+  
   const location = useLocation();
   const selectedRole = location.state?.role || localStorage.getItem("registerRole") || "Tenant";
 
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-
   const validatePassword = (password, username = "") => {
-  const specialChars = "!@#$%^&*()_+-=[]{}|;:,.<>?";
-  let errors = [];
-  if (!/[A-Z]/.test(password)) errors.push("one uppercase letter");
-  if (!/[a-z]/.test(password)) errors.push("one lowercase letter");
-  if (!/[0-9]/.test(password)) errors.push("one number");
-  if (!new RegExp(`[${specialChars.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}]`).test(password))
-    errors.push("one special character");
-  if (/(.)\1\1/.test(password)) errors.push("no more than 2 identical characters in a row");
-  if (username && password.toLowerCase().includes(username.toLowerCase()))
-    errors.push("not contain your username");
-  return errors;
-};
+    const specialChars = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+    let errors = [];
+    if (!/[A-Z]/.test(password)) errors.push("one uppercase letter");
+    if (!/[a-z]/.test(password)) errors.push("one lowercase letter");
+    if (!/[0-9]/.test(password)) errors.push("one number");
+    if (!new RegExp(`[${specialChars.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}]`).test(password))
+      errors.push("one special character");
+    if (/(.)\1\1/.test(password)) errors.push("no more than 2 identical characters in a row");
+    if (username && password.toLowerCase().includes(username.toLowerCase()))
+      errors.push("not contain your username");
+    return errors;
+  };
 
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    if (formErrors[field]) {
+      setFormErrors(prev => ({ ...prev, [field]: null }));
+    }
+    
+    if (field === 'password' || (field === 'fullName' && formData.password)) {
+      const password = field === 'password' ? value : formData.password;
+      const username = field === 'fullName' ? value : formData.fullName;
+      
+      if (password) {
+        const passwordErrors = validatePassword(password, username);
+        if (passwordErrors.length > 0) {
+          setFormErrors(prev => ({ 
+            ...prev, 
+            password: `Password must contain: ${passwordErrors.join(', ')}`
+          }));
+        } else {
+          setFormErrors(prev => ({ ...prev, password: null }));
+        }
+      }
+    }
+  };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.fullName.trim()) {
+      errors.fullName = 'Username is required';
+    } else if (formData.fullName.length < 3) {
+      errors.fullName = 'Username must be at least 3 characters';
+    } else if (formData.fullName.length > 50) {
+      errors.fullName = 'Username must be less than 50 characters';
+    } else if (!/^[ a-zA-Z0-9_.-]+$/.test(formData.fullName)) {
+      errors.fullName = 'Username can contain letters, numbers, dots, hyphens, underscores and spaces';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    } else if (formData.email.length > 254) {
+      errors.email = 'Email address is too long';
+    }
+    
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
+    } else {
+      const passwordErrors = validatePassword(formData.password, formData.fullName);
+      if (passwordErrors.length > 0) {
+        errors.password = `Password must contain: ${passwordErrors.join(', ')}`;
+      }
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const getPasswordStrength = () => {
+    if (!formData.password) return { strength: 0, label: '', color: '' };
+    
+    const password = formData.password;
+    let score = 0;
+    
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+    
+    if (/[a-z]/.test(password)) score += 1;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/[0-9]/.test(password)) score += 1;
+    if (/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) score += 1;
+    
+    if (!/(.)\1\1/.test(password)) score += 1;
+    
+    if (score <= 2) return { strength: 1, label: 'Weak', color: 'danger' };
+    if (score <= 4) return { strength: 2, label: 'Fair', color: 'warning' };
+    if (score <= 6) return { strength: 3, label: 'Good', color: 'info' };
+    return { strength: 4, label: 'Strong', color: 'success' };
+  };
+
+  const passwordStrength = getPasswordStrength();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.email.includes("@")) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    const passwordErrors = validatePassword(formData.password, formData.fullName);
-    if (passwordErrors.length > 0) {
-      setError(
-        "Password must contain at least " +
-          passwordErrors.join(", ")
-      );
-      return;
-    }
-
-    const payload = {
-      username: formData.fullName,
-      email: formData.email,
-      password: formData.password,
-    };
-    const apiCall = selectedRole === "Landlord" ? registerLandlord : registerUser;
-    apiCall(payload)
-      .then(() => {
+    if (validateForm()) {
+      const payload = {
+        username: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+      };
+      
+      try {
+        const apiCall = selectedRole === "Landlord" ? registerLandlord : registerUser;
+        await apiCall(payload);
         toast.success("You were registered successfully!", { autoClose: 4000 });
         localStorage.removeItem("registerRole");
         navigate("/login");
-      })
-      .catch((err) => {
-        setError(err.message || "Registration error");
-      });
+      } catch (error) {
+        if (error.response) {
+          if (error.response.status === 409) {
+            toast.error('A user with this username or email already exists');
+          } else if (error.response.data?.errors) {
+            const backendErrors = error.response.data.errors;
+            
+            if (backendErrors.Username) {
+              const usernameError = Array.isArray(backendErrors.Username) 
+                ? backendErrors.Username.join(', ')
+                : backendErrors.Username;
+              toast.error(`Username: ${usernameError}`);
+            }
+            
+            if (backendErrors.Email) {
+              const emailError = Array.isArray(backendErrors.Email)
+                ? backendErrors.Email.join(', ')
+                : backendErrors.Email;
+              toast.error(`Email: ${emailError}`);
+            }
+            
+            if (backendErrors.Password) {
+              const passwordError = Array.isArray(backendErrors.Password)
+                ? backendErrors.Password.join(', ')
+                : backendErrors.Password;
+              toast.error(`Password: ${passwordError}`);
+            }
+          } else {
+            toast.error('Registration failed. Please try again.');
+          }
+        } else {
+          toast.error('Network error. Please check your connection and try again.');
+        }
+      }
+    }
   };
 
   return (
@@ -108,7 +209,6 @@ const Register = () => {
           zIndex: 5,
         }}
       >
-        {/* Outline-текст зверху */}
         <div
           style={{
             width: "100%",
@@ -134,7 +234,6 @@ const Register = () => {
           </span>
         </div>
 
-        {/* Заголовок */}
         <div
           style={{
             fontSize: 32,
@@ -149,7 +248,6 @@ const Register = () => {
           Create Account
         </div>
 
-        {/* Поля */}
         <form style={{ width: "100%", maxWidth: 500 }} onSubmit={handleSubmit}>
           <div style={{ position: "relative", marginBottom: 16 }}>
             <img
@@ -163,13 +261,17 @@ const Register = () => {
                 width: 22,
                 height: 22,
                 opacity: 0.7,
+                zIndex: 1,
               }}
             />
             <input
               type="text"
               name="fullName"
-              className="form-control"
-              placeholder="Username"
+              className={`form-control ${
+                formErrors.fullName ? 'is-invalid' : 
+                formData.fullName.length >= 3 ? 'is-valid' : ''
+              }`}
+              placeholder="Username (3-50 characters)"
               value={formData.fullName}
               required
               style={{
@@ -183,44 +285,15 @@ const Register = () => {
                 paddingLeft: 48,
                 fontWeight: 500,
               }}
-              onChange={handleChange}
+              maxLength={50}
+              onChange={(e) => handleChange('fullName', e.target.value)}
             />
+            {formErrors.fullName && (
+              <div className="invalid-feedback d-block" style={{ fontSize: '0.875rem', marginTop: 4 }}>
+                {formErrors.fullName}
+              </div>
+            )}
           </div>
-          <div style={{ position: "relative", marginBottom: 16 }}>
-            <img
-              src="/images/password-icon.png"
-              alt="password"
-              style={{
-                position: "absolute",
-                left: 14,
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: 22,
-                height: 16,
-                opacity: 0.7,
-              }}
-            />
-            <input
-              type="password"
-              name="password"
-              className="form-control"
-              placeholder="Password"
-              value={formData.password}
-              required
-              style={{
-                fontSize: 16,
-                minHeight: 44,
-                borderRadius: 16,
-                border: "1.5px solid #02457A",
-                background: "transparent",
-                color: "#183E6B",
-                boxShadow: "none",
-                paddingLeft: 48,
-                fontWeight: 500,
-              }}
-              onChange={handleChange}
-            />
-          </div>         
 
           <div style={{ position: "relative", marginBottom: 24 }}>
             <img
@@ -234,12 +307,16 @@ const Register = () => {
                 width: 22,
                 height: 16,
                 opacity: 0.7,
+                zIndex: 1,
               }}
             />
             <input
               type="email"
               name="email"
-              className="form-control"
+              className={`form-control ${
+                formErrors.email ? 'is-invalid' : 
+                formData.email.includes('@') && formData.email.includes('.') ? 'is-valid' : ''
+              }`}
               placeholder="Email address"
               value={formData.email}
               required
@@ -254,14 +331,82 @@ const Register = () => {
                 paddingLeft: 48,
                 fontWeight: 500,
               }}
-              onChange={handleChange}
+              maxLength={254}
+              onChange={(e) => handleChange('email', e.target.value)}
             />
+            {formErrors.email && (
+              <div className="invalid-feedback d-block" style={{ fontSize: '0.875rem', marginTop: 4 }}>
+                {formErrors.email}
+              </div>
+            )}
           </div>
 
-          {/* Кнопка реєстрації */}
+          <div style={{ position: "relative", marginBottom: 16 }}>
+            <img
+              src="/images/password-icon.png"
+              alt="password"
+              style={{
+                position: "absolute",
+                left: 14,
+                top: 22,
+                transform: "translateY(-50%)",
+                width: 22,
+                height: 16,
+                opacity: 0.7,
+                zIndex: 1,
+              }}
+            />
+            <input
+              type="password"
+              name="password"
+              className={`form-control ${
+                formErrors.password ? 'is-invalid' : 
+                formData.password && validatePassword(formData.password, formData.fullName).length === 0 ? 'is-valid' : ''
+              }`}
+              placeholder="Password (min 8 characters)"
+              value={formData.password}
+              required
+              style={{
+                fontSize: 16,
+                minHeight: 44,
+                borderRadius: 16,
+                border: "1.5px solid #02457A",
+                background: "transparent",
+                color: "#183E6B",
+                boxShadow: "none",
+                paddingLeft: 48,
+                fontWeight: 500,
+              }}
+              onChange={(e) => handleChange('password', e.target.value)}
+            />
+            
+            {formData.password && (
+              <div style={{ marginTop: 8 }}>
+                <div className="d-flex align-items-center">
+                  <small className="text-muted me-2">Strength:</small>
+                  <span className={`badge bg-${passwordStrength.color} bg-opacity-10 text-${passwordStrength.color}`}>
+                    {passwordStrength.label}
+                  </span>
+                </div>
+                <div className="progress" style={{ height: '4px' }}>
+                  <div 
+                    className={`progress-bar bg-${passwordStrength.color}`}
+                    style={{ width: `${(passwordStrength.strength / 4) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {formErrors.password &&
+              <div className="invalid-feedback d-block" style={{ fontSize: '0.875rem', marginTop: 4 }}>
+                {formErrors.password}
+              </div>}
+          </div>
+
           <button
             type="submit"
             className="btn w-100"
+            disabled={Object.keys(formErrors).some(key => formErrors[key])}
             style={{
               background: "#062C43",
               color: "#fff",
@@ -272,13 +417,13 @@ const Register = () => {
               marginBottom: 18,
               letterSpacing: "0.5px",
               marginTop: 6,
+              opacity: Object.keys(formErrors).some(key => formErrors[key]) ? 0.6 : 1
             }}
           >
             Create Account
           </button>
         </form>
 
-        {/* Текст і лінк на логін */}
         <div className="w-100 text-center" style={{ marginTop: 12, color: "#8898b3", fontSize: 16 }}>
           Have an account?{" "}
           <Link to="/login" style={{ color: "#0C63E4", fontWeight: 600, marginLeft: 6 }}>
@@ -286,7 +431,6 @@ const Register = () => {
           </Link>
         </div>
 
-        {/* Лінія з "or" */}
         <div style={{
           display: "flex", alignItems: "center",
           width: 500, maxWidth: "100%", margin: "24px 0"
@@ -340,12 +484,6 @@ const Register = () => {
             Sing up with Google
           </button>          
         </div>
-
-        {error && (
-          <div className="alert alert-danger mt-3" style={{ width: 500, maxWidth: "100%" }}>
-            {error}
-          </div>
-        )}
       </div>
     </div>
   );
