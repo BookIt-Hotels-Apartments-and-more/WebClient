@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch  } from "react-redux";
 import { axiosInstance } from "../../api/axios";
 import { setUser } from "../../store/slices/userSlice";
@@ -6,7 +6,7 @@ import { getEstablishmentsByOwnerFiltered } from "../../api/establishmentsApi";
 import LandEstablishmentCard from "./LandEstablishmentCard";
 import { Link, useNavigate } from "react-router-dom";
 import { ESTABLISHMENT_TYPE_LABELS } from "../../utils/enums";
-import { uploadUserPhoto, updateUserDetails } from "../../api/userApi";
+import { uploadUserPhoto, updateUserDetails, getUserImages } from "../../api/userApi";
 import { toast } from "react-toastify";
 
 
@@ -22,8 +22,9 @@ const LandPanel = () => {
     email: user?.email || "",
     phoneNumber: user?.phoneNumber || "",
     photoBase64: "",
-    photoPreview: user?.photoUrl || "",
+    photoPreview: "",
   });
+  const fileRef = useRef(null);
   const [selectedType, setSelectedType] = useState("");
 
   useEffect(() => {
@@ -56,8 +57,11 @@ const LandPanel = () => {
       username: user?.username || "",
       email: user?.email || "",
       phoneNumber: user?.phoneNumber || "",
+      photoBase64: "",
+      photoPreview: "",
     });
     setIsEditing(false);
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const handlePhotoChange = (e) => {
@@ -84,21 +88,24 @@ const LandPanel = () => {
       };
       await updateUserDetails(payload);
 
+      let images = user?.photos || [];
       if (editedUser.photoBase64) {
         await uploadUserPhoto(editedUser.photoBase64);
+        images = await getUserImages();
       }
-
       const current = JSON.parse(localStorage.getItem("user") || "{}");
       const nextUser = {
         ...current,
-        username: payload.username,
-        email: payload.email,
-        phoneNumber: payload.phoneNumber,
-        photoUrl: editedUser.photoPreview || current.photoUrl
+        ...payload,
+        photos: images || [],
+        photoUrl: images?.[0]?.blobUrl || current.photoUrl,
       };
+
       localStorage.setItem("user", JSON.stringify(nextUser));
       dispatch(setUser(nextUser));
       setIsEditing(false);
+      setEditedUser(u => ({ ...u, photoBase64: "", photoPreview: "" }));
+       if (fileRef.current) fileRef.current.value = "";
     } catch (err) {
       console.error("Error saving profile:", err?.response || err);
     }
@@ -109,8 +116,6 @@ const LandPanel = () => {
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("favorites");
-
 
     if (axiosInstance?.defaults?.headers?.common?.Authorization) {
       delete axiosInstance.defaults.headers.common.Authorization;
@@ -165,49 +170,40 @@ const LandPanel = () => {
               padding: 24,
               boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)"
             }}>
+              {(user?.photoUrl || user?.photos?.[0]?.blobUrl) && (
+                <img
+                  src={user?.photoUrl || user?.photos?.[0]?.blobUrl}
+                  alt="User avatar"
+                  width={90}
+                  height={90}
+                  style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", marginBottom: 12 }}
+                />
+              )}
               <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 18 }}>Your details</div>
               {isEditing ? (
                 <>
-                  {/* Аватар + завантаження фото */}
-                <div style={{ marginBottom: 24 }}>
-                  {editedUser.photoPreview && (
-                    <img
-                      src={editedUser.photoPreview}
-                      alt="User avatar"
-                      width={90}
-                      height={90}
-                      style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", marginBottom: 12 }}
+                  {/* Фото профілю */}
+                  <div style={{ marginBottom: 24, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
+                    <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
+                      Profile photo
+                    </label>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      className="form-control"
+                      onChange={handlePhotoChange}
                     />
-                  )}
-                  <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
-                    Profile photo
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="form-control"
-                    onChange={handlePhotoChange}
-                  />
-                  {editedUser.photoPreview && (
-                    <button
-                      className="btn btn-primary btn-sm mt-2"
-                      style={{ borderRadius: 10, fontWeight: 600, minWidth: 110 }}
-                      disabled={!editedUser.photoBase64}
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        try {
-                          await uploadUserPhoto(editedUser.photoBase64);
-                          // за бажанням: toast.success("Profile photo updated!")
-                        } catch (err) {
-                          console.error("Failed to upload photo", err);
-                          // за бажанням: toast.error("Failed to upload photo")
-                        }
-                      }}
-                    >
-                      Save photo
-                    </button>
-                  )}
-                </div>
+                    {editedUser.photoPreview && (
+                      <img
+                        src={editedUser.photoPreview}
+                        alt="User avatar"
+                        width={90}
+                        height={90}
+                        style={{ display: "block", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee" }}
+                      />
+                    )}
+                  </div>
 
                   {/* Full name */}
                   <div style={{ marginBottom: 24 }}>

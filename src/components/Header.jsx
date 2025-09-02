@@ -10,6 +10,7 @@ import { displayableRole } from "../utils/roles";
 
 const Header = () => {
   const user = useSelector((state) => state.user.user);
+  const avatarUrl = user?.photoUrl || user?.photos?.[0]?.blobUrl;
   const navigate = useNavigate();
   const [showRolePicker, setShowRolePicker] = useState(false);
   const rolePickerRef = useRef(null);
@@ -38,6 +39,17 @@ const Header = () => {
       document.removeEventListener("mousedown", onClick);
     };
   }, [showRolePicker]);
+
+   useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === "user" && e.newValue) {
+        try { dispatch(setUser(JSON.parse(e.newValue))); } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [dispatch]);
+
 
 
   return (
@@ -98,24 +110,11 @@ const Header = () => {
                   aria-expanded={showRolePicker ? "true" : "false"}
                   style={{ background: "transparent", border: "none", padding: 0, color: "#02457A" }}
                 >
-                  {user?.photos?.length > 0 && user.photos[0]?.blobUrl ? (
-                    <img
-                      src={user.photos[0].blobUrl}
-                      alt="User avatar"
-                      width={60}
-                      height={60}
-                      style={{
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                        border: "2px solid #e0eaf6",
-                        background: "#f3f3f3",
-                        boxShadow: "0 2px 5px 0 rgba(2,69,122,0.08)",
-                        cursor: "pointer"
-                      }}
-                    />
-                  ) : (
-                    <FaUserCircle size={36} style={{ cursor: "pointer" }} />
-                  )}
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="User avatar" width={60} height={60} style={{ borderRadius: "50%", objectFit: "cover", border: "2px solid #e0eaf6", background: "#f3f3f3", boxShadow: "0 2px 5px 0 rgba(2,69,122,0.08)", cursor: "pointer" }} />
+                      ) : (
+                        <FaUserCircle size={36} style={{ cursor: "pointer" }} />
+                      )}
                 </button>
 
                 <span>Hello, {user?.username}</span>

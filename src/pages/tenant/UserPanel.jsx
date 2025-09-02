@@ -7,7 +7,7 @@ import { getBookingById, deleteBooking, updateBooking } from "../../api/bookingA
 import { removeFavorite  } from "../../api/favoriteApi";
 import { getApartmentById } from "../../api/apartmentApi";
 import { toast } from 'react-toastify';
-import { uploadUserPhoto, updateUserPassword, updateUserDetails } from "../../api/userApi";
+import { uploadUserPhoto, updateUserPassword, updateUserDetails, getUserImages } from "../../api/userApi";
 import AddComment from "../../components/AddComment";
 import { decodeFlagsUser, 
   ESTABLISHMENT_FEATURE_LABELS,  
@@ -31,7 +31,7 @@ const UserPanel = () => {
     email: user?.email || "",
     phoneNumber: user?.phoneNumber || "",
     photoBase64: "",
-    photoPreview: user?.photoUrl || "",
+    photoPreview: "",
   });
   const [editModal, setEditModal] = useState({
     show: false,
@@ -125,18 +125,22 @@ const UserPanel = () => {
       };
       await updateUserDetails(payload);
 
-      if (editedUser.photoBase64) {
-        await uploadUserPhoto(editedUser.photoBase64);
-      }
+      let images = user?.photos || [];
+        if (editedUser.photoBase64) {
+          await uploadUserPhoto(editedUser.photoBase64);
+          images = await getUserImages();
+        }
+
+        const nextUser = {
+          ...user,
+          ...payload,
+          photos: images || [],
+          photoUrl: images?.[0]?.blobUrl || editedUser.photoPreview || user.photoUrl,
+        };
+        dispatch(setUser(nextUser));
+        localStorage.setItem("user", JSON.stringify(nextUser));
       
-      const nextUser = {
-        ...user,
-        username: payload.username,
-        email: payload.email,
-        phoneNumber: payload.phoneNumber,
-        photoUrl: editedUser.photoPreview || user.photoUrl
-      };
-      dispatch(setUser(nextUser));
+      
       setIsEditing(false);
       toast.success("Profile saved!", { autoClose: 3000 });
     } catch (err) {
@@ -152,6 +156,8 @@ const UserPanel = () => {
       username: user?.username || "",
       email: user?.email || "",
       phoneNumber: user?.phoneNumber || "",
+      photoBase64: "",
+      photoPreview: "",
     });
     setIsEditing(false);
   };
@@ -400,15 +406,16 @@ const UserPanel = () => {
                     <>           
                   {/* Full name */}
                   <div style={{ marginBottom: 24 }}>
-                    {user?.photoUrl && (
+                    {(user?.photoUrl || user?.photos?.[0]?.blobUrl) && (
                       <img
-                        src={user.photoUrl}
+                        src={user?.photoUrl || user?.photos?.[0]?.blobUrl}
                         alt="User avatar"
                         width={90}
                         height={90}
                         style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", marginBottom: 12 }}
                       />
                     )}
+
                     <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
                       Full name
                     </label>
@@ -484,7 +491,7 @@ const UserPanel = () => {
                       placeholder="Phone number"
                     />
                     {/* User photo upload */}
-                    <div style={{ marginBottom: 32 }}>
+                    <div style={{ marginBottom: 32, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
                       <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
                         Profile photo
                       </label>
@@ -496,36 +503,18 @@ const UserPanel = () => {
                         onChange={handlePhotoChange}
                       />
                       {editedUser.photoPreview && (
-                        <div style={{ marginTop: 10 }}>
-                          <img
-                            src={editedUser.photoPreview}
-                            alt="Profile preview"
-                            width={90}
-                            height={90}
-                            style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee" }}
-                          />
-                          <button
-                            className="btn btn-primary btn-sm mt-2"
-                            style={{ borderRadius: 10, fontWeight: 600, minWidth: 110, marginLeft: 12 }}
-                            disabled={!editedUser.photoBase64}
-                            onClick={async (e) => {
-                              e.preventDefault();
-                              try {
-                                await uploadUserPhoto(editedUser.photoBase64);
-                                toast.success("Profile photo updated!", { autoClose: 3000 });
-                              } catch (err) {
-                                console.error("Failed to upload photo", err);
-                                toast.error("Failed to upload photo", { autoClose: 4000 });
-                              }
-                            }}
-                          >
-                            Save photo
-                          </button>
-                        </div>
+                        <img
+                          src={editedUser.photoPreview}
+                          alt="User avatar"
+                          width={90}
+                          height={90}
+                          style={{ display: "block", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee" }}
+                        />
                       )}
 
+
                       <button className="btn btn-outline-primary btn-sm" 
-                      style={{ minWidth: 280, marginTop: 20, minHeight:50, fontSize: 18, borderRadius: 16 }}                        
+                      style={{ alignSelf: "flex-start", minWidth: 280, minHeight: 50, fontSize: 18, borderRadius: 16 }}                   
                       onClick={() => setPwModal(m => ({ ...m, show: true, error: "" }))}
                       >
                         Change password

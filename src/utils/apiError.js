@@ -1,29 +1,28 @@
-export function getApiErrorMessage(err, fallback = "Booking/payment error!") {
-  const data = err?.response?.data;
+export function getApiErrorMessage(err, fallback = "Something went wrong. Please try again.") {
+  const resp = err?.response;
+  const data = resp?.data;
 
   if (typeof data === "string" && data.trim()) return data;
 
-  if (data?.message && typeof data.message === "string") {
-    if (data?.details?.Rule) {
-      return `${data.message}`;
-    }
-    return data.message;
-  }
+  if (data?.message && typeof data.message === "string") return data.message;
 
   if (data?.errors && typeof data.errors === "object") {
-    const lines = Object.values(data.errors)
-      .flat()
-      .filter(Boolean)
-      .map(String);
+    const lines = Object.values(data.errors).flat().filter(Boolean).map(String);
     if (lines.length) return lines.join("\n");
+    if (data.title) return String(data.title);
   }
 
-  if (data?.title && typeof data.title === "string") {
-    return data.detail ? `${data.title}\n${data.detail}` : data.title;
+  if (data?.detail) return String(data.detail);
+  if (data?.error_description) return String(data.error_description);
+
+  if (Array.isArray(data?.errors)) {
+    const msgs = data.errors
+      .map(e => e?.message || e?.description || (typeof e === "string" ? e : ""))
+      .filter(Boolean);
+    if (msgs.length) return msgs.join("\n");
   }
 
-  if (err?.response?.statusText) return err.response.statusText;
-
+  if (resp?.statusText) return resp.statusText;
   if (err?.message) return err.message;
 
   return fallback;
