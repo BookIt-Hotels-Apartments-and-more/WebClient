@@ -19,11 +19,11 @@ const Register = () => {
   const validatePassword = (password, username = "") => {
     const specialChars = "!@#$%^&*()_+-=[]{}|;:,.<>?";
     let errors = [];
-    if (!/[A-Z]/.test(password)) errors.push("one uppercase letter");
-    if (!/[a-z]/.test(password)) errors.push("one lowercase letter");
-    if (!/[0-9]/.test(password)) errors.push("one number");
+    if (!/[A-Z]/.test(password)) errors.push("uppercase letter");
+    if (!/[a-z]/.test(password)) errors.push("lowercase letter");
+    if (!/[0-9]/.test(password)) errors.push("number");
     if (!new RegExp(`[${specialChars.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}]`).test(password))
-      errors.push("one special character");
+      errors.push("special character");
     if (/(.)\1\1/.test(password)) errors.push("no more than 2 identical characters in a row");
     if (username && password.toLowerCase().includes(username.toLowerCase()))
       errors.push("not contain your username");
@@ -90,30 +90,6 @@ const Register = () => {
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
-  const getPasswordStrength = () => {
-    if (!formData.password) return { strength: 0, label: '', color: '' };
-    
-    const password = formData.password;
-    let score = 0;
-    
-    if (password.length >= 8) score += 1;
-    if (password.length >= 12) score += 1;
-    
-    if (/[a-z]/.test(password)) score += 1;
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/[0-9]/.test(password)) score += 1;
-    if (/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) score += 1;
-    
-    if (!/(.)\1\1/.test(password)) score += 1;
-    
-    if (score <= 2) return { strength: 1, label: 'Weak', color: 'danger' };
-    if (score <= 4) return { strength: 2, label: 'Fair', color: 'warning' };
-    if (score <= 6) return { strength: 3, label: 'Good', color: 'info' };
-    return { strength: 4, label: 'Strong', color: 'success' };
-  };
-
-  const passwordStrength = getPasswordStrength();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -341,7 +317,7 @@ const Register = () => {
             )}
           </div>
 
-          <div style={{ position: "relative", marginBottom: 16 }}>
+          <div style={{ position: "relative", marginBottom: 16, minHeight: 68 }}>
             <img
               src="/images/password-icon.png"
               alt="password"
@@ -379,26 +355,9 @@ const Register = () => {
               }}
               onChange={(e) => handleChange('password', e.target.value)}
             />
-            
-            {formData.password && (
-              <div style={{ marginTop: 8 }}>
-                <div className="d-flex align-items-center">
-                  <small className="text-muted me-2">Strength:</small>
-                  <span className={`badge bg-${passwordStrength.color} bg-opacity-10 text-${passwordStrength.color}`}>
-                    {passwordStrength.label}
-                  </span>
-                </div>
-                <div className="progress" style={{ height: '4px' }}>
-                  <div 
-                    className={`progress-bar bg-${passwordStrength.color}`}
-                    style={{ width: `${(passwordStrength.strength / 4) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
 
             {formErrors.password &&
-              <div className="invalid-feedback d-block" style={{ fontSize: '0.875rem', marginTop: 4 }}>
+              <div className="invalid-feedback d-block" style={{ fontSize: '0.875rem', marginTop: 5 }}>
                 {formErrors.password}
               </div>}
           </div>
