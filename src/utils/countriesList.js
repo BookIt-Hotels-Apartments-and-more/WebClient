@@ -1,4 +1,3 @@
-
 const countriesList = [
   {
     name: "France",

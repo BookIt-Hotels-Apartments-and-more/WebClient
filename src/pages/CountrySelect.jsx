@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useContext  } from "react";
+import { useState, useEffect, useMemo  } from "react";
 import { useLocation, Link, useNavigate  } from "react-router-dom";
 import { getAllEstablishments } from "../api/establishmentsApi";
 import { axiosInstance } from "../api/axios";
@@ -9,7 +9,6 @@ import countriesList from "../utils/countriesList";
 import { ESTABLISHMENT_TYPE_LABELS } from "../utils/enums";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import { ESTABLISHMENT_FEATURE_LABELS, VIBE_TYPE } from "../utils/enums";
-
 
 export default function CountrySelect() {
   const location = useLocation();
@@ -41,8 +40,6 @@ export default function CountrySelect() {
   const [favorites, setFavorites] = useState([]);
   const FACILITIES = Object.keys(ESTABLISHMENT_FEATURE_LABELS);
   const [sortMode, setSortMode] = useState("recommendations");
-
-
 
   useEffect(() => {
     getAllEstablishments()
@@ -79,9 +76,7 @@ export default function CountrySelect() {
 
 
   const CONTENT_MAX = 1250;
-  const H_PADDING   = 36; 
 
-  // поки мокові дані
   const REGION_SUGGESTIONS = {
     Thailand: [
       { key: 'patong', title: 'Patong Beach', city: 'Patong',    badges: ['Beaches', 'Nightlife', 'Watersports'], img: '/images/patong.png' },
@@ -108,29 +103,21 @@ export default function CountrySelect() {
     return regions[idx];
   });
 
-  const handleRegionClick = (r) => {
-    setSearch(r.city || r.title);
-  };
-
   const nextRegion = () => setRegionIndex(i => (i + 1) % regions.length);
 
   
   const filteredHotels = useMemo(() => {
     return hotels.filter(hotel => {
-      // Фільтр по країні
       const geo = hotel.geolocation || {};
       const country = (geo.country || "").trim().toLowerCase();
       const matchesCountry = !filters.country || country === filters.country.toLowerCase();
 
-
-      // Мін/макс ціна
       const price = Number.isFinite(Number(hotel?.minApartmentPrice))
         ? Number(hotel.minApartmentPrice)
         : null;
       const matchesMinPrice = !filters.minPrice || (price !== null && price >= Number(filters.minPrice));
       const matchesMaxPrice = !filters.maxPrice || (price !== null && price <= Number(filters.maxPrice));
       
-      // Рейтинг
       const ratingRaw = filters?.rating ?? "";
       let minRating = null;
       if (ratingRaw !== "") {
@@ -278,7 +265,7 @@ export default function CountrySelect() {
           <Breadcrumbs
             items={[
               { label: "Main page", to: "/" },
-              { label: "Quick and easy planning >" },
+              { label: "Quick and easy planning", to: "/countries" },
               { label: currentCountry }
             ]}
           />
@@ -346,10 +333,8 @@ export default function CountrySelect() {
             </span>
           </div>
 
-          {/* Кнопки типів */}
           <div className="filter-types-wrapper" style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", justifyContent: "flex-end"}}>
            <div className="d-flex flex-wrap gap-2 justify-content-end">
-              {/* All */}
               <button
                 className="btn"
                 style={{
@@ -367,7 +352,6 @@ export default function CountrySelect() {
                 All
               </button>
 
-              {/* Решта типів */}
               {Object.keys(ESTABLISHMENT_TYPE_LABELS).map((type) => (
                 <button
                   key={type}
@@ -392,11 +376,6 @@ export default function CountrySelect() {
           </div>
         </div>
 
-        
-
-
-
-
         <div className="row">
           {/* Фільтр зліва */}
 
@@ -413,7 +392,7 @@ export default function CountrySelect() {
               <i className="bi bi-funnel"></i> Filters
             </button>
           </div>
-          {/* Desktop фільтр */}
+
           <div className="col-12 col-md-3 mb-4 d-none d-md-block">
             <HotelFilters
               filters={filters}
@@ -460,7 +439,6 @@ export default function CountrySelect() {
 
           
           <div className="col-12 col-md-9">
-            {/* === Region picker (добірка районів країни) === */}
             <div style={{ position: "relative", marginBottom: 18 }}>
             <div
               style={{
@@ -480,7 +458,6 @@ export default function CountrySelect() {
                 return (
                   <div
                     key={r.key}
-                    onClick={() => handleRegionClick(r)}
                     style={{
                       cursor: "pointer",
                       borderRadius: 14,

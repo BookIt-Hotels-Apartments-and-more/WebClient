@@ -1,10 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import BookingBannerForm from '../components/BookingBannerForm';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useNavigate } from "react-router-dom";
 import countriesList from "../utils/countriesList";
-
-
 
 const filters = ["Beach", "Nature", "City", "Mountains", "Relax"];
 
@@ -15,7 +13,6 @@ export default function Countries() {
 
   const handleCountryClick = (countryName) => {
     navigate(`/country-select?country=${encodeURIComponent(countryName)}`);
-
   };
 
   const filteredCountries =
@@ -25,7 +22,6 @@ export default function Countries() {
 
   return (
     <div className="countries-page" style={{ background: "#f6fafc", minHeight: "100vh" }}>
-        {/* Банер */}
         <div
         className="baner"
         style={{
@@ -45,11 +41,9 @@ export default function Countries() {
           zIndex: 1,
         }}
       >
-        {/* Форма пошуку */}
         <div style={{ zIndex: 2, marginTop: -100 }}>
           <BookingBannerForm search={search} setSearch={setSearch} />
         </div>
-        {/* Текст */}
         <span
           style={{
             position: 'absolute',
