@@ -97,7 +97,7 @@ export function normalizeFeaturesForCheckboxes(backendFeatures, LABELS) {
 export function featuresObjectToBitmask(featuresObj, featureLabels) {
   return Object.entries(featureLabels)
     .filter(([key]) => featuresObj[key])
-    .reduce((sum, [, value]) => sum + value, 0);
+    .reduce((sum, [, value]) => sum + (1 << value), 0);
 }
 
 export const displayableVibe = (vibeId) => {

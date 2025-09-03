@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   getApartmentsByEstablishment,
   deleteApartment,
@@ -14,18 +14,14 @@ import {
 import { deleteEstablishment } from "../../api/establishmentsApi";
 import { Link } from "react-router-dom";
 import { APARTMENT_FEATURE_LABELS, ESTABLISHMENT_FEATURE_LABELS, decodeFlagsUser } from "../../utils/enums";
+import { toast } from "react-toastify";
 
 const LandEstablishmentCard = ({ est, reloadStats  }) => {
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [reviews, setReviews] = useState([]);
 
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const allApts = await getApartmentsByEstablishment(est.id);
       setApartments(Array.isArray(allApts) ? allApts : []);
@@ -47,24 +43,27 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
     } catch (err) {
       console.error("❌ Error while loading:", err);
     }
-  };
+  }, [est.id]);
 
-  const fmt1 = (v) =>
-    (typeof v === "number" && !Number.isNaN(v))
-      ? v.toFixed(1)
-      : (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
+  const fmt1 = (v) => (typeof v === "number" && !Number.isNaN(v))
+      ? v.toFixed(1) : (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 
   const handleDeleteHotel = async () => {
     if (confirm("Are you sure you want to delete the hotel?")) {
       await deleteEstablishment(est.id);
+      toast.success("Hotel deleted");
       reloadStats();
     }
   };
 
   const handleDeleteApartment = async (id) => {
-      if (confirm("Delete room?")) {
+      if (confirm("Are you sure you want to delete the apartment?")) {
         await deleteApartment(id);
+        toast.success("Apartment deleted");
         await loadData();
         if (reloadStats) reloadStats();
       }
@@ -73,39 +72,33 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
   const handleCheckIn = async (bookingId) => {
     try {
       await checkInBooking(bookingId);
+      toast.success("Booking was checked in");
       await loadData();
     } catch (err) {
-      console.error("❌ Error during check-in:", err);
+      toast.error("Failed to check-in a booking:", err);
     }
   };
 
   const handleCancelBooking = async (bookingId) => {
-    if (confirm("Cancel booking?")) {
+    if (confirm("Are you sure than you want to cancel the booking?")) {
       await deleteBooking(bookingId);
+      toast.success("Booking canceled");
       await loadData();
     }
   };
 
   const handleDeleteReview = async (reviewId) => {
-    if (confirm("Delete review?")) {
+    if (confirm("Are you sure you want to delete the review?")) {
       await deleteReview(reviewId);
+      toast.success("Apartment deleted");
       setReviews((prev) => prev.filter((r) => r.id !== reviewId));
     }
   };
-
-  function getApartmentFeatureNames(features) {
-    return Object.keys(APARTMENT_FEATURE_LABELS)
-      .filter(key => (features & (1 << APARTMENT_FEATURE_LABELS[key])) !== 0)
-      .join(", ");
-  }
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
     return new Date(dateStr).toISOString().split("T")[0];
   };
-
-
-
 
   return (
     <div className="card mb-4 shadow-sm">
@@ -133,7 +126,6 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
 
         <hr />
 
-        {/* Вивід фото готелю */}
         <p className="card-text">Hotel photos:</p>
         {est.photos && est.photos.length > 0 && (
           <div className="d-flex flex-wrap gap-2 my-2">
@@ -156,17 +148,14 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
           </div>
         )}
 
-        {/* Вивід удобств */}
         <p className="card-text mb-1 fw-bold">Facilities:</p>
 
         {(() => {
           let featureNames = [];
 
           if (typeof est?.features === "number") {
-            // бек віддав бітмаску
             featureNames = decodeFlagsUser(est.features, ESTABLISHMENT_FEATURE_LABELS);
           } else if (est?.features && typeof est.features === "object") {
-            // бек віддав об’єкт булів { parking: true, ... }
             featureNames = Object.keys(ESTABLISHMENT_FEATURE_LABELS).filter(k =>
               est.features[k.charAt(0).toLowerCase() + k.slice(1)]
             );
@@ -239,7 +228,6 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                 </div>
               </div>
 
-              {/* Фото апартамента */}
               {apt.photos && apt.photos.length > 0 && (
                 <div className="d-flex gap-2 mt-2 mb-1 flex-wrap">
                   {apt.photos.map((photo, idx) => (
@@ -259,7 +247,6 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                 </div>                
               )}
               {apt.description}
-              {/* Вивід зручностей апартаменту (з іконками) */}
               <div className="mb-2 mt-2">
                 <p className="card-text mb-1 fw-bold">Room facilities:</p>
 
@@ -267,10 +254,8 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                   let featureNames = [];
 
                   if (typeof apt?.features === "number") {
-                    // бек повернув бітмаску
                     featureNames = decodeFlagsUser(apt.features, APARTMENT_FEATURE_LABELS);
                   } else if (apt?.features && typeof apt.features === "object") {
-                    // бек повернув об’єкт булів { freeWifi: true, ... }
                     featureNames = Object.keys(APARTMENT_FEATURE_LABELS).filter(k =>
                       apt.features[k.charAt(0).toLowerCase() + k.slice(1)]
                     );
@@ -344,7 +329,6 @@ const LandEstablishmentCard = ({ est, reloadStats  }) => {
                   </button>
                   <button
                     className="btn btn-sm btn-outline-primary"
-                    // Додати реалізацію оцінки клієнта (куди і як будемо застосовувати рейтинг?)                    
                   >
                     Rate the client
                   </button>

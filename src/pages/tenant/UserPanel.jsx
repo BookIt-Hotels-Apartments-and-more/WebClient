@@ -14,11 +14,9 @@ import { decodeFlagsUser,
   getEstablishmentTypeName, 
   APARTMENT_FEATURE_LABELS } from "../../utils/enums";
 
-
 const UserPanel = () => {
   const user = useSelector(s => s.user.user);
   const dispatch = useDispatch();
-  if (!user) return null;
 
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
@@ -49,7 +47,6 @@ const UserPanel = () => {
    error: ""
  });
  const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
-
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +99,7 @@ const UserPanel = () => {
         const apt = await getApartmentById(id);
         newMap[id] = apt;
       } catch (err) {
-        // handle error
+        console.warn("Apartment load error:", err?.response || err);
       }
     }
     setApartmentMap(newMap);
@@ -342,6 +339,8 @@ const UserPanel = () => {
     if (!dateStr) return "";
     return new Date(dateStr).toLocaleDateString();
   };
+
+  if (!user) return null;
 
   // --- Дані для правої колонки
   const upcomingBooking = upcoming[0] || null;
@@ -983,30 +982,27 @@ const UserPanel = () => {
                     </div>                 
                     
 
-                    {/* --- HR between bookings --- */}
                     {idx < upcoming.length - 1 && <hr style={{ margin: "20px 0", borderTop: "2px solid #dde2e7" }} />}
                   </div>                  
                 )                
               })
             )}
 
-            {/* Історія бронювань */}
             <div style={{background: "#fcfcfc", borderRadius: 18, padding: 24, minHeight: 120, boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)" }}>
-              <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 10, marginTop: 30, color: "#001B48" }}>
+              <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 10, color: "#001B48" }}>
                 Booking history
               </div>
               <hr></hr>
               {history.length === 0 && (
                 <div style={{ color: "#aaa" }}>No past bookings found.</div>
               )}
-              {history.map((b, idx) => (
+              {history.map((b) => (
                 <div key={b.id} className="mb-2" style={{ borderBottom: "1px solid #eee", paddingBottom: 10 }}>
                   <div style={{ fontWeight: 600, color: "#001B48", fontSize: 20 }}>{b.apartment?.establishment?.name || "Hotel"}</div>
                   <div style={{ fontWeight: 300, color: "#001B48", fontSize: 14 }}>{b.apartment?.name}</div>
                   <div style={{ fontWeight: 500, color: "#001B48", fontSize: 16 }}>
                     {new Date(b.dateFrom).toLocaleDateString()} &ndash; {new Date(b.dateTo).toLocaleDateString()}
                   </div>
-                  {/* Потім переробити на отримання статусу з бека */}
                   <div style={{ fontWeight: 300, color: "#001B48", fontSize: 16 }}>Status: <span style={{ color: "#aaa" }}>Completed</span></div>
                   <button
                     className="btn btn-success btn-sm mt-2"
@@ -1022,7 +1018,6 @@ const UserPanel = () => {
           
         </div>
 
-        {/* модалка редагування бронювання (додати перевірку дат бронювання!!!!!!!!!!) */}
         {editModal.show && (
         <div
           style={{
@@ -1079,7 +1074,6 @@ const UserPanel = () => {
         </div>
       )}
       </div>
-      {/* модалка додавання відгуків */}
       {addReviewModal.show && (
         <div
           style={{
@@ -1122,7 +1116,6 @@ const UserPanel = () => {
           </div>
         </div>
       )}
-      {/* Модалка зміни пароля */}
       {pwModal.show && (
       <div
         style={{
@@ -1200,67 +1193,9 @@ const UserPanel = () => {
         </div>
       </div>
     )}
-
-
-      
     </div>
     
   );
 };
-
-
-
-
-
-
-// --- ПРОГРЕС-БАР (3 кроки)
-function ProgressBar({ activeStep }) {
-  // 1: Your choice, 2: Your details, 3: Completing your booking
-  return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      borderBottom: "2px solid #d5e3f7",
-      paddingBottom: 8,
-      marginBottom: 14
-    }}>
-      {["Your choice", "Your details", "Completing your booking"].map((step, i) => (
-        <div key={i} style={{
-          display: "flex",
-          alignItems: "center",
-          flex: 1,
-          color: i < activeStep ? "#24ac70" : "#555",
-          fontWeight: i === activeStep - 1 ? 700 : 500,
-          fontSize: 17,
-        }}>
-          <span style={{
-            display: "inline-block",
-            width: 22,
-            height: 22,
-            borderRadius: "50%",
-            background: i < activeStep ? "#24ac70" : "#e9e9e9",
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: 14,
-            lineHeight: "22px",
-            textAlign: "center",
-            marginRight: 8,
-            border: i === activeStep - 1 ? "2px solid #2ca377" : "2px solid #e9e9e9"
-          }}>{i + 1}</span>
-          {step}
-          {i !== 2 && <span style={{
-            display: "inline-block",
-            width: 70,
-            height: 3,
-            background: i < activeStep - 1 ? "#24ac70" : "#e9e9e9",
-            margin: "0 16px",
-            borderRadius: 2
-          }} />}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default UserPanel;

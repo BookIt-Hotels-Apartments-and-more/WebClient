@@ -60,14 +60,12 @@ export default function Booking() {
       specialRequests: "",
     };
   });
-  // блок “Add to your booking”
   const [extras, setExtras] = useState({
     airfare: false,
     carHire: false,
     airportTaxi: false,
   });
 
-  // edit booking modal
   const [editModal, setEditModal] = useState({ show: false, booking: null, dateFrom: "", dateTo: "" });
   const [paymentType, setPaymentType] = useState("Cash");
   const rowRefs = useRef({});  
@@ -616,12 +614,12 @@ export default function Booking() {
                     <div className="col-6">
                     <div style={{ color: "#22614D", fontWeight: 800 }}>Check-in</div>
                     <div>{formatDate(b.dateFrom)}</div>
-                    <div>Check-in Time: {b.dateFrom?.slice(11, 16)}</div>
+                    <div>Check-in Time: {b.apartment?.establishment?.checkInTime?.slice(0, 5)}</div>
                     </div>
                     <div className="col-6">
                     <div style={{ color: "#22614D", fontWeight: 800 }}>Check-out</div>
                     <div>{formatDate(b.dateTo)}</div>
-                    <div>Check-out Time: {b.dateTo?.slice(11, 16)}</div>
+                    <div>Check-out Time: {b.apartment?.establishment?.checkOutTime?.slice(0, 5)}</div>
                     </div>
                 </div>
                 <div className="row mt-2">
