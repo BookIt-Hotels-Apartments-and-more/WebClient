@@ -7,7 +7,6 @@ import Step3Feature from "../pages/user/Step3Feature";
 import Step4Description from '../pages/user/Step4Description';
 import Step5Photos from '../pages/user/Step5Photos';
 import Step6Publication from '../pages/user/Step6Publication';
-import Step7Addapartment from '../pages/user/Step7Addapartment';
 
 import Home from '../pages/Home';
 import AboutUs from '../pages/AboutUs';
@@ -62,8 +61,8 @@ const AppRouter = () => {
           <Route path="/add-establishment/step-4" element={<Step4Description />} />
           <Route path='/add-establishment/step-5' element={<Step5Photos />} />
           <Route path='/add-establishment/step-6' element={<Step6Publication />} />
-          <Route path='/add-establishment/step-7' element={<Step7Addapartment />} />
-          <Route path="/add-establishment/step-7/:establishmentId" element={<Step7Addapartment />} />
+          <Route path='/add-establishment/step-7' element={<AddApartment />} />
+          <Route path="/add-establishment/step-7/:establishmentId" element={<AddApartment />} />
 
           <Route path="/booking" element={<Booking />} />
           <Route path="/hotels/:id" element={<HotelDetails />} />
