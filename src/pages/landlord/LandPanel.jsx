@@ -1,21 +1,17 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch  } from "react-redux";
-import { axiosInstance } from "../../api/axios";
 import { setUser } from "../../store/slices/userSlice";
 import { getEstablishmentsByOwnerFiltered } from "../../api/establishmentsApi";
 import LandEstablishmentCard from "./LandEstablishmentCard";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ESTABLISHMENT_TYPE_LABELS } from "../../utils/enums";
 import { uploadUserPhoto, updateUserDetails, getUserImages } from "../../api/userApi";
-import { toast } from "react-toastify";
-
-
 
 const LandPanel = () => {
   const user = useSelector((state) => state.user.user);
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const [establishments, setEstablishments] = useState([]);
+  const [filteredEstablishments, setFilteredEstablishments] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState({
     username: user?.username || "",
@@ -30,17 +26,22 @@ const LandPanel = () => {
   useEffect(() => {
     if (user?.id) {
       const filter = {};
-      if (selectedType !== "") filter.type = selectedType;
       getEstablishmentsByOwnerFiltered(user.id, filter)
         .then(setEstablishments)
         .catch(console.error);
     }
-  }, [user, selectedType]);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (selectedType) {
+      const filtered = establishments.filter(est => est.type === selectedType);
+      setFilteredEstablishments(filtered);
+    }
+  }, [selectedType, establishments, setFilteredEstablishments]);
 
   const reloadStats = () => {
     if (user?.id) {
       const filter = {};
-      if (selectedType !== "") filter.type = selectedType;
       getEstablishmentsByOwnerFiltered(user.id, filter)
         .then(setEstablishments)
         .catch(console.error);
@@ -111,21 +112,6 @@ const LandPanel = () => {
     }
   };
 
-  const handleLogout = () => {
-    dispatch(setUser(null));
-
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    if (axiosInstance?.defaults?.headers?.common?.Authorization) {
-      delete axiosInstance.defaults.headers.common.Authorization;
-    }
-    toast.success("You have been logged out", { autoClose: 2000 });
-
-    navigate("/");
-  };
-
-
   return (
     <div
       style={{
@@ -159,16 +145,14 @@ const LandPanel = () => {
           marginTop: "60px",
         }}
       >
-       
         <div className="row mt-4" style={{ minHeight: 500 }}>
-          {/* ЛІВА КОЛОНКА */}
           <div className="col-12 col-md-8 mb-4 mb-md-0" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* Особиста інформація */}
             <div style={{
               background: "#fcfcfc",
               borderRadius: 18,
               padding: 24,
-              boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)"
+              boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)",
+              position: "relative"
             }}>
               {(user?.photoUrl || user?.photos?.[0]?.blobUrl) && (
                 <img
@@ -176,13 +160,11 @@ const LandPanel = () => {
                   alt="User avatar"
                   width={90}
                   height={90}
-                  style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", marginBottom: 12 }}
+                  style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", marginBottom: 30 }}
                 />
               )}
-              <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 18 }}>Your details</div>
               {isEditing ? (
                 <>
-                  {/* Фото профілю */}
                   <div style={{ marginBottom: 24, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
                     <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
                       Profile photo
@@ -205,7 +187,6 @@ const LandPanel = () => {
                     )}
                   </div>
 
-                  {/* Full name */}
                   <div style={{ marginBottom: 24 }}>
                     <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
                       Full name
@@ -230,7 +211,6 @@ const LandPanel = () => {
                     />
                   </div>
 
-                  {/* Email */}
                   <div style={{ marginBottom: 24 }}>
                     <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
                       Email
@@ -258,7 +238,6 @@ const LandPanel = () => {
                     </div>
                   </div>
 
-                  {/* Phone */}
                   <div style={{ marginBottom: 32 }}>
                     <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
                       Telephone number
@@ -286,55 +265,6 @@ const LandPanel = () => {
                     </div>
                   </div>
 
-                  {/* --------- Email Confirmation та Save new data --------- */}
-                  <div style={{ marginBottom: 22 }}>
-                    <div>
-                      <input type="checkbox" id="emailConfirm" style={{ accentColor: "#02457A" }} />
-                      <label htmlFor="emailConfirm" style={{ marginLeft: 10, fontSize: 16, color: "#02457A", fontWeight: 600 }}>
-                        Yes, send me a free email confirmation <span style={{ fontWeight: 400 }}>(recommended)</span>
-                      </label>
-                      <div style={{ marginLeft: 32, color: "#737373", fontSize: 13, marginBottom: 4 }}>
-                        We will send you a link to download our application
-                      </div>
-                    </div>
-                    <div>
-                      <input type="checkbox" id="saveData" style={{ accentColor: "#02457A" }} />
-                      <label htmlFor="saveData" style={{ marginLeft: 10, fontSize: 16, color: "#02457A", fontWeight: 600 }}>
-                        Save new data to account
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* --------- Special Requests --------- */}
-                  <div style={{ marginBottom: 24 }}>
-                    <div style={{ fontWeight: 700, color: "#207147", fontSize: 19, marginBottom: 8 }}>
-                      Tell us about your special requests
-                    </div>
-                    <div style={{ color: "#555", fontSize: 14, marginBottom: 8 }}>
-                      The administration of the accommodation cannot guarantee the fulfillment of special requests, but will do everything possible to ensure this. You can always leave a special request after completing the booking!
-                    </div>
-                    <label htmlFor="specialRequests" style={{ fontSize: 16, marginBottom: 5, color: "#02457A", display: "block" }}>
-                      Please write your requests
-                    </label>
-                    <textarea
-                      id="specialRequests"
-                      name="specialRequests"
-                      rows={3}
-                      style={{
-                        width: "100%",
-                        border: "1.5px solid #02457A",
-                        borderRadius: 16,
-                        fontSize: 15,
-                        padding: 12,
-                        resize: "vertical",
-                        background: "transparent",
-                        color: "#001B48"
-                      }}
-                      placeholder="Write here..."
-                    />
-                  </div>
-
-                  {/* Buttons */}
                   <div className="d-flex gap-2" style={{ marginTop: 12 }}>
                     <button className="btn btn-sm" style={{ minWidth: 80, background: '#02457A', color: 'white' }} onClick={handleSave}>
                       Save
@@ -360,49 +290,16 @@ const LandPanel = () => {
                   </div>
                   <button
                     className="btn btn-outline-primary btn-sm mt-4"
-                    style={{ borderRadius: 12, fontWeight: 600, minWidth: 80 }}
+                    style={{ borderRadius: 12, fontWeight: 600, minWidth: 80, position: "absolute", top: 0, right: 20 }}
                     onClick={() => setIsEditing(true)}
                   >
                     Edit
-                  </button>
-
-                  <button
-                      className="btn btn-danger btn-sm mt-4"
-                      style={{ borderRadius: 12, fontWeight: 600, minWidth: 250, marginLeft: 20 }}
-                      onClick={handleLogout}
-                    >
-                      Log Out
                   </button>
                 </>
               )}
             </div>
 
-            {/* Загальна статистика */}
-            <div style={{
-              background: "#fcfcfc",
-              borderRadius: 18,
-              padding: 24,
-              boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.17)"
-            }}>
-              <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 12 }}>General statistics</div>
-              <div style={{ color: "#183E6B", fontWeight: 500 }}>
-                <span style={{ marginRight: 16 }}>🏨 Hotels: <b>{establishments.length}</b></span>
-                {/* Apartments і Reservations поки не показуємо, додамо пізніше */}
-              </div>
-            </div>
-
-            {/* Кнопки дій */}
-            <div style={{ display: "flex", gap: 16 }}>
-              <Link to="/add-hotel" className="btn btn-success">
-                ➕ Add a new hotel
-              </Link>
-            </div>
-
-            {/* --- Фільтр по типу --- */}
-            <div>
-              <label htmlFor="typeSelect" style={{ fontWeight: 600, fontSize: 15, marginBottom: 5, display: "block", color: "#165188" }}>
-                Filter by type
-              </label>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
               <select
                 id="typeSelect"
                 value={selectedType}
@@ -414,9 +311,12 @@ const LandPanel = () => {
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
+
+              <Link to="/add-hotel" className="btn btn-success">
+                ➕ Add hotel
+              </Link>
             </div>
 
-            {/* --- Список готелів --- */}
             <div style={{
               background: "#fcfcfc",
               borderRadius: 18,
@@ -431,7 +331,7 @@ const LandPanel = () => {
                 <div className="text-muted">You don't have any hotels yet.</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {establishments.map((est) => (
+                  {(selectedType ?  filteredEstablishments : establishments).map((est) => (
                     <LandEstablishmentCard key={est.id} est={est} reloadStats={reloadStats} />
                   ))}
                 </div>
@@ -439,7 +339,6 @@ const LandPanel = () => {
             </div>
           </div>
 
-          {/* ПРАВА КОЛОНКА */}
           <div className="col-12 col-md-4 d-flex flex-column gap-3">
             <div style={{
               background: "#fcfcfc",
@@ -453,6 +352,18 @@ const LandPanel = () => {
               </div>
               <div style={{ color: "#567" }}>
                 Here you can manage your hotels, apartments and reservations. Use the buttons above to add new hotels or view your current properties.
+              </div>
+            </div>
+
+            <div style={{
+              background: "#fcfcfc",
+              borderRadius: 18,
+              padding: 24,
+              boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.17)"
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 12 }}>General statistics</div>
+              <div style={{ color: "#183E6B", fontWeight: 500 }}>
+                <span style={{ marginRight: 16 }}>🏨 Hotels: <b>{establishments.length}</b></span>
               </div>
             </div>
           </div>

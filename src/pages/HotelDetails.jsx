@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../api/axios";
 import { getApartmentAvailability } from "../api/bookingApi"
-import { getAllReviews } from "../api/reviewApi";
+import { getFilteredReviews } from "../api/reviewApi";
 import BookingBannerForm from '../components/BookingBannerForm';
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import {
@@ -17,8 +17,6 @@ import { getApiErrorMessage } from "../utils/apiError";
 const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "");
 
-
-
 const HotelDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -30,7 +28,6 @@ const HotelDetails = () => {
     dateFrom: "",
     dateTo: ""
   });
-  const [bookingLoading, setBookingLoading] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const [favorites, setFavorites] = useState([]);
   const hotelIsFavorite = isHotelFavorite(favorites, Number(id));
@@ -63,13 +60,13 @@ const HotelDetails = () => {
     if (!user?.id) return;
       try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); }
       catch { setFavorites([]); }
+
       const onStorage = (e) => {
-        if (e.key === "favorites") {
-          try { setFavorites(JSON.parse(e.newValue || "[]")); } catch {}
-        }
+        if (e.key === "favorites") setFavorites(JSON.parse(e.newValue || "[]"));
       };
+      
       const onLocal = () => {
-        try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); } catch {}
+        setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]"));
       };
 
       window.addEventListener("storage", onStorage);
@@ -90,19 +87,15 @@ const HotelDetails = () => {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const all = await getAllReviews();
-        const hotelApartmentIds = (apartments || []).map(a => a.id);
-        const filtered = all.filter(r =>
-          hotelApartmentIds.includes(r.booking?.apartment?.id)
-        );
-        setReviews(filtered);
+        const reviews = await getFilteredReviews({establishmentId: id});
+        setReviews(reviews);
       } catch (e) {
         console.error("Error loading reviews:", e);
         setReviews([]);
       }
     };
     if (apartments.length) fetchReviews();
-  }, [apartments]);
+  }, [apartments, id]);
 
   useEffect(() => {
     if (!bookingApartmentId) return;
@@ -629,8 +622,6 @@ const HotelDetails = () => {
               </div>
             )}
 
-
-
             {activeTab === "terms" && (
               <div style={{ fontSize: 15 }}>
                 {apartments.length === 0 && <div className="text-muted">No apartments available.</div>}
@@ -643,7 +634,7 @@ const HotelDetails = () => {
                     <div><strong>Features:</strong>
                       <ul style={{ marginTop: 6 }}>
                         {Object.entries(apt.features || {})
-                          .filter(([_, v]) => v)
+                          .filter(([, v]) => v)
                           .map(([k], j) => (
                             <li key={j}>
                               {APARTMENT_FEATURE_LABELS[k] || k.charAt(0).toUpperCase() + k.slice(1)}
@@ -900,12 +891,14 @@ const HotelDetails = () => {
                 </div>
               </div>              
               <div className="d-flex justify-content-center gap-3">
-                <button className="btn btn-success" disabled={bookingLoading}>Confirm booking</button>
+                <button className="btn btn-success">Confirm booking</button>
                 <button
                   type="button"
                   className="btn btn-outline-secondary"
                   onClick={() => setBookingApartmentId(null)}
-                  disabled={bookingLoading}>Cancel</button>
+                >
+                    Cancel
+                </button>
               </div>
             </form>
           </div>

@@ -10,6 +10,11 @@ export const getBookingById = async (id) => {
   return res.data;
 };
 
+export const getFilteredBookings = async (filter) => {
+  const res = await axiosInstance.get('/api/bookings/filter', {params: filter});
+  return res.data;
+};
+
 export const createBooking = async (bookingData) => {
   const res = await axiosInstance.post("/api/bookings", bookingData);
   return res.data;

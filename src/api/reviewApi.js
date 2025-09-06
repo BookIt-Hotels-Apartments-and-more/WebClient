@@ -5,6 +5,11 @@ export const getAllReviews = async () => {
   return Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
 };
 
+export const getFilteredReviews = async (params) => {
+  const res = await axiosInstance.get("/api/reviews/filter", { params });
+  return Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
+};
+
 export const getReviewById = async (id) => {
   const res = await axiosInstance.get(`/api/reviews/${id}`);
   return res.data;

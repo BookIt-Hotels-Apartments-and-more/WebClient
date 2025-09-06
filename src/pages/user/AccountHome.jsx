@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { setUser } from "../../store/slices/userSlice";
@@ -42,7 +42,6 @@ let pct = 0;
 const safePctFlag  = Math.min(97, Math.max(3, pct));
 const safePctLabel = Math.min(94, Math.max(6, pct));
 
-
 export default function AccountHome() {
   const user = useSelector((s) => s.user.user);
   const dispatch = useDispatch();
@@ -53,13 +52,11 @@ export default function AccountHome() {
   const isTenant   = roles.includes("Tenant")   || whoLS === "user"     || whoLS === "traveller";
 
   const [establishments, setEstablishments] = useState([]);
-  const [type, setType] = useState("");
   const [showMyProperty, setShowMyProperty] = useState(false);
 
   useEffect(() => {
     (async () => {
-      if (!user?.id) return;
-      if (!isTenant) return;
+      if (!user?.id || !isTenant) return;
       try {
         const full = await getCurrentUser();
         dispatch(setUser(full));
@@ -69,9 +66,7 @@ export default function AccountHome() {
     })();
   }, [user?.id, isTenant, dispatch]);
 
-  const bookingCount = Array.isArray(user?.bookings)
-    ? user.bookings.length
-    : 0;
+  const bookingCount = Array.isArray(user?.bookings) ? user.bookings.length : 0;
     if (isTenant && bookingCount > 0) {
       CURRENT_LVL = Math.min(MAX_LVL, Math.max(1, bookingCount));
       pct = (CURRENT_LVL / MAX_LVL) * 100;
@@ -81,21 +76,19 @@ export default function AccountHome() {
 
   useEffect(() => {
     if (isLandlord && user?.id) {
-      const filter = type !== "" ? { type } : {};
-      getEstablishmentsByOwnerFiltered(user.id, filter)
+      getEstablishmentsByOwnerFiltered(user.id)
         .then(setEstablishments)
         .catch(console.error);
     }
-  }, [isLandlord, user?.id, type]);
+  }, [isLandlord, user?.id]);
 
-  const reload = () => {
+  const reload = useCallback(() => {
     if (isLandlord && user?.id) {
-      const filter = type !== "" ? { type } : {};
-      getEstablishmentsByOwnerFiltered(user.id, filter)
+      getEstablishmentsByOwnerFiltered(user.id)
         .then(setEstablishments)
         .catch(console.error);
     }
-  };
+  }, [isLandlord, user?.id]);
 
   const handleTripsClick = (e) => {
     e.preventDefault();
@@ -124,10 +117,8 @@ export default function AccountHome() {
     }
   };
 
-
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#fff", paddingBottom: 40, marginTop: -120, }}>
-      {/* HERO with gradient banner */}
       <div
         style={{
           position: "relative",
@@ -139,9 +130,7 @@ export default function AccountHome() {
         }}
         >
         <div className="container" style={{ width: 2200 }}>
-          {/* верхній ряд*/}
           <div className="row align-items-center" style={{ marginTop: 110 }}>
-            {/* left: avatar + greeting */}
             <div className="col-12 col-md-7">
               <div className="d-flex align-items-center" style={{ gap: 14 }}>
                 {user?.photos?.length > 0 && user.photos[0]?.blobUrl ? (
@@ -191,7 +180,6 @@ export default function AccountHome() {
               </div>
             </div>
 
-            {/* right: "Your next journey awaits you!" */}
             <div className="col-12 col-md-5 d-flex flex-column align-items-md-end align-items-start mt-3 mt-md-0">
               <div style={{ fontSize: 22, fontWeight: 600, color: TOKENS.text }}>
                 Your next journey awaits you!
@@ -199,9 +187,7 @@ export default function AccountHome() {
             </div>
           </div>
 
-            {/* картки в герої */}
             <div className="row g-3 align-items-stretch mt-3">
-            {/* LEFT: Your travel experience */}
             <div className="col-12 col-lg-8 d-flex">
                 <Card
                     className="w-100 h-100"
@@ -225,9 +211,7 @@ export default function AccountHome() {
                         )}
                     </div>
 
-                    {/* Візуальна зона шкали */}
                     <div style={{ position: "relative", height: 110, marginTop: 6, marginBottom: 6 }}>
-                        {/* Тонка чорна лінія по центру */}
                         <div
                         style={{
                             position: "absolute",
@@ -267,17 +251,18 @@ export default function AccountHome() {
 
                     <div className="d-flex justify-content-between small text-muted">
                         <span />
-                        <Link to="/userpanel" className="text-decoration-none" style={{color: "#000000"}}>
-                        Show level reward bonuses
+                        <Link
+                          to={user?.role === "Tenant" || user?.role === 2 ? "/userpanel" : "/landlordpanel"}
+                          className="text-decoration-none" style={{color: "#000000"}}
+                        >
+                          Show level reward bonuses
                         </Link>
                     </div>
                     </Card>
 
             </div>
 
-            {/* RIGHT: дві окремі картки */}
             <div className="col-12 col-lg-4 d-flex flex-column gap-2">
-                {/* Bonuses */}
                 <Card style={{ padding: 20 }}>
                 <div style={{ fontWeight: 700, color: "#000", fontSize: 28, marginBottom: 10 }}>
                     Bonuses
@@ -310,7 +295,6 @@ export default function AccountHome() {
                 </div>
                 </Card>
 
-                {/* Fill out your profile */}
                 <Card style={{ padding: 10 }}>
                     <Link
                         to={user?.role === "Tenant" || user?.role === 2 ? "/userpanel" : "/landlordpanel"}
@@ -338,10 +322,8 @@ export default function AccountHome() {
         </div>
       </div>
 
-        {/* Основний контент */}
         <div className="container" style={{ marginTop: 16, width: 2200 }}>
             <div className="row g-4 align-items-stretch">
-                {/* My travels */}
                   <div className="col-12 col-md-4 d-flex">
                     <Card className="h-100 flex-fill d-flex flex-column" style={{ padding: 22 }}>
                         <div style={{ fontWeight: 700, fontSize: 24, color: "#FA7E1E", marginBottom: 10 }}>
@@ -401,7 +383,6 @@ export default function AccountHome() {
                     </Card>
                   </div>
 
-                {/* Account management */}
                 <div className="col-12 col-md-4 d-flex">
                 <Card className="h-100 flex-fill d-flex flex-column" style={{ padding: 22 }}>
                     <div style={{ fontWeight: 700, fontSize: 24, color: "#FA7E1E", marginBottom: 8 }}>
@@ -410,9 +391,9 @@ export default function AccountHome() {
                     <ul className="list-unstyled d-flex flex-column gap-3 m-0">
                         <li className="d-flex align-items-center">
                             <Link
-                            to={user?.role === "Tenant" || user?.role === 2 ? "/userpanel" : "/landlordpanel"}
-                            className="text-decoration-none d-inline-flex align-items-baseline gap-2 flex-grow-1"
-                            style={{ color: "#000", fontSize: 18, lineHeight: 1.1, marginBlockEnd: 15 }}
+                              to={user?.role === "Tenant" || user?.role === 2 ? "/userpanel" : "/landlordpanel"}
+                              className="text-decoration-none d-inline-flex align-items-baseline gap-2 flex-grow-1"
+                              style={{ color: "#000", fontSize: 18, lineHeight: 1.1, marginBlockEnd: 15 }}
                             >
                             <img src="/images/icon/personal.png" alt="" width={20} height={19} style={{ alignSelf: "baseline" }} />
                             <span>Personal information</span>
@@ -440,8 +421,6 @@ export default function AccountHome() {
                 </Card>
                 </div>
 
-                {/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */}
-                {/* Help */}
                 <div className="col-12 col-md-4 d-flex">
                 <Card className="h-100 flex-fill d-flex flex-column" style={{ padding: 22 }}>
                     <div style={{ fontWeight: 700, fontSize: 24, color: "#FA7E1E", marginBottom: 8 }}>
@@ -479,10 +458,8 @@ export default function AccountHome() {
                     </ul>
                 </Card>
                 </div>
-                {/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */}
             </div>
 
-            {/* Manage your property */}
             <div className="row g-3 mt-3">
                 <div className="col-12 d-flex">
                     <Card
@@ -528,7 +505,6 @@ export default function AccountHome() {
                 </div>
             </div>
 
-            {/* Your property */}
             <div className="row g-3 mt-3">
               <div className="col-12 d-flex">
                 <Card

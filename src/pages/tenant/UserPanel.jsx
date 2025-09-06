@@ -713,9 +713,6 @@ const UserPanel = () => {
 
           </div>
 
-          
-
-          {/* ПРАВА КОЛОНКА !!!!!!!! */}
           <div className="col-12 col-md-6 d-flex flex-column gap-3">
             {upcoming.length === 0 ? (
               <div style={{
@@ -730,12 +727,12 @@ const UserPanel = () => {
                 <div className="text-muted">Here will be shown your next hotel</div>
               </div>
             ) : (
-              // БЛОК З МАЙБУТНІМИ БРОНЮВАННЯМИ
               upcoming.map((booking, idx) => {
                 const apt = booking.apartment;
                 const hotel = apt?.establishment;
                 const now = new Date();
-                const canAddReview = new Date(booking.dateFrom) <= now;
+                const canAddReview = !booking.hasCustomerReviewed && new Date(booking.dateFrom) <= now;
+                const canEditBooking = new Date(booking.dateFrom).getDate() < now.getDate();
                 return (
                   <div key={booking.id} style={{ marginBottom: 32 }}>                    
                     <div style={{
@@ -952,21 +949,25 @@ const UserPanel = () => {
                         className="d-flex justify-content-center align-items-center gap-2 flex-wrap"
                         style={{ marginBottom: 16 }}
                       >
-                        <button
-                          className="btn btn-outline-primary btn-sm"
-                          style={{ borderRadius: 10, minWidth: "30%", fontWeight: 600 }}
-                          onClick={() => openEditModal(booking)}
-                        >
-                          Edit
-                        </button>
+                        {canEditBooking && (
+                          <button
+                            className="btn btn-outline-primary btn-sm"
+                            style={{ borderRadius: 10, minWidth: "30%", fontWeight: 600 }}
+                            onClick={() => openEditModal(booking)}
+                          >
+                            Edit
+                          </button>
+                        )}
 
-                        <button
-                          className="btn btn-outline-danger btn-sm"
-                          style={{ borderRadius: 10, minWidth: "30%", fontWeight: 600 }}
-                          onClick={() => handleCancelBooking(booking.id)}
-                        >
-                          Cancel booking
-                        </button>
+                        {canEditBooking && (
+                          <button
+                            className="btn btn-outline-danger btn-sm"
+                            style={{ borderRadius: 10, minWidth: "30%", fontWeight: 600 }}
+                            onClick={() => handleCancelBooking(booking.id)}
+                          >
+                            Cancel booking
+                          </button>
+                        )}
 
                         {canAddReview && (
                           <button
@@ -981,7 +982,6 @@ const UserPanel = () => {
                    
                     </div>                 
                     
-
                     {idx < upcoming.length - 1 && <hr style={{ margin: "20px 0", borderTop: "2px solid #dde2e7" }} />}
                   </div>                  
                 )                
@@ -1104,7 +1104,11 @@ const UserPanel = () => {
             <AddComment
               bookingId={addReviewModal.booking?.id}
               apartmentId={addReviewModal.booking?.apartmentId || addReviewModal.booking?.apartment?.id}
-              onClose={() => setAddReviewModal({ show: false, booking: null })}
+              onClose={() => {
+                setAddReviewModal({ show: false, booking: null });
+                const reviewedBooking = upcoming.find(b => b.id === addReviewModal.booking?.id);
+                if (reviewedBooking) reviewedBooking.hasCustomerReviewed = true;
+              }}
             />
             <button
               className="btn btn-secondary btn-sm mt-3"

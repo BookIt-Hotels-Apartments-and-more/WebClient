@@ -1,12 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { getAllEstablishments, getEstablishmentsByVibe, getTrendingEstablishments } from "../api/establishmentsApi";
-import { axiosInstance } from "../api/axios";
 import BookingBannerForm from '../components/BookingBannerForm';
 import HotelFilters from "../components/HotelFilters";
 import countriesList from "../utils/countriesList";
-import { addFavorite } from "../api/favoriteApi";
-import { toast } from "react-toastify";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 import { getAllReviews } from "../api/reviewApi";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
@@ -14,10 +11,8 @@ import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "");
 
-
 export default function HotelsList() {
   const location = useLocation();
-  const navigate = useNavigate();
   const sourceHotels = location.state?.hotels || null;
   const params = new URLSearchParams(location.search);
   const selectedType = params.get("type");
@@ -32,7 +27,6 @@ export default function HotelsList() {
 
   const [search, setSearch] = useState("");
   const [hotels, setHotels] = useState([]);
-  const [apartments, setApartments] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const userId = JSON.parse(localStorage.getItem("user"))?.id;
   const countryOptions = countriesList.map(c => c.name);
@@ -46,7 +40,6 @@ export default function HotelsList() {
   const [reviews, setReviews] = useState([]);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [modalReviews, setModalReviews] = useState([]);
- 
 
   useEffect(() => {
     if (trendingFlag === "1") {
@@ -62,20 +55,20 @@ export default function HotelsList() {
         .catch(() => setHotels([]));
     } else {
       getAllEstablishments().then(setHotels);
-    }
-      axiosInstance.get("/api/apartments").then(res => setApartments(res.data));
-      
+    }    
       if (userId) {
         try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); }
         catch { setFavorites([]); }
       }
+
       const onStorage = (e) => {
         if (e.key === "favorites") {
-          try { setFavorites(JSON.parse(e.newValue || "[]")); } catch {}
+          setFavorites(JSON.parse(e.newValue || "[]"));
         }
       };
+
       const onLocal = () => {
-        try { setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]")); } catch {}
+        setFavorites(JSON.parse(localStorage.getItem("favorites") || "[]"));
       };
 
       window.addEventListener("storage", onStorage);
@@ -98,13 +91,7 @@ export default function HotelsList() {
       }
     };
     fetchReviews();
-  }, [apartments]);
-
-  const openApartmentReviews = (apartmentId) => {
-    const list = reviews.filter(r => r.booking?.apartment?.id === apartmentId);
-    setModalReviews(list);
-    setShowReviewsModal(true);
-  };
+  }, []);
   
   const matchingCountries = useMemo(() => {
     if (!selectedType) return null;
@@ -120,23 +107,19 @@ export default function HotelsList() {
 
   const filteredHotels = useMemo(() => {
     return hotelsBase.filter(hotel => {
-      // Фільтр по країні
       const geo = hotel.geolocation || {};
       const country = (geo.country || "").trim().toLowerCase();
       const matchesCountry = !filters.country || country === filters.country.toLowerCase();
 
-      // Фільтр для QuickPlanning
       const matchesType = (selectedVibe !== null && !Number.isNaN(selectedVibe))
         ? true
         : (!matchingCountries || matchingCountries.includes(country));
 
-      // Мін/макс ціна
       const price = Number.isFinite(Number(hotel?.minApartmentPrice))
         ? Number(hotel.minApartmentPrice)
         : null;
       const matchesMinPrice = !filters.minPrice || (price !== null && price >= Number(filters.minPrice));
       const matchesMaxPrice = !filters.maxPrice || (price !== null && price <= Number(filters.maxPrice));
-      // Рейтинг
       const ratingRaw = filters?.rating ?? "";
       let minRating = null;
       if (ratingRaw !== "") {
@@ -148,7 +131,6 @@ export default function HotelsList() {
           ? Number(hotel.rating.generalRating)
           : (typeof hotel?.rating === "number" ? Number(hotel.rating) : null);
       const matchesRating = (minRating == null) || (ratingNum != null && ratingNum >= minRating);
-      // Пошук (якщо ввели в BookingBannerForm)
       const searchLower = search.trim().toLowerCase();
       const matchesSearch = !searchLower ||
           (hotel.name || "").toLowerCase().includes(searchLower) ||
@@ -162,11 +144,10 @@ export default function HotelsList() {
 
       return matchesCountry && matchesType && matchesMinPrice && matchesMaxPrice && matchesRating && matchesSearch && hasAllFacilities;
     });
-  }, [hotelsBase, apartments, filters, search, matchingCountries]);
+  }, [hotelsBase, filters, search, matchingCountries, FACILITIES, selectedVibe]);
 
   return (
     <div>
-      {/* Банер */}
       <div className='baner'
         style={{
           width: "100%",
@@ -255,18 +236,12 @@ export default function HotelsList() {
           </div>
         </div>
 
-          
-          {/* Список готелів */}
-          <div className="col-12 col-md-9">
+        <div className="col-12 col-md-9">
             {filteredHotels.length > 0 ? (
               filteredHotels.map((hotel) => {
-                const hotelApartments = apartments.filter(a => a.establishment?.id === hotel.id);
                 const minPrice = Number.isFinite(Number(hotel?.minApartmentPrice))
                   ? Number(hotel.minApartmentPrice)
                   : null;
-                const apartmentId =
-                  hotelApartments.find(a => Number(a.price) === minPrice)?.id
-                  ?? hotelApartments[0]?.id;
                 const isFavorite = isHotelFavorite(favorites, hotel.id);
                 const priceText = minPrice;
 
@@ -325,9 +300,7 @@ export default function HotelsList() {
                                 objectFit: "contain"
                               }}
                             />
-                            {/* Середній рейтинг */}
                             {fmt1(hotel?.rating?.generalRating)}
-                            {/* Кількість відгуків */}
                             <a
                               href="#reviews"
                               style={{
