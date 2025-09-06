@@ -158,7 +158,7 @@ const Header = () => {
                   className="btn btn-outline-primary btn-sm w-100"
                   onClick={() => {
                     setShowRolePicker(false);
-                    navigate(user?.role === 0 ? "/adminpanel" : user?.role === 1 ? "/landlordpanel" : "/accounthome");
+                    navigate(user?.role === 0 ? "/adminpanel" : user?.role === 1 ? "/accounthome" : "/accounthome");
                   }}
                 >
                   {user?.role === 0 ? "Admin panel" : user?.role === 1 ? "Landlord panel" : "User panel"}

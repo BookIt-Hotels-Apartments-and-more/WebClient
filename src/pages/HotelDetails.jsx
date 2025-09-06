@@ -167,7 +167,7 @@ const HotelDetails = () => {
      if (!currentUser?.id || !localStorage.getItem("token")) {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
-      toast.warn("To book a room, log in to your account!", { autoClose: 10000 });
+      toast.warn("To book a room, log in to your account!", { autoClose: 3000 });
       return;
     }
     const stored = JSON.parse(localStorage.getItem("bookingForm") || "{}");
@@ -176,15 +176,15 @@ const HotelDetails = () => {
     const df = rawFrom.slice(0, 10);
     const dt = rawTo.slice(0, 10);
      if (!df || !dt) {
-      toast.warn("Please select dates for booking.", { autoClose: 10000 });
+      toast.warn("Please select dates for booking.", { autoClose: 3000 });
       return;
     }
     if (new Date(dt) <= new Date(df)) {
-      toast.warn("Check-out must be after check-in.", { autoClose: 8000 });
+      toast.warn("Check-out must be after check-in.", { autoClose: 3000 });
       return;
     }
      if (isDateUnavailable(df, dt)) {
-      toast.error("These dates are already booked for this room. Please select other dates.", { autoClose: 12000 });
+      toast.error("These dates are already booked for this room. Please select other dates.", { autoClose: 4000 });
       return;
     }
 
@@ -208,7 +208,7 @@ const HotelDetails = () => {
       navigate("/booking?preview=1");
     } catch (err) {
       const msg = getApiErrorMessage(err);
-      toast.error(<div style={{ whiteSpace: "pre-wrap" }}>{msg}</div>, { autoClose: 12000 });
+      toast.error(<div style={{ whiteSpace: "pre-wrap" }}>{msg}</div>, { autoClose: 4000 });
     }
   };  
 

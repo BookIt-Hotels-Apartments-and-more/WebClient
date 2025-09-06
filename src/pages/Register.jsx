@@ -2,6 +2,7 @@ import { useState } from "react";
 import { axiosInstance } from "../api/axios";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { registerUser, registerLandlord } from "../api/authApi";
+import getApiErrorMessage from "../utils/apiError";
 import { toast } from 'react-toastify';
 
 const Register = () => {
@@ -103,43 +104,29 @@ const Register = () => {
       
       try {
         const apiCall = selectedRole === "Landlord" ? registerLandlord : registerUser;
-        await apiCall(payload);
-        toast.success("You were registered successfully!", { autoClose: 4000 });
+        const res = await apiCall(payload);
+        const okMsg = res?.message || "You were registered successfully!";
+        toast.success(okMsg, { autoClose: 3000 });
         localStorage.removeItem("registerRole");
         navigate("/login");
       } catch (error) {
-        if (error.response) {
-          if (error.response.status === 409) {
-            toast.error('A user with this username or email already exists');
-          } else if (error.response.data?.errors) {
-            const backendErrors = error.response.data.errors;
-            
-            if (backendErrors.Username) {
-              const usernameError = Array.isArray(backendErrors.Username) 
-                ? backendErrors.Username.join(', ')
-                : backendErrors.Username;
-              toast.error(`Username: ${usernameError}`);
-            }
-            
-            if (backendErrors.Email) {
-              const emailError = Array.isArray(backendErrors.Email)
-                ? backendErrors.Email.join(', ')
-                : backendErrors.Email;
-              toast.error(`Email: ${emailError}`);
-            }
-            
-            if (backendErrors.Password) {
-              const passwordError = Array.isArray(backendErrors.Password)
-                ? backendErrors.Password.join(', ')
-                : backendErrors.Password;
-              toast.error(`Password: ${passwordError}`);
-            }
-          } else {
-            toast.error('Registration failed. Please try again.');
+          const resp = error?.response;
+          if (resp?.status === 409) {
+            const msg409 = resp?.data?.message || 'A user with this username or email already exists';
+            toast.error(msg409);
+            return;
           }
-        } else {
-          toast.error('Network error. Please check your connection and try again.');
-        }
+          const be = resp?.data?.errors;
+          if (be && typeof be === "object") {
+            const next = {};
+            if (be.Username) next.fullName = Array.isArray(be.Username) ? be.Username.join(", ") : String(be.Username);
+            if (be.Email)    next.email    = Array.isArray(be.Email)    ? be.Email.join(", ")    : String(be.Email);
+            if (be.Password) next.password = Array.isArray(be.Password) ? be.Password.join(", ") : String(be.Password);
+            setFormErrors(prev => ({ ...prev, ...next }));
+            toast.error("Please fix the highlighted fields.");
+            return;
+          }
+          toast.error(getApiErrorMessage(error, "Registration failed. Please try again."));        
       }
     }
   };
