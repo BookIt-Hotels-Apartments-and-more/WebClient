@@ -931,7 +931,7 @@ export default function AdminPanel() {
               onClick={handleLogout}
             >
               <i className="bi bi-box-arrow-right me-2"></i>
-              Log Out
+              Logout
             </button>
           </div>
 

@@ -2,17 +2,19 @@ import { useEffect, useState } from "react";
 import { axiosInstance } from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { setUser, updateUser, logout  } from "../../store/slices/userSlice";
+import { setUser, updateUser, logout } from "../../store/slices/userSlice";
 import { getBookingById, deleteBooking, updateBooking } from "../../api/bookingApi";
-import { removeFavorite  } from "../../api/favoriteApi";
+import { removeFavorite } from "../../api/favoriteApi";
 import { getApartmentById } from "../../api/apartmentApi";
 import { toast } from 'react-toastify';
 import { uploadUserPhoto, updateUserPassword, updateUserDetails, getUserImages } from "../../api/userApi";
 import AddComment from "../../components/AddComment";
-import { decodeFlagsUser, 
-  ESTABLISHMENT_FEATURE_LABELS,  
-  getEstablishmentTypeName, 
-  APARTMENT_FEATURE_LABELS } from "../../utils/enums";
+import {
+  decodeFlagsUser,
+  ESTABLISHMENT_FEATURE_LABELS,
+  getEstablishmentTypeName,
+  APARTMENT_FEATURE_LABELS
+} from "../../utils/enums";
 
 const UserPanel = () => {
   const user = useSelector(s => s.user.user);
@@ -39,14 +41,14 @@ const UserPanel = () => {
   });
   const [addReviewModal, setAddReviewModal] = useState({ show: false, booking: null });
   const [pwModal, setPwModal] = useState({
-   show: false,
-   current: "",
-   next: "",
-   confirm: "",
-   loading: false,
-   error: ""
- });
- const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
+    show: false,
+    current: "",
+    next: "",
+    confirm: "",
+    loading: false,
+    error: ""
+  });
+  const fmt1 = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixed(1) : "—");
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +66,7 @@ const UserPanel = () => {
     (async () => {
       try {
         let favData = [];
-        try { favData = JSON.parse(localStorage.getItem("favorites") || "[]"); } catch {}
+        try { favData = JSON.parse(localStorage.getItem("favorites") || "[]"); } catch { }
         const bookingIds = (user?.bookings || [])
           .map(b => (typeof b === "number" ? b : b?.id))
           .filter(Boolean);
@@ -85,7 +87,7 @@ const UserPanel = () => {
 
     const onStorage = (e) => {
       if (e.key === "favorites") {
-        try { setFavorites(JSON.parse(e.newValue || "[]")); } catch {}
+        try { setFavorites(JSON.parse(e.newValue || "[]")); } catch { }
       }
     };
     window.addEventListener("storage", onStorage);
@@ -123,21 +125,21 @@ const UserPanel = () => {
       await updateUserDetails(payload);
 
       let images = user?.photos || [];
-        if (editedUser.photoBase64) {
-          await uploadUserPhoto(editedUser.photoBase64);
-          images = await getUserImages();
-        }
+      if (editedUser.photoBase64) {
+        await uploadUserPhoto(editedUser.photoBase64);
+        images = await getUserImages();
+      }
 
-        const nextUser = {
-          ...user,
-          ...payload,
-          photos: images || [],
-          photoUrl: images?.[0]?.blobUrl || editedUser.photoPreview || user.photoUrl,
-        };
-        dispatch(setUser(nextUser));
-        localStorage.setItem("user", JSON.stringify(nextUser));
-      
-      
+      const nextUser = {
+        ...user,
+        ...payload,
+        photos: images || [],
+        photoUrl: images?.[0]?.blobUrl || editedUser.photoPreview || user.photoUrl,
+      };
+      dispatch(setUser(nextUser));
+      localStorage.setItem("user", JSON.stringify(nextUser));
+
+
       setIsEditing(false);
       toast.success("Profile saved!", { autoClose: 3000 });
     } catch (err) {
@@ -209,7 +211,7 @@ const UserPanel = () => {
         bookings: (user.bookings || []).filter(id => id !== bookingId)
       }));
       toast.success("Booking cancelled successfully!", { autoClose: 4000 });
-    } catch (err) {
+    } catch {
       toast.error("Unable to cancel reservation!", { autoClose: 4000 });
     }
   };
@@ -259,29 +261,28 @@ const UserPanel = () => {
   const getNights = (fromStr, toStr) => {
     if (!fromStr || !toStr) return 0;
     const from = new Date(fromStr);
-    const to   = new Date(toStr);
+    const to = new Date(toStr);
     const diffMs = to - from;
     const nights = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     return Math.max(1, nights);
   };
 
-  // ПАРОЛЬ
   const SPECIALS = "!@#$%^&*()_+-=[]{}|;:,.<>?";
   const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   const validatePassword = (pwd, username) => {
     const errors = [];
-      if (!/[A-Z]/.test(pwd)) errors.push("contain at least one uppercase letter");
-      if (!/[a-z]/.test(pwd)) errors.push("contain at least one lowercase letter");
-      if (!/\d/.test(pwd)) errors.push("contain at least one number");
-      if (!new RegExp(`[${escapeRegExp(SPECIALS)}]`).test(pwd))
-        errors.push("contain at least one special character");
-      if (/(.)\1\1/.test(pwd))
-        errors.push("contain no more than 2 consecutive identical characters");
-      if (username && pwd.toLowerCase().includes(username.toLowerCase()))
-        errors.push("not contain the username");
-      return errors;
-    };
+    if (!/[A-Z]/.test(pwd)) errors.push("contain at least one uppercase letter");
+    if (!/[a-z]/.test(pwd)) errors.push("contain at least one lowercase letter");
+    if (!/\d/.test(pwd)) errors.push("contain at least one number");
+    if (!new RegExp(`[${escapeRegExp(SPECIALS)}]`).test(pwd))
+      errors.push("contain at least one special character");
+    if (/(.)\1\1/.test(pwd))
+      errors.push("contain no more than 2 consecutive identical characters");
+    if (username && pwd.toLowerCase().includes(username.toLowerCase()))
+      errors.push("not contain the username");
+    return errors;
+  };
 
   const handleChangePassword = async () => {
     if (!pwModal.current || !pwModal.next) {
@@ -296,39 +297,38 @@ const UserPanel = () => {
 
     const username = user?.username || user?.email?.split("@")[0];
     const vErrors = validatePassword(pwModal.next, username);
-      if (vErrors.length) {
-        return setPwModal(m => ({ ...m, error: `Password must ${vErrors.join(", ")}.` }));
-      }
+    if (vErrors.length) {
+      return setPwModal(m => ({ ...m, error: `Password must ${vErrors.join(", ")}.` }));
+    }
 
-      try {
-        setPwModal(m => ({ ...m, loading: true, error: "" }));
-        await updateUserPassword(pwModal.current, pwModal.next);
-        setPwModal({ show: false, current: "", next: "", confirm: "", loading: false, error: "" });
-        toast.success("Password changed successfully!", { autoClose: 3000 });
-      } catch (err) {
-        const msg = err?.response?.data?.message || "Failed to change password.";
-        setPwModal(m => ({ ...m, loading: false, error: msg }));
-        toast.error(msg, { autoClose: 4000 });
-      }
-    };
+    try {
+      setPwModal(m => ({ ...m, loading: true, error: "" }));
+      await updateUserPassword(pwModal.current, pwModal.next);
+      setPwModal({ show: false, current: "", next: "", confirm: "", loading: false, error: "" });
+      toast.success("Password changed successfully!", { autoClose: 3000 });
+    } catch (err) {
+      const msg = err?.response?.data?.message || "Failed to change password.";
+      setPwModal(m => ({ ...m, loading: false, error: msg }));
+      toast.error(msg, { autoClose: 4000 });
+    }
+  };
 
   const handleLogout = () => {
-      dispatch(logout());
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("favorites");
+    dispatch(logout());
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("favorites");
 
-      if (axiosInstance?.defaults?.headers?.common?.Authorization) {
-        delete axiosInstance.defaults.headers.common.Authorization;
-      }
-      setBookings([]);
-      setFavorites([]);
-      setApartmentMap({});
-      toast.success("You have been logged out", { autoClose: 2000 });
-      navigate("/");
-    };
+    if (axiosInstance?.defaults?.headers?.common?.Authorization) {
+      delete axiosInstance.defaults.headers.common.Authorization;
+    }
+    setBookings([]);
+    setFavorites([]);
+    setApartmentMap({});
+    toast.success("You have been logged out", { autoClose: 2000 });
+    navigate("/");
+  };
 
-  // --- Розбивка бронювань
   const myBookings = bookings.filter(
     (b) => b.customer?.email && user && b.customer.email === user.email
   );
@@ -341,11 +341,6 @@ const UserPanel = () => {
   };
 
   if (!user) return null;
-
-  // --- Дані для правої колонки
-  const upcomingBooking = upcoming[0] || null;
-  const apt = upcomingBooking?.apartment || null;
-  const hotel = apt?.establishment || null;
 
   return (
     <div
@@ -381,210 +376,139 @@ const UserPanel = () => {
           marginTop: "60px",
         }}
       >
-        
-        {/* --- ДВІ КОЛОНКИ --- */}
-        <div className="row mt-4" style={{ minHeight: 400 }}>
 
-          {/* ЛІВА КОЛОНКА !!!!!! */}
+        <div className="row mt-4" style={{ minHeight: 400 }}>
           <div className="col-12 col-md-6 mb-4 mb-md-0" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            
-            
-            {/* 1. Інформація користувача */}
             <div style={{
-              background: "#fcfcfc",  //
+              background: "#fcfcfc",
               borderRadius: 18,
-              padding: 24,              
-              boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)"   //
+              padding: 24,
+              boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)"
             }}>
               <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 18 }}>Your details</div>
-              <div className="d-flex align-items-center gap-3 mb-3">              
-                <div>
-
-                  {/*    EDIT    */}
+              <div className="d-flex align-items-center gap-3 mb-3" style={{width: "100%"}}>
+                <div style={{width: "100%"}}>
                   {isEditing ? (
-                    <>           
-                  {/* Full name */}
-                  <div style={{ marginBottom: 24 }}>
-                    {(user?.photoUrl || user?.photos?.[0]?.blobUrl) && (
-                      <img
-                        src={user?.photoUrl || user?.photos?.[0]?.blobUrl}
-                        alt="User avatar"
-                        width={90}
-                        height={90}
-                        style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", marginBottom: 12 }}
-                      />
-                    )}
+                    <>
+                      <div style={{ marginBottom: 24, width: "100%" }}>
+                        {(user?.photoUrl || user?.photos?.[0]?.blobUrl) && (
+                          <img
+                            src={user?.photoUrl || user?.photos?.[0]?.blobUrl}
+                            alt="User avatar"
+                            width={90}
+                            height={90}
+                            style={{ borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", marginBottom: 12 }}
+                          />
+                        )}
 
-                    <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
-                      Full name
-                    </label>
-                    <input
-                      type="text"
-                      name="username"
-                      className="form-control"
-                      style={{
-                        borderRadius: 16,
-                        fontWeight: 500,
-                        border: "1.5px solid #02457A",
-                        background: "transparent",
-                        minHeight: 44,
-                        fontSize: 16,
-                        paddingLeft: 16,
-                        marginBottom: 6,
-                      }}
-                      value={editedUser.username}
-                      onChange={handleInputChange}
-                      placeholder="Full name"
-                    />
-                  </div>
-
-                  {/* Email */}
-                  <div style={{ marginBottom: 24 }}>
-                    <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      className="form-control"
-                      style={{
-                        borderRadius: 16,
-                        fontWeight: 500,
-                        border: "1.5px solid #02457A",
-                        background: "transparent",
-                        minHeight: 44,
-                        fontSize: 16,
-                        paddingLeft: 16,
-                        marginBottom: 6,
-                      }}
-                      value={editedUser.email}
-                      onChange={handleInputChange}
-                      placeholder="Email"
-                    />
-                    <div style={{ fontSize: 13, color: "#6E7C87", fontWeight: 400, marginTop: 2 }}>
-                      A booking confirmation will be sent to this address
-                    </div>
-                  </div>
-
-                  {/* Phone */}
-                  <div style={{ marginBottom: 32 }}>
-                    <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
-                      Telephone number
-                    </label>
-                    <input
-                      type="text"
-                      name="phoneNumber"
-                      className="form-control"
-                      style={{
-                        borderRadius: 16,
-                        fontWeight: 500,
-                        border: "1.5px solid #02457A",
-                        background: "transparent",
-                        minHeight: 44,
-                        fontSize: 16,
-                        paddingLeft: 16,
-                        marginBottom: 6,
-                      }}
-                      value={editedUser.phoneNumber}
-                      onChange={handleInputChange}
-                      placeholder="Phone number"
-                    />
-                    {/* User photo upload */}
-                    <div style={{ marginBottom: 32, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
-                      <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
-                        Profile photo
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="form-control"
-                        style={{borderRadius:16}}
-                        onChange={handlePhotoChange}
-                      />
-                      {editedUser.photoPreview && (
-                        <img
-                          src={editedUser.photoPreview}
-                          alt="User avatar"
-                          width={90}
-                          height={90}
-                          style={{ display: "block", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee" }}
+                        <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
+                          Full name
+                        </label>
+                        <input
+                          type="text"
+                          name="username"
+                          className="form-control"
+                          style={{
+                            borderRadius: 16,
+                            fontWeight: 500,
+                            border: "1.5px solid #02457A",
+                            background: "transparent",
+                            minHeight: 44,
+                            fontSize: 16,
+                            paddingLeft: 16,
+                            marginBottom: 6,
+                          }}
+                          value={editedUser.username}
+                          onChange={handleInputChange}
+                          placeholder="Full name"
                         />
-                      )}
-
-
-                      <button className="btn btn-outline-primary btn-sm" 
-                      style={{ alignSelf: "flex-start", minWidth: 280, minHeight: 50, fontSize: 18, borderRadius: 16 }}                   
-                      onClick={() => setPwModal(m => ({ ...m, show: true, error: "" }))}
-                      >
-                        Change password
-                      </button>
-
-                    </div>
-
-                    <div style={{ fontSize: 13, color: "#6E7C87", fontWeight: 400, marginTop: 2 }}>
-                      To confirm your level and be able to contact you if necessary
-                    </div>
-                  </div>
-
-                  {/* --------- Email Confirmation та Save new data --------- */}
-                  <div style={{ marginBottom: 22 }}>
-                    <div>
-                      <input type="checkbox" id="emailConfirm" style={{ accentColor: "#02457A" }} />
-                      <label htmlFor="emailConfirm" style={{ marginLeft: 10, fontSize: 16, color: "#02457A", fontWeight: 600 }}>
-                        Yes, send me a free email confirmation <span style={{ fontWeight: 400 }}>(recommended)</span>
-                      </label>
-                      <div style={{ marginLeft: 32, color: "#737373", fontSize: 13, marginBottom: 4 }}>
-                        We will send you a link to download our application
                       </div>
-                    </div>
-                    <div>
-                      <input type="checkbox" id="saveData" style={{ accentColor: "#02457A" }} />
-                      <label htmlFor="saveData" style={{ marginLeft: 10, fontSize: 16, color: "#02457A", fontWeight: 600 }}>
-                        Save new data to account
-                      </label>
-                    </div>
-                  </div>
 
-                  {/* --------- Special Requests --------- */}
-                  <div style={{ marginBottom: 24 }}>
-                    <div style={{ fontWeight: 700, color: "#207147", fontSize: 19, marginBottom: 8 }}>
-                      Tell us about your special requests
-                    </div>
-                    <div style={{ color: "#555", fontSize: 14, marginBottom: 8 }}>
-                      The administration of the accommodation cannot guarantee the fulfillment of special requests, but will do everything possible to ensure this. You can always leave a special request after completing the booking!
-                    </div>
-                    <label htmlFor="specialRequests" style={{ fontSize: 16, marginBottom: 5, color: "#02457A", display: "block" }}>
-                      Please write your requests
-                    </label>
-                    <textarea
-                      id="specialRequests"
-                      name="specialRequests"
-                      rows={3}
-                      style={{
-                        width: "100%",
-                        border: "1.5px solid #02457A",
-                        borderRadius: 16,
-                        fontSize: 15,
-                        padding: 12,
-                        resize: "vertical",
-                        background: "transparent",
-                        color: "#001B48"
-                      }}
-                      placeholder="Write here..."
-                    />
-                  </div>
+                      <div style={{ marginBottom: 24, width: "100%" }}>
+                        <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          name="email"
+                          className="form-control"
+                          style={{
+                            borderRadius: 16,
+                            fontWeight: 500,
+                            border: "1.5px solid #02457A",
+                            background: "transparent",
+                            minHeight: 44,
+                            fontSize: 16,
+                            paddingLeft: 16,
+                            marginBottom: 6,
+                          }}
+                          value={editedUser.email}
+                          onChange={handleInputChange}
+                          placeholder="Email"
+                        />
+                      </div>
 
+                      <div style={{ marginBottom: 32, width: "100%" }}>
+                        <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
+                          Phone
+                        </label>
+                        <input
+                          type="text"
+                          name="phoneNumber"
+                          className="form-control"
+                          style={{
+                            borderRadius: 16,
+                            fontWeight: 500,
+                            border: "1.5px solid #02457A",
+                            background: "transparent",
+                            minHeight: 44,
+                            fontSize: 16,
+                            paddingLeft: 16,
+                            marginBottom: 6,
+                          }}
+                          value={editedUser.phoneNumber}
+                          onChange={handleInputChange}
+                          placeholder="Phone number"
+                        />
+                        <div style={{ marginBottom: 32, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
+                          <label style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0e590e", display: "block" }}>
+                            Profile photo
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="form-control"
+                            style={{ borderRadius: 16 }}
+                            onChange={handlePhotoChange}
+                          />
+                          {editedUser.photoPreview && (
+                            <img
+                              src={editedUser.photoPreview}
+                              alt="User avatar"
+                              width={90}
+                              height={90}
+                              style={{ display: "block", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee" }}
+                            />
+                          )}
 
-                  {/* Buttons */}
-                  <div className="d-flex gap-2" style={{ marginTop: 12 }}>
-                    <button className="btn btn-sm" style={{ minWidth: "49%", background: '#02457A', color: 'white' }} onClick={handleSave}>
-                      Save
-                    </button>
-                    <button className="btn btn-outline-primary btn-sm" style={{ minWidth: "49%" }} onClick={handleCancel}>
-                      Cancel
-                    </button>
-                  </div>
+                          <button className="btn btn-outline-primary btn-sm"
+                            style={{ alignSelf: "flex-start", minWidth: 280, minHeight: 50, fontSize: 18, borderRadius: 16 }}
+                            onClick={() => setPwModal(m => ({ ...m, show: true, error: "" }))}
+                          >
+                            Change password
+                          </button>
 
+                        </div>
+                      </div>
+
+                      <div className="d-flex gap-2" style={{ marginTop: 12, width: "100%"}}>
+                        <button className="btn btn-sm" style={{ minWidth: "49%", background: '#02457A', color: 'white' }} onClick={handleSave}>
+                          Save
+                        </button>
+                        <button className="btn btn-outline-primary btn-sm" style={{ minWidth: "49%" }} onClick={handleCancel}>
+                          Cancel
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -600,7 +524,7 @@ const UserPanel = () => {
                         <span style={{ fontWeight: 400 }}>Phone number:</span>{" "}
                         <span style={{ fontWeight: 700 }}>{user?.phoneNumber}</span>
                       </div>
-                      
+
                       <button
                         className="btn btn-outline-primary btn-sm mt-4"
                         style={{ borderRadius: 12, fontWeight: 600, minWidth: 250 }}
@@ -614,102 +538,98 @@ const UserPanel = () => {
                         style={{ borderRadius: 12, fontWeight: 600, minWidth: 250, marginLeft: 20 }}
                         onClick={handleLogout}
                       >
-                        Log Out
+                        Logout
                       </button>
-
-                      
                     </>
                   )}
                 </div>
-              </div>            
-            </div>
-            
-            
-            {/* --- Блок "Favorites" --- */}
-              <div
-                style={{
-                  background: "#fcfcfc",
-                  borderRadius: 18,
-                  padding: 24,
-                  marginBottom: 24,
-                  minHeight: 120,
-                  boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.15)"
-                }}
-              >
-                <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8, color: "#183E6B" }}>
-                  Your favorite hotels
-                </div>
-                {favorites.length === 0 ? (
-                  <div className="text-muted">No favorites found</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {favorites.map((f) => {
-                      const hotel = f.establishment;
-                      return (
-                        <div
-                          key={f.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            borderRadius: 14,
-                            padding: "14px 18px",
-                            background: "#f3f8fe",
-                            border: "1px solid #e1ecfa",
-                            marginBottom: 2,
-                            cursor: "pointer",
-                          }}
-                          onClick={() => hotel?.id && navigate(`/hotels/${hotel.id}`)}
-                        >
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                              {hotel?.photos?.[0]?.blobUrl ? (
-                                <img
-                                  src={hotel.photos[0].blobUrl}
-                                  alt={hotel.name}
-                                  style={{
-                                    width: 120,
-                                    height: 100,
-                                    objectFit: "cover",
-                                    borderRadius: 12,
-                                    marginRight: 10,
-                                    border: "1.5px solid #eee",
-                                    background: "#f3f3f3",
-                                  }}
-                                />
-                              ) : (
-                                <span style={{ fontSize: 34, marginRight: 10 }}>🏨</span>
-                              )}
-                              <span style={{ fontWeight: 600, color: "#02457A", fontSize: 24 }}>
-                                {hotel?.name || `Hotel ${hotel?.id ?? ""}`}
-                              </span>
-                            </div>
-
-                            <div className="text-muted" style={{ fontSize: 13 }}>
-                              {hotel?.geolocation?.address || hotel?.address || ""}
-                            </div>
-                          </div>
-                          <button
-                            className="btn btn-outline-danger btn-sm"
-                            style={{
-                              fontWeight: 600,
-                              minWidth: 75,
-                              borderRadius: 10,
-                              marginLeft: 10,
-                            }}
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleDeleteFavorite(f.id);
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
+            </div>
+
+            <div
+              style={{
+                background: "#fcfcfc",
+                borderRadius: 18,
+                padding: 24,
+                marginBottom: 24,
+                minHeight: 120,
+                boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.15)"
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8, color: "#183E6B" }}>
+                Your favorite hotels
+              </div>
+              {favorites.length === 0 ? (
+                <div className="text-muted">No favorites found</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {favorites.map((f) => {
+                    const hotel = f.establishment;
+                    return (
+                      <div
+                        key={f.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          borderRadius: 14,
+                          padding: "14px 18px",
+                          background: "#f3f8fe",
+                          border: "1px solid #e1ecfa",
+                          marginBottom: 2,
+                          cursor: "pointer",
+                        }}
+                        onClick={() => hotel?.id && navigate(`/hotels/${hotel.id}`)}
+                      >
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                            {hotel?.photos?.[0]?.blobUrl ? (
+                              <img
+                                src={hotel.photos[0].blobUrl}
+                                alt={hotel.name}
+                                style={{
+                                  width: 120,
+                                  height: 100,
+                                  objectFit: "cover",
+                                  borderRadius: 12,
+                                  marginRight: 10,
+                                  border: "1.5px solid #eee",
+                                  background: "#f3f3f3",
+                                }}
+                              />
+                            ) : (
+                              <span style={{ fontSize: 34, marginRight: 10 }}>🏨</span>
+                            )}
+                            <span style={{ fontWeight: 600, color: "#02457A", fontSize: 24 }}>
+                              {hotel?.name || `Hotel ${hotel?.id ?? ""}`}
+                            </span>
+                          </div>
+
+                          <div className="text-muted" style={{ fontSize: 13 }}>
+                            {hotel?.geolocation?.address || hotel?.address || ""}
+                          </div>
+                        </div>
+                        <button
+                          className="btn btn-outline-danger btn-sm"
+                          style={{
+                            fontWeight: 600,
+                            minWidth: 75,
+                            borderRadius: 10,
+                            marginLeft: 10,
+                          }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleDeleteFavorite(f.id);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
           </div>
 
@@ -734,7 +654,7 @@ const UserPanel = () => {
                 const canAddReview = !booking.hasCustomerReviewed && new Date(booking.dateFrom) <= now;
                 const canEditBooking = new Date(booking.dateFrom).getDate() < now.getDate();
                 return (
-                  <div key={booking.id} style={{ marginBottom: 32 }}>                    
+                  <div key={booking.id} style={{ marginBottom: 32 }}>
                     <div style={{
                       background: "#fcfcfc",
                       borderRadius: 18,
@@ -743,13 +663,12 @@ const UserPanel = () => {
                       boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)",
                       marginBottom: 14,
                     }}>
-                      {/* --- Hotel info --- */}                      
-                      <div 
-                        style={{ 
-                          display: "flex", 
-                          justifyContent: "space-between", 
-                          alignItems: "center", 
-                          fontSize: 24, 
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          fontSize: 24,
                           fontWeight: 800,
                           color: "#001B48"
                         }}
@@ -757,15 +676,15 @@ const UserPanel = () => {
                         <span>{hotel?.name || "Hotel"}</span>
                         <span style={{ fontSize: 16, color: "#FE7C2C" }}>
                           <img src="/images/reitingstar-orange.png"
-                              alt="Star"
-                              style={{
-                                width: 16,
-                                height: 16,
-                                marginRight: 4,
-                                verticalAlign: "middle",
-                                objectFit: "contain"
-                              }}
-                            />
+                            alt="Star"
+                            style={{
+                              width: 16,
+                              height: 16,
+                              marginRight: 4,
+                              verticalAlign: "middle",
+                              objectFit: "contain"
+                            }}
+                          />
                           {fmt1(apt?.rating?.generalRating)}
                         </span>
                       </div>
@@ -775,28 +694,28 @@ const UserPanel = () => {
                       </span>{" "}
                       <div style={{ color: "#22614D" }}>
                         <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.geolocation?.address || "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              fontSize: 13,
-                              color: "#02457A",
-                              textDecoration: "none",
-                              display: "flex",
-                              alignItems: "center"
-                            }}
-                          >
-                            <img src="/images/geoikon.png" alt="Geo-ikon"
-                              style={{ width: 16, height: 16, marginRight: 6, objectFit: "contain" }} />
-                        
-                          <span className="fw-bold" style={{ fontSize: 14, color: "#22614D" }}>                        
-                              {hotel.geolocation?.address
-                                ?.split(",")
-                                ?.filter((_, i) => [0, 1, 3, 6].includes(i))
-                                ?.join(", ")}
-                            </span>
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.geolocation?.address || "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontSize: 13,
+                            color: "#02457A",
+                            textDecoration: "none",
+                            display: "flex",
+                            alignItems: "center"
+                          }}
+                        >
+                          <img src="/images/geoikon.png" alt="Geo-ikon"
+                            style={{ width: 16, height: 16, marginRight: 6, objectFit: "contain" }} />
+
+                          <span className="fw-bold" style={{ fontSize: 14, color: "#22614D" }}>
+                            {hotel.geolocation?.address
+                              ?.split(",")
+                              ?.filter((_, i) => [0, 1, 3, 6].includes(i))
+                              ?.join(", ")}
+                          </span>
                         </a>
-                      </div>                      
+                      </div>
 
                       <div className="mt-2" style={{ fontSize: 14, color: "#001B48" }}>
                         Great location - {fmt1(apt?.rating?.generalRating)}
@@ -805,19 +724,19 @@ const UserPanel = () => {
                       <div className="mt-2" style={{ fontSize: 14 }}>
                         <span style={{ fontSize: 16, color: "#FE7C2C" }}>
                           <img src="/images/reitingstar-orange.png"
-                              alt="Star"
-                              style={{
-                                width: 16,
-                                height: 16,
-                                marginRight: 4,
-                                verticalAlign: "middle",
-                                objectFit: "contain"
-                              }}
-                            />
+                            alt="Star"
+                            style={{
+                              width: 16,
+                              height: 16,
+                              marginRight: 4,
+                              verticalAlign: "middle",
+                              objectFit: "contain"
+                            }}
+                          />
                           {fmt1(apt?.rating?.generalRating)}
                         </span>
-                        <span style={{marginLeft: 6, marginRight: 6, color: "#001B48"}}>
-                          Rating excellent /                            
+                        <span style={{ marginLeft: 6, marginRight: 6, color: "#001B48" }}>
+                          Rating excellent /
                         </span>
                         <span style={{ color: "#737373" }}>
                           {hotel?.rating?.reviewCount != null
@@ -825,7 +744,6 @@ const UserPanel = () => {
                             : "-"}
                         </span>
                       </div>
-                      {/* Вивід зручностей готеля з іконками */}
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "15px", marginTop: 20, marginBlockEnd: 20 }}>
                         {(() => {
                           let featureNames = [];
@@ -849,18 +767,15 @@ const UserPanel = () => {
                             </div>
                           ));
                         })()}
-                      </div>                      
-                      <div className="mt-2 text-muted" style={{ fontSize: 13}}>Your apartment: {apt?.name}</div>
-                      {/* Вивід зручностей апартамента з іконками */}
+                      </div>
+                      <div className="mt-2 text-muted" style={{ fontSize: 13 }}>Your apartment: {apt?.name}</div>
                       {apt?.features && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "6px 0 8px" }}>
                           {(() => {
                             let names = [];
                             if (typeof apt.features === "number") {
-                              // якщо бек дає бітмаску
                               names = decodeFlagsUser(apt.features, APARTMENT_FEATURE_LABELS);
                             } else if (typeof apt.features === "object") {
-                              // якщо бек дає об'єкт булів { freeWifi: true, ... }
                               names = Object.keys(APARTMENT_FEATURE_LABELS).filter(k =>
                                 apt.features[k.charAt(0).toLowerCase() + k.slice(1)]
                               );
@@ -877,7 +792,6 @@ const UserPanel = () => {
                                   alt={name}
                                   style={{ width: 16, height: 16, marginRight: 6 }}
                                   onError={(e) => {
-                                    // fallback: пробуємо /images/features/<name>.png; якщо і його нема — ховаємо іконку
                                     const fallback = `/images/features/${name}.png`;
                                     if (!e.currentTarget.dataset.tried) {
                                       e.currentTarget.dataset.tried = "1";
@@ -895,49 +809,45 @@ const UserPanel = () => {
                       )}
 
                       <hr></hr>
-                      {/* --- Booking details --- */}
                       <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 16, color: "#001B48" }}>Your booking details</div>
 
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: 16 }}>
-                        {/* Check-in */}
                         <div>
                           <div style={{ color: "#0F3E0F", fontWeight: 800, marginBottom: 8 }}>Check-in</div>
-                          <div style={{color: "#001B48"}}>{formatDate(booking.dateFrom)}</div>
-                          <div style={{color: "#001B48"}}>Check-in Time: {booking.dateFrom.slice(11, 16)}</div>
+                          <div style={{ color: "#001B48" }}>{formatDate(booking.dateFrom)}</div>
+                          <div style={{ color: "#001B48" }}>Check-in Time: {booking.dateFrom.slice(11, 16)}</div>
                         </div>
 
-                        {/* Check-out */}
                         <div>
                           <div style={{ color: "#0F3E0F", fontWeight: 800, marginBottom: 8 }}>Check-out</div>
-                          <div style={{color: "#001B48"}}>{formatDate(booking.dateTo)}</div>
-                          <div style={{color: "#001B48"}}>Check-out Time: {booking.dateTo.slice(11, 16)}</div>
+                          <div style={{ color: "#001B48" }}>{formatDate(booking.dateTo)}</div>
+                          <div style={{ color: "#001B48" }}>Check-out Time: {booking.dateTo.slice(11, 16)}</div>
                         </div>
 
                         <div>
                           <div style={{ color: "#0F3E0F", fontWeight: 600, marginBottom: 8 }}>Total length of stay:</div>
                           <div style={{ color: "#0F3E0F", fontWeight: 600, marginBottom: 8 }}>You have selected:</div>
-                          
+
                         </div>
 
                         <div>
-                          <div style={{color: "#001B48"}}>{getNights(booking.dateFrom, booking.dateTo)} {getNights(booking.dateFrom, booking.dateTo) === 1 ? "night" : "nights"}</div>
-                          <div style={{color: "#001B48"}}>1 room for {apt?.capacity} adults</div>
+                          <div style={{ color: "#001B48" }}>{getNights(booking.dateFrom, booking.dateTo)} {getNights(booking.dateFrom, booking.dateTo) === 1 ? "night" : "nights"}</div>
+                          <div style={{ color: "#001B48" }}>1 room for {apt?.capacity} adults</div>
                         </div>
-                      </div>           
+                      </div>
 
-                      {/* --- Payment details --- */}
-                      <div style={{color: "#001B48"}}>Status: <span style={{ color: booking.isCheckedIn ? "#29b56f" : "#f9a825", fontWeight: 600 }}>
+                      <div style={{ color: "#001B48" }}>Status: <span style={{ color: booking.isCheckedIn ? "#29b56f" : "#f9a825", fontWeight: 600 }}>
                         {booking.isCheckedIn ? "Checked in" : "Awaiting check-in"}
                       </span></div>
                       <hr></hr>
                       <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8, color: "#001B48" }}>Your payment details</div>
                       <div>
-                        <span style={{color: "#001B48"}}>Total price:</span>{" "}
-                        <b style={{color: "#0F3E0F"}}>
+                        <span style={{ color: "#001B48" }}>Total price:</span>{" "}
+                        <b style={{ color: "#0F3E0F" }}>
                           {getTotalPrice(booking)} {booking.currency || "EUR"}
                         </b>
                       </div>
-                      <div style={{color: "#001B48"}}>
+                      <div style={{ color: "#001B48" }}>
                         Status:{" "}
                         <span style={{ color: "#29b56f", fontWeight: 600 }}>
                           {booking.isPaid ? "Paid" : "Not paid"}
@@ -979,16 +889,16 @@ const UserPanel = () => {
                           </button>
                         )}
                       </div>
-                   
-                    </div>                 
-                    
+
+                    </div>
+
                     {idx < upcoming.length - 1 && <hr style={{ margin: "20px 0", borderTop: "2px solid #dde2e7" }} />}
-                  </div>                  
-                )                
+                  </div>
+                )
               })
             )}
 
-            <div style={{background: "#fcfcfc", borderRadius: 18, padding: 24, minHeight: 120, boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)" }}>
+            <div style={{ background: "#fcfcfc", borderRadius: 18, padding: 24, minHeight: 120, boxShadow: "1px 1px 3px 3px rgba(20, 155, 245, 0.2)" }}>
               <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 10, color: "#001B48" }}>
                 Booking history
               </div>
@@ -1015,64 +925,63 @@ const UserPanel = () => {
               ))}
             </div>
           </div>
-          
         </div>
 
         {editModal.show && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(0,0,0,0.38)",
-            zIndex: 2000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}
-          onClick={closeEditModal}
-        >
           <div
             style={{
-              background: "#fff",
-              borderRadius: 18,
-              padding: 32,
-              minWidth: 320,
-              boxShadow: "0 8px 36px 0 rgba(31, 38, 135, 0.19)",
-              position: "relative"
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              background: "rgba(0,0,0,0.38)",
+              zIndex: 2000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
             }}
-            onClick={e => e.stopPropagation()}
+            onClick={closeEditModal}
           >
-            <h3>Edit Booking Dates</h3>
-            <label style={{ marginTop: 16 }}>Check-in date:</label>
-            <input
-              type="date"
-              value={editModal.dateFrom}
-              min={new Date().toISOString().slice(0, 10)}
-              onChange={e => setEditModal(em => ({ ...em, dateFrom: e.target.value }))}
-              className="form-control mb-2"
-            />
-            <label>Check-out date:</label>
-            <input
-              type="date"
-              value={editModal.dateTo}
-              min={editModal.dateFrom || new Date().toISOString().slice(0, 10)}
-              onChange={e => setEditModal(em => ({ ...em, dateTo: e.target.value }))}
-              className="form-control mb-3"
-            />
-            <div className="d-flex gap-2 mt-3">
-              <button className="btn btn-primary" onClick={handleEditBooking}>
-                Save
-              </button>
-              <button className="btn btn-secondary" onClick={closeEditModal}>
-                Cancel
-              </button>
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: 18,
+                padding: 32,
+                minWidth: 320,
+                boxShadow: "0 8px 36px 0 rgba(31, 38, 135, 0.19)",
+                position: "relative"
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <h3>Edit Booking Dates</h3>
+              <label style={{ marginTop: 16 }}>Check-in date:</label>
+              <input
+                type="date"
+                value={editModal.dateFrom}
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={e => setEditModal(em => ({ ...em, dateFrom: e.target.value }))}
+                className="form-control mb-2"
+              />
+              <label>Check-out date:</label>
+              <input
+                type="date"
+                value={editModal.dateTo}
+                min={editModal.dateFrom || new Date().toISOString().slice(0, 10)}
+                onChange={e => setEditModal(em => ({ ...em, dateTo: e.target.value }))}
+                className="form-control mb-3"
+              />
+              <div className="d-flex gap-2 mt-3">
+                <button className="btn btn-primary" onClick={handleEditBooking}>
+                  Save
+                </button>
+                <button className="btn btn-secondary" onClick={closeEditModal}>
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
       {addReviewModal.show && (
         <div
@@ -1121,84 +1030,83 @@ const UserPanel = () => {
         </div>
       )}
       {pwModal.show && (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.38)",
-          zIndex: 2100,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
-        onClick={() => setPwModal({ show: false, current: "", next: "", confirm: "", loading: false, error: "" })}
-      >
         <div
           style={{
-            background: "#fff",
-            borderRadius: 18,
-            padding: 28,
-            minWidth: 360,
-            boxShadow: "0 8px 36px rgba(31,38,135,.19)"
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.38)",
+            zIndex: 2100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
           }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={() => setPwModal({ show: false, current: "", next: "", confirm: "", loading: false, error: "" })}
         >
-          <h5 className="mb-3">Change password</h5>
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 18,
+              padding: 28,
+              minWidth: 360,
+              boxShadow: "0 8px 36px rgba(31,38,135,.19)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h5 className="mb-3">Change password</h5>
 
-          <label className="form-label">Current password</label>
-          <input
-            type="password"
-            className="form-control mb-2"
-            value={pwModal.current}
-            onChange={(e) => setPwModal(m => ({ ...m, current: e.target.value }))}
-            placeholder="Current password"
-          />
+            <label className="form-label">Current password</label>
+            <input
+              type="password"
+              className="form-control mb-2"
+              value={pwModal.current}
+              onChange={(e) => setPwModal(m => ({ ...m, current: e.target.value }))}
+              placeholder="Current password"
+            />
 
-          <label className="form-label mt-2">New password</label>
-          <input
-            type="password"
-            className="form-control mb-2"
-            value={pwModal.next}
-            onChange={(e) => setPwModal(m => ({ ...m, next: e.target.value }))}
-            placeholder="New password (min 6 chars)"
-          />
+            <label className="form-label mt-2">New password</label>
+            <input
+              type="password"
+              className="form-control mb-2"
+              value={pwModal.next}
+              onChange={(e) => setPwModal(m => ({ ...m, next: e.target.value }))}
+              placeholder="New password (min 6 chars)"
+            />
 
-          <label className="form-label mt-2">Confirm new password</label>
-          <input
-            type="password"
-            className="form-control"
-            value={pwModal.confirm}
-            onChange={(e) => setPwModal(m => ({ ...m, confirm: e.target.value }))}
-            placeholder="Repeat new password"
-          />
+            <label className="form-label mt-2">Confirm new password</label>
+            <input
+              type="password"
+              className="form-control"
+              value={pwModal.confirm}
+              onChange={(e) => setPwModal(m => ({ ...m, confirm: e.target.value }))}
+              placeholder="Repeat new password"
+            />
 
-          {pwModal.error && (
-            <div className="text-danger mt-2" style={{ fontSize: 13 }}>
-              {pwModal.error}
+            {pwModal.error && (
+              <div className="text-danger mt-2" style={{ fontSize: 13 }}>
+                {pwModal.error}
+              </div>
+            )}
+
+            <div className="d-flex gap-2 mt-3">
+              <button
+                className="btn btn-primary"
+                onClick={handleChangePassword}
+                disabled={pwModal.loading}
+              >
+                {pwModal.loading ? "Saving..." : "Change"}
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setPwModal({ show: false, current: "", next: "", confirm: "", loading: false, error: "" })}
+                disabled={pwModal.loading}
+              >
+                Cancel
+              </button>
             </div>
-          )}
-
-          <div className="d-flex gap-2 mt-3">
-            <button
-              className="btn btn-primary"
-              onClick={handleChangePassword}
-              disabled={pwModal.loading}
-            >
-              {pwModal.loading ? "Saving..." : "Change"}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => setPwModal({ show: false, current: "", next: "", confirm: "", loading: false, error: "" })}
-              disabled={pwModal.loading}
-            >
-              Cancel
-            </button>
           </div>
         </div>
-      </div>
-    )}
+      )}
     </div>
-    
   );
 };
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useSelector, useDispatch  } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { setUser } from "../../store/slices/userSlice";
 import { getEstablishmentsByOwnerFiltered } from "../../api/establishmentsApi";
 import LandEstablishmentCard from "./LandEstablishmentCard";
@@ -51,7 +51,7 @@ const LandPanel = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditedUser((prev) => ({ ...prev, [name]: value }));
-  };  
+  };
 
   const handleCancel = () => {
     setEditedUser({
@@ -106,7 +106,7 @@ const LandPanel = () => {
       dispatch(setUser(nextUser));
       setIsEditing(false);
       setEditedUser(u => ({ ...u, photoBase64: "", photoPreview: "" }));
-       if (fileRef.current) fileRef.current.value = "";
+      if (fileRef.current) fileRef.current.value = "";
     } catch (err) {
       console.error("Error saving profile:", err?.response || err);
     }
@@ -331,7 +331,7 @@ const LandPanel = () => {
                 <div className="text-muted">You don't have any hotels yet.</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {(selectedType ?  filteredEstablishments : establishments).map((est) => (
+                  {(selectedType ? filteredEstablishments : establishments).map((est) => (
                     <LandEstablishmentCard key={est.id} est={est} reloadStats={reloadStats} />
                   ))}
                 </div>

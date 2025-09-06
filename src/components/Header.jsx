@@ -7,6 +7,7 @@ import { setUser } from "../store/slices/userSlice";
 import "../styles/HeaderStyle.css";
 import { motion } from "framer-motion";
 import { displayableRole } from "../utils/roles";
+import { toast } from 'react-toastify';
 
 const Header = () => {
   const user = useSelector((state) => state.user.user);
@@ -21,6 +22,7 @@ const Header = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     dispatch(setUser(null));
+    toast.success("You have been logged out", { autoClose: 2000 });
     navigate("/");
   };
 
