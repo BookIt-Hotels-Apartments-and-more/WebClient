@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { getAllEstablishments, getEstablishmentsByVibe, getTrendingEstablishments } from "../api/establishmentsApi";
 import { axiosInstance } from "../api/axios";
 import BookingBannerForm from '../components/BookingBannerForm';
 import HotelFilters from "../components/HotelFilters";
 import countriesList from "../utils/countriesList";
-import { addFavorite } from "../api/favoriteApi";
-import { toast } from "react-toastify";
 import { ESTABLISHMENT_FEATURE_LABELS } from "../utils/enums";
 import { getAllReviews } from "../api/reviewApi";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
@@ -17,7 +15,6 @@ const fmt1Blank = v => (v != null && !Number.isNaN(Number(v)) ? Number(v).toFixe
 
 export default function HotelsList() {
   const location = useLocation();
-  const navigate = useNavigate();
   const sourceHotels = location.state?.hotels || null;
   const params = new URLSearchParams(location.search);
   const selectedType = params.get("type");

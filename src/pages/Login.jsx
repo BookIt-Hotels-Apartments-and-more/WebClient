@@ -6,6 +6,7 @@ import { setUser } from "../store/slices/userSlice";
 import { axiosInstance } from "../api/axios";
 import { useLocation } from "react-router-dom";
 import { USER_ROLE } from "../utils/enums";
+import getApiErrorMessage from "../utils/apiError";
 import { toast } from "react-toastify";
 import { getUserFavorites } from "../api/favoriteApi";
 
@@ -66,15 +67,18 @@ const Login = () => {
         navigate("/");
       }
     } catch (err) {
+      const serverMsg = getApiErrorMessage(err, "Login failed. Please try again.");
       const violationRule = err?.response?.data?.details?.Rule;
-      if (violationRule?.includes("USER_RESTRICTED") ?? false)
-        navigate("/auth/error?error=Your account was restricted. Please contact support.");
-      else if (violationRule?.includes("EMAIL_NOT_CONFIRMED") ?? false)
-        navigate("/auth/error?error=Please confirm your email before logging in.");
-      else if (err?.response?.data?.statusCode === 403)
-        toast.error("Invalid email or password");
-      else
-        toast.error("Login failed. Please try again.");
+      if (violationRule?.includes("USER_RESTRICTED")) {
+        return navigate(`/auth/error?error=${encodeURIComponent(serverMsg)}`);
+      }
+      if (violationRule?.includes("EMAIL_NOT_CONFIRMED")) {
+        return navigate(`/auth/error?error=${encodeURIComponent(serverMsg)}`);
+      }
+      if (err?.response?.status === 403 || err?.response?.data?.statusCode === 403) {
+        return toast.error(serverMsg);
+      }
+      toast.error(serverMsg);
     }
   };
 
@@ -90,7 +94,7 @@ const Login = () => {
       setMessage(`If email ${recoveryEmail} exists, we sent a reset link to it.`);
       setForgotStep(2);
     } catch (err) {
-      setMessage(err?.response?.data?.message || "Error while generating reset token.");
+      setMessage(getApiErrorMessage(err, "Error while generating reset token."));
     } finally {
       setLoadingReset(false);
     }
