@@ -1,12 +1,6 @@
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { WizardProvider } from "../features/establishment/WizardContext";
 import ProtectedRoute from '../components/ProtectedRoute';
-import Step1Name from "../pages/user/Step1Name";
-import Step2Location from "../pages/user/Step2Location";
-import Step3Feature from "../pages/user/Step3Feature";
-import Step4Description from '../pages/user/Step4Description';
-import Step5Photos from '../pages/user/Step5Photos';
-import Step6Publication from '../pages/user/Step6Publication';
 
 import Home from '../pages/Home';
 import AboutUs from '../pages/AboutUs';
@@ -24,6 +18,7 @@ import AuthError from "../pages/AuthError";
 import AdminPanel from '../pages/admin/AdminPanel';
 import AdminAuth from '../pages/admin/AdminAuth'; 
 import AddHotel from "../pages/landlord/AddHotel";
+import EstablishmentWizard from "../pages/user/EstablishmentWizard";
 import EditHotel from "../pages/landlord/EditHotel";
 import AddApartment from "../pages/landlord/AddApartment";
 import EditApartment from "../pages/landlord/EditApartment";
@@ -55,14 +50,10 @@ const AppRouter = () => {
           <Route path="/accounthome" element={<Account />} />
           <Route path="/registerlanding" element={<RegisterLanding />} />
           <Route path="/addproperty" element={<AddProperty />} />
-          <Route path="/add-establishment/step-1" element={<Step1Name />} />
-          <Route path="/add-establishment/step-2" element={<Step2Location />} />
-          <Route path="/add-establishment/step-3" element={<Step3Feature />} />
-          <Route path="/add-establishment/step-4" element={<Step4Description />} />
-          <Route path='/add-establishment/step-5' element={<Step5Photos />} />
-          <Route path='/add-establishment/step-6' element={<Step6Publication />} />
-          <Route path='/add-establishment/step-7' element={<AddApartment />} />
-          <Route path="/add-establishment/step-7/:establishmentId" element={<AddApartment />} />
+
+          <Route path="/add-establishment/step/:step" element={<EstablishmentWizard />} />
+          <Route path="/add-establishment/step/:step/:establishmentId" element={<EstablishmentWizard />} />
+          <Route path="/add-establishment" element={<Navigate to="/add-establishment/step/1" replace />} />
 
           <Route path="/booking" element={<Booking />} />
           <Route path="/hotels/:id" element={<HotelDetails />} />

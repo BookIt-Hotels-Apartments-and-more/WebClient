@@ -3,7 +3,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { useEstWizard } from "../../features/establishment/WizardContext"; 
 import { ESTABLISHMENT_TYPE_LABELS } from "../../utils/enums";
 
-
 const TOKENS = {
   bgCard: "#FFFFFF",
   border: "#E6EEF4",
@@ -57,7 +56,7 @@ export default function AddProperty() {
   const startWizard = (type) => {
     setPropertyType(type);          // "Apartments" | "Villa" | "Hotel" | "Alternative"
     setStep(1);
-    navigate("/add-establishment/step-1");
+    navigate("/add-establishment/step/1");
   };
 
   return (
@@ -153,8 +152,6 @@ export default function AddProperty() {
                 </div>                    
             </div>
         </div>
-
     </div>
-    
   );
 }
