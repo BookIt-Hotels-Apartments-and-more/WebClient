@@ -15,6 +15,7 @@ import {
   getEstablishmentTypeName,
   APARTMENT_FEATURE_LABELS
 } from "../../utils/enums";
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 const UserPanel = () => {
   const user = useSelector(s => s.user.user);
@@ -342,6 +343,8 @@ const UserPanel = () => {
 
   if (!user) return null;
 
+  if (loading) return <LoadingSpinner size="medium" text="Loading your account data..." />;
+
   return (
     <div
       style={{
@@ -654,7 +657,7 @@ const UserPanel = () => {
                 const canAddReview = !booking.hasCustomerReviewed && new Date(booking.dateFrom) <= now;
                 const canEditBooking = new Date(booking.dateFrom).getDate() < now.getDate();
                 return (
-                  <div key={booking.id} style={{ marginBottom: 32 }}>
+                  <div key={booking.id} style={{ marginBottom: 8 }}>
                     <div style={{
                       background: "#fcfcfc",
                       borderRadius: 18,
@@ -891,8 +894,6 @@ const UserPanel = () => {
                       </div>
 
                     </div>
-
-                    {idx < upcoming.length - 1 && <hr style={{ margin: "20px 0", borderTop: "2px solid #dde2e7" }} />}
                   </div>
                 )
               })

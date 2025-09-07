@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { APARTMENT_FEATURE_LABELS, ESTABLISHMENT_FEATURE_LABELS, decodeFlagsUser } from "../../utils/enums";
 import { toast } from "react-toastify";
 import AddComment from "../../components/AddComment";
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 const CustomerDetailsModal = ({ customer, isOpen, onClose }) => {
   if (!isOpen || !customer) return null;
@@ -201,12 +202,7 @@ const LandEstablishmentCard = ({ est, reloadStats }) => {
   if (isLoading) {
     return (
       <div className="card mb-4 shadow-sm">
-        <div className="card-body text-center py-5">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="mt-2 text-muted">Loading property data...</p>
-        </div>
+        <LoadingSpinner size="small" text="Loading property data..." />
       </div>
     );
   }

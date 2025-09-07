@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getApartmentById, updateApartment } from "../../api/apartmentApi";
+import LoadingSpinner from "../../components/LoadingSpinner";
 import { APARTMENT_FEATURE_LABELS, normalizeFeaturesForCheckboxes, featuresObjectToBitmask } from "../../utils/enums";
 
 const EditApartment = () => {
@@ -245,9 +246,7 @@ const EditApartment = () => {
 
   if (loading) return (
     <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
-      <div className="spinner-border text-primary" role="status">
-        <span className="visually-hidden">Loading...</span>
-      </div>
+        <LoadingSpinner size="medium" text="Loading apartment data..." />
     </div>
   );
 

@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getTrendingEstablishments } from "../api/establishmentsApi";
 import { useNavigate } from "react-router-dom";
-import { axiosInstance } from "../api/axios";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import { toast } from "react-toastify";
-
+import LoadingSpinner from "../components/LoadingSpinner"
 
 const cardStyles = {
   borderRadius: 18,
@@ -19,13 +18,11 @@ const cardStyles = {
   justifyContent: "flex-end",
 };
 
-const fmt1 = v =>
-  v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(1) : "—";
+const fmt1 = v => v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(1) : "—";
 
 const PopularDestinations = ({ search = "" }) => {
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [apartments, setApartments] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const navigate = useNavigate();
   const userId = JSON.parse(localStorage.getItem("user"))?.id;
@@ -35,14 +32,13 @@ const PopularDestinations = ({ search = "" }) => {
     setLoading(true);
     Promise.all([
       getTrendingEstablishments(12, 365),
-      axiosInstance.get("/api/apartments"),(userId && token)
+      (userId && token)
         ? Promise.resolve(JSON.parse(localStorage.getItem("favorites") || "[]"))
         : Promise.resolve([]),
     ])
-      .then(([trending, apartmentsData, favoritesData]) => {
+      .then(([trending, favoritesData]) => {
         const list = Array.isArray(trending) ? trending : trending?.items || [];
         setHotels(list);
-        setApartments(apartmentsData.data);
         setFavorites(favoritesData);
       })
       .catch(err => console.error("Download error:", err))
@@ -86,9 +82,7 @@ const PopularDestinations = ({ search = "" }) => {
   if (loading) {
     return (
       <section className="my-5">
-        <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
-          Loading popular destinations...
-        </div>
+        <LoadingSpinner size="small" text="Loadng popular destinations..." />
       </section>
     );
   }

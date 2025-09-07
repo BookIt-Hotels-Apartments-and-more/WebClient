@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import LoadingSpinner from "../../components/LoadingSpinner";
 import { getEstablishmentById, updateEstablishment } from "../../api/establishmentsApi";
 import GeoPicker from "../../components/GeoPicker";
 import {
@@ -313,9 +314,7 @@ const EditHotel = () => {
 
   if (loading) return (
     <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
-      <div className="spinner-border text-primary" role="status">
-        <span className="visually-hidden">Loading...</span>
-      </div>
+        <LoadingSpinner size="medium" text="Loading hotel data..." />
     </div>
   );
 

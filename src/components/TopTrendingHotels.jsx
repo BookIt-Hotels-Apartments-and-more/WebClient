@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getTrendingEstablishments } from "../api/establishmentsApi";
 import { useNavigate } from "react-router-dom";
 import HotelCard from "./HotelCard";
 import { isHotelFavorite, toggleHotelFavorite } from "../utils/favoriteUtils";
 import { toast } from "react-toastify";
-
-
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const TopTrendingHotels = ({ search = "" }) => {
   const [hotels, setHotels] = useState([]);
@@ -49,7 +48,6 @@ const TopTrendingHotels = ({ search = "" }) => {
     };
   }, [userId, token]);
 
-  // Унікальні країни з готелів
   const countries = useMemo(() => {
     const set = new Set();
     hotels.forEach(h => {
@@ -84,9 +82,7 @@ const TopTrendingHotels = ({ search = "" }) => {
   if (loading) {
     return (
       <section className="my-5">
-        <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
-          Loading trending hotels...
-        </div>
+        <LoadingSpinner size="small" text="Loadng trending hotels..." />
       </section>
     );
   }
@@ -119,7 +115,6 @@ const TopTrendingHotels = ({ search = "" }) => {
           </button>
 
         </div>
-        {/* Buttons */}
         <div className="mb-3" style={{ display: "flex", gap: 12 }}>
           {countries.map(country => (
             <button

@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import { axiosInstance } from "../../api/axios";
 import CreateAdminModal from "./CreateAdminModal";
 import ReviewDetailsModal from "./ReviewDetailsModal";
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 const badgeByStatus = (status) => {
   switch (status) {
@@ -56,23 +57,6 @@ const createAdmin = async (userData) => {
 const deleteReview = async (reviewId) => {
   const response = await axiosInstance.delete(`/api/reviews/${reviewId}`);
   return response.data;
-};
-
-const LoadingSpinner = ({ size = "md" }) => {
-  const sizeClasses = {
-    sm: "spinner-border-sm",
-    md: "",
-    lg: "spinner-border-lg"
-  };
-
-  return (
-    <div className="d-flex justify-content-center align-items-center py-5">
-      <div className={`spinner-border text-primary ${sizeClasses[size]}`} role="status">
-        <span className="visually-hidden">Loading...</span>
-      </div>
-      <span className="ms-3 text-muted">Loading data...</span>
-    </div>
-  );
 };
 
 const SearchAndFilter = ({ 
@@ -876,7 +860,7 @@ export default function AdminPanel() {
             boxShadow: "0 4px 28px 0 rgba(31, 38, 135, 0.11)",
           }}
         >
-          <LoadingSpinner size="lg" />
+        <LoadingSpinner size="medium" text="Loading data..." />
         </div>
       </div>
     );
